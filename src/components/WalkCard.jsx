@@ -1,0 +1,91 @@
+import { formatTime } from '../lib/parseICS'
+
+export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
+  const { startTime, endTime, events } = group
+  const groupKey = `${startTime.getTime()}-${endTime.getTime()}`
+  const allLogged = events.every((ev) => loggedIds.has(ev._id))
+
+  return (
+    <div
+      className={`rounded-2xl shadow-sm border p-4 transition-all ${
+        allLogged
+          ? 'bg-green-50 border-green-200'
+          : 'bg-white border-gray-100'
+      }`}
+    >
+      {/* Time row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🕙</span>
+          <span className="font-semibold text-sm text-gray-700">
+            {formatTime(startTime)} – {formatTime(endTime)}
+          </span>
+          <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+            {events.length} {events.length === 1 ? 'dog' : 'dogs'}
+          </span>
+        </div>
+        {allLogged && (
+          <span className="text-green-600 font-semibold text-sm flex items-center gap-1">
+            ✅ Done
+          </span>
+        )}
+      </div>
+
+      {/* Sector badge if mixed */}
+      {events.some((e) => e.sector !== events[0].sector) && (
+        <div className="mb-2 flex gap-1 flex-wrap">
+          {[...new Set(events.map((e) => e.sector))].map((s) => (
+            <span key={s} className="text-xs bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 font-medium">
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Dog chips */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {events.map((ev) => {
+          const isLogged = loggedIds.has(ev._id)
+          const isMissing = !ev.dog
+          return (
+            <button
+              key={ev._id}
+              onClick={() => onDogClick(ev)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all active:scale-95 ${
+                isLogged
+                  ? 'bg-green-100 text-green-700'
+                  : isMissing
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : 'bg-[#FFF4F1] text-[#E8634A] border border-[#f0c4b9]'
+              }`}
+            >
+              {isMissing && <span>⚠️</span>}
+              {ev.displayName}
+              {isLogged && <span className="ml-1">✓</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Address preview (first event) */}
+      {events[0]?.location && (
+        <p className="text-xs text-gray-400 mb-3 truncate">
+          📍 {events[0].location}
+        </p>
+      )}
+
+      {/* Log walk button */}
+      <button
+        onClick={() => onLogWalk(group)}
+        className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 ${
+          allLogged
+            ? 'bg-green-100 text-green-700 cursor-default'
+            : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
+        }`}
+        disabled={allLogged}
+      >
+        {allLogged ? '✅ Walk Logged' : '📝 Log Walk'}
+      </button>
+    </div>
+  )
+}
