@@ -9,19 +9,17 @@ const SECTOR_COLORS = {
 export default function Header({ date }) {
   const { profile, isAdmin, signOut } = useAuth()
 
-  const displayDate = date
-    ? new Date(date).toLocaleDateString('en-CA', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'America/Toronto',
-      })
-    : new Date().toLocaleDateString('en-CA', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'America/Toronto',
-      })
+  // Parse YYYY-MM-DD without UTC interpretation (new Date("2026-03-02") would
+  // be UTC midnight, which shows as the previous day in America/Toronto)
+  const displayDate = (() => {
+    const dateStr = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+  })()
 
   const sector = profile?.sector || 'both'
   const sectorLabel = sector === 'both' ? 'All Sectors' : sector
