@@ -59,23 +59,41 @@ export default function Schedule() {
       const sector = profile?.sector || 'both'
       let allEvents = []
 
-      async function getICS(sectorName) {
-        try {
-          const res = await fetch(`/api/calendar?sector=${sectorName.toLowerCase()}`)
-          if (res.ok) return await res.text()
-        } catch {
-          // API unavailable — fall through to static
+      // Try Acuity REST API first
+      let usedAcuity = false
+      try {
+        const res = await fetch(`/api/acuity?date=${today}`)
+        if (res.ok) {
+          const acuityEvents = await res.json()
+          allEvents = acuityEvents
+            .filter((ev) => sector === 'both' || ev.sector === sector)
+            .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
+          usedAcuity = true
         }
-        return sectorName === 'Plateau' ? plateauICS : laurierICS
+      } catch {
+        // Acuity unavailable — fall through to ICS
       }
 
-      if (sector === 'Plateau' || sector === 'both') {
-        const ics = await getICS('Plateau')
-        allEvents = allEvents.concat(getEventsForDate(ics, today, 'Plateau'))
-      }
-      if (sector === 'Laurier' || sector === 'both') {
-        const ics = await getICS('Laurier')
-        allEvents = allEvents.concat(getEventsForDate(ics, today, 'Laurier'))
+      // Fall back to ICS (live Google Calendar or static files)
+      if (!usedAcuity) {
+        async function getICS(sectorName) {
+          try {
+            const res = await fetch(`/api/calendar?sector=${sectorName.toLowerCase()}`)
+            if (res.ok) return await res.text()
+          } catch {
+            // API unavailable — fall through to static
+          }
+          return sectorName === 'Plateau' ? plateauICS : laurierICS
+        }
+
+        if (sector === 'Plateau' || sector === 'both') {
+          const ics = await getICS('Plateau')
+          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Plateau'))
+        }
+        if (sector === 'Laurier' || sector === 'both') {
+          const ics = await getICS('Laurier')
+          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Laurier'))
+        }
       }
 
       // Enrich events with dog matching (now matching against Supabase dogs)
