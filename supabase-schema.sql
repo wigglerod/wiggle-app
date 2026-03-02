@@ -160,7 +160,7 @@ insert into dogs (name, address, door_info, must_know, extra_info, email, sector
 
 
 -- ============================================================
--- DONE
+-- DONE — POST-SETUP STEPS
 -- ============================================================
 -- After running this:
 --
@@ -168,6 +168,41 @@ insert into dogs (name, address, door_info, must_know, extra_info, email, sector
 --    Dashboard → Storage → New Bucket
 --    Name: photos  |  Public: ON
 --
--- 2. Set yourself as admin (replace with your email):
---    update profiles set role = 'admin' where email = 'you@example.com';
+-- 2. Create your admin user:
+--    a) Sign up via the app login page (or Supabase Dashboard → Authentication → Add User)
+--    b) Then run this in the SQL Editor (replace with your email):
+--       update profiles set role = 'admin' where email = 'you@example.com';
+-- ============================================================
+
+
+-- ============================================================
+-- TROUBLESHOOTING — Run in SQL Editor if you hit issues
+-- ============================================================
+
+-- 1. Check if the signup trigger exists:
+--    select tgname from pg_trigger where tgname = 'on_auth_user_created';
+--    (Should return 1 row. If empty, re-run STEP 4 above.)
+
+-- 2. If you signed up but have NO profile row (common if trigger was missing):
+--    insert into profiles (id, email, role)
+--    select id, email, 'admin'
+--    from auth.users
+--    where email = 'you@example.com'
+--    on conflict (id) do update set role = 'admin';
+
+-- 3. Recreate the trigger if it's missing (safe to re-run):
+--    create or replace function handle_new_user()
+--    returns trigger language plpgsql security definer
+--    set search_path = public as $$
+--    begin
+--      insert into profiles (id, email)
+--      values (new.id, new.email);
+--      return new;
+--    end;
+--    $$;
+--
+--    drop trigger if exists on_auth_user_created on auth.users;
+--    create trigger on_auth_user_created
+--      after insert on auth.users
+--      for each row execute procedure handle_new_user();
 -- ============================================================
