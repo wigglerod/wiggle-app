@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -148,10 +148,6 @@ export default function Admin() {
     if (!isAdmin) navigate('/')
   }, [isAdmin, navigate])
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   async function fetchData() {
     setLoading(true)
     const [{ data: dogsData }, { data: logsData }] = await Promise.all([
@@ -162,6 +158,9 @@ export default function Admin() {
     setLogs(logsData || [])
     setLoading(false)
   }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch from external API is the intended use of useEffect
+  useEffect(() => { fetchData() }, [])
 
   async function deleteDog(id) {
     if (!confirm('Delete this dog profile?')) return

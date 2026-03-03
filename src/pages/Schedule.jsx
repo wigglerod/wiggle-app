@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import Header from '../components/Header'
 import WalkCard from '../components/WalkCard'
 import DogDrawer from '../components/DogDrawer'
 import WalkLogModal from '../components/WalkLogModal'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { getEventsForDate, groupEventsByTimeSlot } from '../lib/parseICS'
 import { extractDogName, matchDog, parseDogsCSV } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
@@ -18,9 +18,6 @@ function uid() { return ++_idCounter }
 
 export default function Schedule() {
   const { profile } = useAuth()
-  const [dogs, setDogs] = useState([])
-  const [groups, setGroups] = useState([])
-  const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [logGroup, setLogGroup] = useState(null)
   const [loggedIds, setLoggedIds] = useState(new Set())
@@ -30,15 +27,12 @@ export default function Schedule() {
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
   }, [])
 
-  // Parse dog CSV on mount
-  useEffect(() => {
-    const parsed = parseDogsCSV(dogsCSVRaw)
-    setDogs(parsed)
-  }, [])
+  // Parse dog CSV once (static data)
+  const dogs = useMemo(() => parseDogsCSV(dogsCSVRaw), [])
 
-  // Parse ICS files once dogs are loaded
-  useEffect(() => {
-    if (dogs.length === 0) return
+  // Parse ICS files and build groups from dogs + profile
+  const groups = useMemo(() => {
+    if (dogs.length === 0) return []
 
     const sector = profile?.sector || 'both'
     let allEvents = []
@@ -73,9 +67,7 @@ export default function Schedule() {
       }
     })
 
-    const grouped = groupEventsByTimeSlot(enriched)
-    setGroups(grouped)
-    setLoading(false)
+    return groupEventsByTimeSlot(enriched)
   }, [dogs, today, profile])
 
   function handleLogged(ids) {
@@ -98,7 +90,7 @@ export default function Schedule() {
 
       <main className="px-4 py-4 pb-24 max-w-lg mx-auto">
         {/* Progress banner */}
-        {!loading && totalWalks > 0 && (
+        {totalWalks > 0 && (
           <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
             <span className="text-sm text-gray-500">Today's walks</span>
             <span className="text-sm font-bold text-[#E8634A]">
@@ -107,14 +99,7 @@ export default function Schedule() {
           </div>
         )}
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-8 h-8 border-3 border-[#E8634A] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">Loading schedule…</p>
-          </div>
-        )}
-
-        {!loading && groups.length === 0 && (
+        {groups.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <span className="text-5xl">🐾</span>
             <p className="text-lg font-semibold text-gray-600">No walks today</p>
@@ -122,7 +107,7 @@ export default function Schedule() {
           </div>
         )}
 
-        {!loading && groups.length > 0 && (
+        {groups.length > 0 && (
           <div className="flex flex-col gap-3">
             {groups.map((group) => (
               <WalkCard

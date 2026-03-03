@@ -2,7 +2,6 @@ import { formatTime } from '../lib/parseICS'
 
 export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
   const { startTime, endTime, events } = group
-  const groupKey = `${startTime.getTime()}-${endTime.getTime()}`
   const allLogged = events.every((ev) => loggedIds.has(ev._id))
 
   return (

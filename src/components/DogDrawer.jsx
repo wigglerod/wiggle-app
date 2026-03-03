@@ -13,23 +13,15 @@ function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent)
 }
 
-export default function DogDrawer({ event, onClose }) {
+function DogDrawerContent({ event, onClose }) {
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError] = useState(false)
-
-  // Reset door reveal when event changes
-  useEffect(() => {
-    setDoorRevealed(false)
-    setImgError(false)
-  }, [event])
 
   // Trap scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
-
-  if (!event) return null
 
   const dog = event.dog
   const address = event.location || dog?.address || ''
@@ -183,4 +175,10 @@ export default function DogDrawer({ event, onClose }) {
       </div>
     </>
   )
+}
+
+// Use key to reset state when event changes instead of setState in useEffect
+export default function DogDrawer({ event, onClose }) {
+  if (!event) return null
+  return <DogDrawerContent key={event._id ?? event.summary} event={event} onClose={onClose} />
 }
