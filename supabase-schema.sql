@@ -160,6 +160,37 @@ insert into dogs (name, address, door_info, must_know, extra_info, email, sector
 
 
 -- ============================================================
+-- STEP 7 — WALK GROUPS (drag-and-drop organizer)
+-- ============================================================
+
+create table if not exists walk_groups (
+  id           uuid        primary key default gen_random_uuid(),
+  walk_date    date        not null,
+  group_num    int         not null check (group_num between 1 and 3),
+  dog_ids      text[]      not null default '{}',
+  sector       text        not null check (sector in ('Plateau', 'Laurier')),
+  updated_by   uuid        references profiles(id),
+  updated_at   timestamptz not null default now(),
+  unique(walk_date, group_num, sector)
+);
+
+alter table walk_groups enable row level security;
+
+-- Everyone authenticated can read walk groups
+create policy "walk_groups_read" on walk_groups
+  for select using (auth.uid() is not null);
+
+-- Walkers and admins can insert/update walk groups
+create policy "walk_groups_write" on walk_groups
+  for all
+  using     (auth.uid() is not null)
+  with check(auth.uid() is not null);
+
+-- Enable realtime for walk_groups
+alter publication supabase_realtime add table walk_groups;
+
+
+-- ============================================================
 -- DONE — POST-SETUP STEPS
 -- ============================================================
 -- After running this:

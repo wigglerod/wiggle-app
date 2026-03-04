@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
 
@@ -48,6 +49,14 @@ function AppRoutes() {
       />
       <Route
         path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/schedule"
         element={
           <ProtectedRoute>
             <Schedule />

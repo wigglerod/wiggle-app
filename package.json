@@ -11,7 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/supabase-js": "^2.98.0",
+    "@vis.gl/react-google-maps": "^1.7.1",
     "fast-levenshtein": "^3.0.0",
     "ical.js": "^2.2.1",
     "react": "^19.2.0",
