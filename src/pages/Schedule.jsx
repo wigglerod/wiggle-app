@@ -5,13 +5,9 @@ import DogDrawer from '../components/DogDrawer'
 import WalkLogModal from '../components/WalkLogModal'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getEventsForDate, groupEventsByTimeSlot } from '../lib/parseICS'
+import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { extractDogName, matchDog } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
-
-// Static ICS fallback (used when live API is unavailable)
-import plateauICS from '../data/plateau.ics?raw'
-import laurierICS from '../data/laurier.ics?raw'
 
 let _idCounter = 0
 function uid() { return ++_idCounter }
@@ -51,7 +47,7 @@ export default function Schedule() {
     fetchDogs()
   }, [])
 
-  // Fetch ICS (live with static fallback) and build schedule
+  // Fetch schedule from Acuity and build walk groups
   useEffect(() => {
     if (!dogsReady) return
 
@@ -59,8 +55,6 @@ export default function Schedule() {
       const sector = profile?.sector || 'both'
       let allEvents = []
 
-      // Try Acuity REST API first
-      let usedAcuity = false
       try {
         const res = await fetch(`/api/acuity?date=${today}`)
         if (res.ok) {
@@ -68,35 +62,12 @@ export default function Schedule() {
           allEvents = acuityEvents
             .filter((ev) => sector === 'both' || ev.sector === sector)
             .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
-          usedAcuity = true
         }
       } catch {
-        // Acuity unavailable — fall through to ICS
+        // Acuity unavailable
       }
 
-      // Fall back to ICS (live Google Calendar or static files)
-      if (!usedAcuity) {
-        async function getICS(sectorName) {
-          try {
-            const res = await fetch(`/api/calendar?sector=${sectorName.toLowerCase()}`)
-            if (res.ok) return await res.text()
-          } catch {
-            // API unavailable — fall through to static
-          }
-          return sectorName === 'Plateau' ? plateauICS : laurierICS
-        }
-
-        if (sector === 'Plateau' || sector === 'both') {
-          const ics = await getICS('Plateau')
-          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Plateau'))
-        }
-        if (sector === 'Laurier' || sector === 'both') {
-          const ics = await getICS('Laurier')
-          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Laurier'))
-        }
-      }
-
-      // Enrich events with dog matching (now matching against Supabase dogs)
+      // Enrich events with dog matching (against Supabase dogs)
       const enriched = allEvents.map((ev) => {
         const rawName = extractDogName(ev.summary)
         const { dog, matchType } = matchDog(rawName, dogs)

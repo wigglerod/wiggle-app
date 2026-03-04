@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { getEventsForDate } from '../lib/parseICS'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -260,25 +259,22 @@ export default function Admin() {
             onClick={async () => {
               setSyncing(true)
               const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-              const results = []
 
-              for (const sector of ['plateau', 'laurier']) {
-                try {
-                  const res = await fetch(`/api/calendar?sector=${sector}`)
-                  if (res.ok) {
-                    const ics = await res.text()
-                    const events = getEventsForDate(ics, today, sector)
-                    results.push(`${sector}: ${events.length} walks today`)
-                  } else {
-                    results.push(`${sector}: API returned ${res.status} (check calendar URL env vars)`)
-                  }
-                } catch {
-                  results.push(`${sector}: API unreachable (set PLATEAU_CALENDAR_URL / LAURIER_CALENDAR_URL)`)
+              try {
+                const res = await fetch(`/api/acuity?date=${today}`)
+                if (res.ok) {
+                  const events = await res.json()
+                  setSyncing(false)
+                  alert(`Acuity sync OK: ${events.length} appointments today`)
+                } else {
+                  const err = await res.json().catch(() => ({}))
+                  setSyncing(false)
+                  alert(`Acuity returned ${res.status}: ${err.error || 'Check ACUITY_USER_ID and ACUITY_API_KEY env vars'}`)
                 }
+              } catch {
+                setSyncing(false)
+                alert('Acuity API unreachable. Set ACUITY_USER_ID and ACUITY_API_KEY in Vercel env vars.')
               }
-
-              setSyncing(false)
-              alert('Calendar sync check:\n\n' + results.join('\n'))
             }}
             className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-semibold shadow-sm active:bg-gray-50"
           >
