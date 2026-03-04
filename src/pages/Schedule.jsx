@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import Header from '../components/Header'
 import WalkCard from '../components/WalkCard'
 import DogDrawer from '../components/DogDrawer'
@@ -18,9 +18,6 @@ function uid() { return ++_idCounter }
 
 export default function Schedule() {
   const { profile } = useAuth()
-  const [dogs, setDogs] = useState([])
-  const [groups, setGroups] = useState([])
-  const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [logGroup, setLogGroup] = useState(null)
   const [loggedIds, setLoggedIds] = useState(new Set())
@@ -30,15 +27,12 @@ export default function Schedule() {
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
   }, [])
 
-  // Parse dog CSV on mount
-  useEffect(() => {
-    const parsed = parseDogsCSV(dogsCSVRaw)
-    setDogs(parsed)
-  }, [])
+  // Parse dog CSV (static data, computed once)
+  const dogs = useMemo(() => parseDogsCSV(dogsCSVRaw), [])
 
-  // Parse ICS files once dogs are loaded
-  useEffect(() => {
-    if (dogs.length === 0) return
+  // Parse ICS files and build groups from dogs + profile
+  const groups = useMemo(() => {
+    if (dogs.length === 0) return []
 
     const sector = profile?.sector || 'both'
     let allEvents = []
@@ -73,10 +67,10 @@ export default function Schedule() {
       }
     })
 
-    const grouped = groupEventsByTimeSlot(enriched)
-    setGroups(grouped)
-    setLoading(false)
+    return groupEventsByTimeSlot(enriched)
   }, [dogs, today, profile])
+
+  const loading = groups.length === 0 && dogs.length === 0
 
   function handleLogged(ids) {
     setLoggedIds((prev) => {
@@ -139,7 +133,7 @@ export default function Schedule() {
 
       {/* Dog profile drawer */}
       {selectedEvent && (
-        <DogDrawer event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+        <DogDrawer key={selectedEvent._id} event={selectedEvent} onClose={() => setSelectedEvent(null)} />
       )}
 
       {/* Walk log modal */}

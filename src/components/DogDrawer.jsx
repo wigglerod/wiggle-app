@@ -17,12 +17,6 @@ export default function DogDrawer({ event, onClose }) {
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError] = useState(false)
 
-  // Reset door reveal when event changes
-  useEffect(() => {
-    setDoorRevealed(false)
-    setImgError(false)
-  }, [event])
-
   // Trap scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = 'hidden'

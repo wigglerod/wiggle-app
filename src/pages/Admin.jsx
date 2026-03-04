@@ -148,10 +148,6 @@ export default function Admin() {
     if (!isAdmin) navigate('/')
   }, [isAdmin, navigate])
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   async function fetchData() {
     setLoading(true)
     const [{ data: dogsData }, { data: logsData }] = await Promise.all([
@@ -162,6 +158,12 @@ export default function Admin() {
     setLogs(logsData || [])
     setLoading(false)
   }
+
+  /* eslint-disable react-hooks/set-state-in-effect -- fetch from external DB on mount */
+  useEffect(() => {
+    fetchData()
+  }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function deleteDog(id) {
     if (!confirm('Delete this dog profile?')) return
