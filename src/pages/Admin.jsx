@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { getEventsForDate } from '../lib/parseICS'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -258,14 +259,30 @@ export default function Admin() {
           <button
             onClick={async () => {
               setSyncing(true)
-              // Phase 2: trigger Google Sheets / Calendar sync
-              await new Promise((r) => setTimeout(r, 1200))
+              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+              const results = []
+
+              for (const sector of ['plateau', 'laurier']) {
+                try {
+                  const res = await fetch(`/api/calendar?sector=${sector}`)
+                  if (res.ok) {
+                    const ics = await res.text()
+                    const events = getEventsForDate(ics, today, sector)
+                    results.push(`${sector}: ${events.length} walks today`)
+                  } else {
+                    results.push(`${sector}: API returned ${res.status} (check calendar URL env vars)`)
+                  }
+                } catch {
+                  results.push(`${sector}: API unreachable (set PLATEAU_CALENDAR_URL / LAURIER_CALENDAR_URL)`)
+                }
+              }
+
               setSyncing(false)
-              alert('Sync complete (live sync enabled in Phase 2)')
+              alert('Calendar sync check:\n\n' + results.join('\n'))
             }}
             className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-semibold shadow-sm active:bg-gray-50"
           >
-            {syncing ? '⏳' : '🔄'} Sync
+            {syncing ? '...' : 'Sync'}
           </button>
         </div>
 

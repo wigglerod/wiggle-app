@@ -1,4 +1,8 @@
 {
+  "framework": "vite",
+  "devCommand": "npx vite",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
   "headers": [
     {

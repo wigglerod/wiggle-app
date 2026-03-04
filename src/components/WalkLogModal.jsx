@@ -32,21 +32,34 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
     setSaving(true)
     setError(null)
 
-    const logs = group.events
-      .filter((ev) => selectedDogs.has(ev._id))
-      .map((ev) => ({
+    const selected = group.events.filter((ev) => selectedDogs.has(ev._id))
+    const matched = selected.filter((ev) => ev.dog?.id)
+    const unmatched = selected.filter((ev) => !ev.dog?.id)
+
+    if (matched.length > 0) {
+      const logs = matched.map((ev) => ({
         walker_id: user?.id,
-        dog_id: ev.dog?.id || null,
+        dog_id: ev.dog.id,
         walk_date: group.startTime.toISOString().split('T')[0],
         status,
         notes: notes.trim() || null,
       }))
 
-    const { error: dbError } = await supabase.from('walk_logs').insert(logs)
+      const { error: dbError } = await supabase.from('walk_logs').insert(logs)
 
-    if (dbError) {
-      // In dev mode without Supabase, still mark as logged locally
-      console.warn('Supabase insert failed (dev mode?):', dbError.message)
+      if (dbError) {
+        console.warn('Walk log insert failed:', dbError.message)
+        setError('Failed to save walk log. Please try again.')
+        setSaving(false)
+        return
+      }
+    }
+
+    if (unmatched.length > 0) {
+      console.warn(
+        'Skipped logging for unmatched dogs:',
+        unmatched.map((ev) => ev.displayName).join(', ')
+      )
     }
 
     onLogged([...selectedDogs])
@@ -95,6 +108,13 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
               </button>
             ))}
           </div>
+
+          {/* Warning for unmatched dogs */}
+          {group.events.some((ev) => selectedDogs.has(ev._id) && !ev.dog?.id) && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4 text-xs text-amber-700">
+              Dogs without a profile won't be saved to the walk log. Tap their name in the schedule to create a profile.
+            </div>
+          )}
 
           {/* Status selection */}
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Walk Status</p>

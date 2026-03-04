@@ -1,23 +1,27 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Header from '../components/Header'
 import WalkCard from '../components/WalkCard'
 import DogDrawer from '../components/DogDrawer'
 import WalkLogModal from '../components/WalkLogModal'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import { getEventsForDate, groupEventsByTimeSlot } from '../lib/parseICS'
-import { extractDogName, matchDog, parseDogsCSV } from '../lib/matchDogs'
+import { extractDogName, matchDog } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
 
-// Dev mode: import ICS and CSV as raw text
+// Static ICS fallback (used when live API is unavailable)
 import plateauICS from '../data/plateau.ics?raw'
 import laurierICS from '../data/laurier.ics?raw'
-import dogsCSVRaw from '../data/dogs.csv?raw'
 
 let _idCounter = 0
 function uid() { return ++_idCounter }
 
 export default function Schedule() {
   const { profile } = useAuth()
+  const [dogs, setDogs] = useState([])
+  const [dogsReady, setDogsReady] = useState(false)
+  const [groups, setGroups] = useState([])
+  const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [logGroup, setLogGroup] = useState(null)
   const [loggedIds, setLoggedIds] = useState(new Set())
@@ -27,50 +31,97 @@ export default function Schedule() {
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
   }, [])
 
-  // Parse dog CSV (static data, computed once)
-  const dogs = useMemo(() => parseDogsCSV(dogsCSVRaw), [])
+  // Fetch dogs from Supabase (single source of truth)
+  useEffect(() => {
+    async function fetchDogs() {
+      const { data, error } = await supabase
+        .from('dogs')
+        .select('*')
+        .eq('active', true)
+        .order('name')
 
-  // Parse ICS files and build groups from dogs + profile
-  const groups = useMemo(() => {
-    if (dogs.length === 0) return []
-
-    const sector = profile?.sector || 'both'
-    let allEvents = []
-
-    if (sector === 'Plateau' || sector === 'both') {
-      const evs = getEventsForDate(plateauICS, today, 'Plateau')
-      allEvents = allEvents.concat(evs)
-    }
-    if (sector === 'Laurier' || sector === 'both') {
-      const evs = getEventsForDate(laurierICS, today, 'Laurier')
-      allEvents = allEvents.concat(evs)
-    }
-
-    // Enrich events with dog matching
-    const enriched = allEvents.map((ev) => {
-      const rawName = extractDogName(ev.summary)
-      const { dog, matchType } = matchDog(rawName, dogs)
-      const calendarDoorCode = extractDoorCode(ev.description)
-
-      // Extract breed (words after first word in summary)
-      const parts = ev.summary.trim().split(/\s+/)
-      const breed = parts.length > 1 ? parts.slice(1).join(' ') : null
-
-      return {
-        ...ev,
-        _id: uid(),
-        displayName: rawName,
-        breed,
-        dog,
-        matchType,
-        calendarDoorCode,
+      if (error) {
+        console.warn('Failed to fetch dogs from Supabase:', error.message)
+        setDogs([])
+      } else {
+        setDogs(data || [])
       }
-    })
+      setDogsReady(true)
+    }
+    fetchDogs()
+  }, [])
 
-    return groupEventsByTimeSlot(enriched)
-  }, [dogs, today, profile])
+  // Fetch ICS (live with static fallback) and build schedule
+  useEffect(() => {
+    if (!dogsReady) return
 
-  const loading = groups.length === 0 && dogs.length === 0
+    async function buildSchedule() {
+      const sector = profile?.sector || 'both'
+      let allEvents = []
+
+      // Try Acuity REST API first
+      let usedAcuity = false
+      try {
+        const res = await fetch(`/api/acuity?date=${today}`)
+        if (res.ok) {
+          const acuityEvents = await res.json()
+          allEvents = acuityEvents
+            .filter((ev) => sector === 'both' || ev.sector === sector)
+            .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
+          usedAcuity = true
+        }
+      } catch {
+        // Acuity unavailable — fall through to ICS
+      }
+
+      // Fall back to ICS (live Google Calendar or static files)
+      if (!usedAcuity) {
+        async function getICS(sectorName) {
+          try {
+            const res = await fetch(`/api/calendar?sector=${sectorName.toLowerCase()}`)
+            if (res.ok) return await res.text()
+          } catch {
+            // API unavailable — fall through to static
+          }
+          return sectorName === 'Plateau' ? plateauICS : laurierICS
+        }
+
+        if (sector === 'Plateau' || sector === 'both') {
+          const ics = await getICS('Plateau')
+          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Plateau'))
+        }
+        if (sector === 'Laurier' || sector === 'both') {
+          const ics = await getICS('Laurier')
+          allEvents = allEvents.concat(getEventsForDate(ics, today, 'Laurier'))
+        }
+      }
+
+      // Enrich events with dog matching (now matching against Supabase dogs)
+      const enriched = allEvents.map((ev) => {
+        const rawName = extractDogName(ev.summary)
+        const { dog, matchType } = matchDog(rawName, dogs)
+        const calendarDoorCode = extractDoorCode(ev.description)
+        const parts = ev.summary.trim().split(/\s+/)
+        const breed = parts.length > 1 ? parts.slice(1).join(' ') : null
+
+        return {
+          ...ev,
+          _id: uid(),
+          displayName: rawName,
+          breed,
+          dog,
+          matchType,
+          calendarDoorCode,
+        }
+      })
+
+      const grouped = groupEventsByTimeSlot(enriched)
+      setGroups(grouped)
+      setLoading(false)
+    }
+
+    buildSchedule()
+  }, [dogsReady, dogs, today, profile])
 
   function handleLogged(ids) {
     setLoggedIds((prev) => {
@@ -78,6 +129,24 @@ export default function Schedule() {
       ids.forEach((id) => next.add(id))
       return next
     })
+  }
+
+  function handleDogUpdated(updatedDog) {
+    // Update the dog in local state so drawer and cards reflect changes immediately
+    setDogs((prev) => prev.map((d) => (d.id === updatedDog.id ? updatedDog : d)))
+    // Also update the dog reference in any group events
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        events: g.events.map((ev) =>
+          ev.dog?.id === updatedDog.id ? { ...ev, dog: updatedDog } : ev
+        ),
+      }))
+    )
+    // Update the selected event if it's the one being edited
+    setSelectedEvent((prev) =>
+      prev?.dog?.id === updatedDog.id ? { ...prev, dog: updatedDog } : prev
+    )
   }
 
   const totalWalks = groups.reduce((sum, g) => sum + g.events.length, 0)
@@ -104,7 +173,7 @@ export default function Schedule() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="w-8 h-8 border-3 border-[#E8634A] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">Loading schedule…</p>
+            <p className="text-sm text-gray-400">Loading schedule...</p>
           </div>
         )}
 
@@ -133,7 +202,11 @@ export default function Schedule() {
 
       {/* Dog profile drawer */}
       {selectedEvent && (
-        <DogDrawer key={selectedEvent._id} event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+        <DogDrawer
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onDogUpdated={handleDogUpdated}
+        />
       )}
 
       {/* Walk log modal */}
