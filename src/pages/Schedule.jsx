@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
@@ -23,13 +23,21 @@ export default function Schedule() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [logGroup, setLogGroup] = useState(null)
   const [loggedIds, setLoggedIds] = useState(new Set())
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [pullY, setPullY] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const isPulling = useRef(false)
+
+  const PULL_THRESHOLD = 64
+  const PULL_MAX = 90
 
   const today = useMemo(() => {
     const d = new Date()
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
   }, [])
 
-  // Fetch dogs from Supabase (single source of truth)
+  // Fetch dogs from Supabase — re-runs on pull-to-refresh
   useEffect(() => {
     async function fetchDogs() {
       const { data, error } = await supabase
@@ -47,7 +55,8 @@ export default function Schedule() {
       setDogsReady(true)
     }
     fetchDogs()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   // Fetch schedule from Acuity and build walk groups
   useEffect(() => {
@@ -122,6 +131,42 @@ export default function Schedule() {
     )
   }
 
+  // Clear refreshing indicator once loading finishes
+  useEffect(() => {
+    if (!loading) setRefreshing(false)
+  }, [loading])
+
+  function handleTouchStart(e) {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY
+      isPulling.current = true
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (!isPulling.current) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) {
+      setPullY(Math.min(delta * 0.45, PULL_MAX))
+    } else {
+      isPulling.current = false
+      setPullY(0)
+    }
+  }
+
+  function handleTouchEnd() {
+    if (!isPulling.current) return
+    isPulling.current = false
+    if (pullY >= PULL_THRESHOLD && !refreshing) {
+      setRefreshing(true)
+      setLoading(true)
+      setDogsReady(false)
+      setRefreshKey((k) => k + 1)
+    }
+    setPullY(0)
+    touchStartY.current = 0
+  }
+
   const totalWalks = groups.reduce((sum, g) => sum + g.events.length, 0)
   const loggedCount = groups.reduce(
     (sum, g) => sum + g.events.filter((ev) => loggedIds.has(ev._id)).length,
@@ -129,8 +174,23 @@ export default function Schedule() {
   )
 
   return (
-    <div className="min-h-screen bg-[#FFF4F1]">
+    <div
+      className="min-h-screen bg-[#FFF4F1]"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Header date={today} />
+
+      {/* Pull-to-refresh indicator */}
+      <div
+        className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
+        style={{ height: refreshing ? 88 : pullY }}
+      >
+        {(pullY > 8 || refreshing) && (
+          <LoadingDog text={refreshing ? 'Wiggling...' : pullY >= PULL_THRESHOLD ? 'Release!' : 'Pull to refresh...'} />
+        )}
+      </div>
 
       <main className="px-4 py-4 pb-24 max-w-lg mx-auto">
         {/* Progress banner */}
@@ -143,7 +203,7 @@ export default function Schedule() {
           </div>
         )}
 
-        {loading && (
+        {loading && !refreshing && (
           <div className="flex justify-center py-20">
             <LoadingDog />
           </div>
