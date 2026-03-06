@@ -29,22 +29,11 @@ export default function Header({ date }) {
     <header className="bg-white shadow-sm sticky top-0 z-30">
       <div className="px-4 py-3 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 flex items-center justify-center">
-            {/* Dog silhouette SVG placeholder */}
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8">
-              <ellipse cx="12" cy="22" rx="8" ry="5" fill="#1A1A1A"/>
-              <circle cx="20" cy="14" r="6" fill="#1A1A1A"/>
-              <ellipse cx="10" cy="18" rx="3" ry="5" fill="#1A1A1A" transform="rotate(-20 10 18)"/>
-              <ellipse cx="26" cy="20" rx="2" ry="6" fill="#1A1A1A" transform="rotate(15 26 20)"/>
-              <ellipse cx="25" cy="9" rx="2" ry="4" fill="#1A1A1A" transform="rotate(-10 25 9)"/>
-            </svg>
-          </div>
-          <div className="leading-tight">
-            <span className="text-[#E8634A] font-bold text-lg tracking-tight">WIGGLE</span>
-            <span className="text-[#1A1A1A] font-medium text-sm block -mt-1">Dog Walks</span>
-          </div>
-        </div>
+        <img
+          src="/LogoWiggleRGB-01.png"
+          alt="Wiggle Dog Walks"
+          className="h-8 w-auto object-contain"
+        />
 
         {/* Right side */}
         <div className="flex items-center gap-2">

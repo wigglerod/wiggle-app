@@ -26,19 +26,11 @@ export default function Login() {
     <div className="min-h-screen bg-[#FFF4F1] flex flex-col items-center justify-center px-6 py-12">
       {/* Logo */}
       <div className="flex flex-col items-center mb-10">
-        <div className="w-20 h-20 flex items-center justify-center mb-3">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
-            <ellipse cx="24" cy="44" rx="16" ry="10" fill="#1A1A1A"/>
-            <circle cx="40" cy="28" r="12" fill="#1A1A1A"/>
-            <ellipse cx="20" cy="36" rx="6" ry="10" fill="#1A1A1A" transform="rotate(-20 20 36)"/>
-            <ellipse cx="52" cy="40" rx="4" ry="12" fill="#1A1A1A" transform="rotate(15 52 40)"/>
-            <ellipse cx="50" cy="18" rx="4" ry="8" fill="#1A1A1A" transform="rotate(-10 50 18)"/>
-          </svg>
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          <span className="text-[#E8634A]">WIGGLE</span>
-        </h1>
-        <p className="text-[#1A1A1A] font-medium text-base mt-0.5">Dog Walks · Montréal</p>
+        <img
+          src="/LogoWiggleRGB-01.png"
+          alt="Wiggle Dog Walks"
+          className="w-48 object-contain"
+        />
       </div>
 
       {/* Form card */}

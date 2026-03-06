@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.98.0",
     "@vis.gl/react-google-maps": "^1.7.1",
     "fast-levenshtein": "^3.0.0",
+    "framer-motion": "^12.35.0",
     "ical.js": "^2.2.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
