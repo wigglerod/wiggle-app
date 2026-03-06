@@ -232,7 +232,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           groupKey="unassigned"
           eventIds={groups.unassigned || []}
           eventsMap={eventsMap}
-          onDogClick={onDogClick}
+          onDogClick={(ev) => onDogClick({ ...ev, _groupKey: 'unassigned', _groupName: 'Unassigned' })}
           activeId={activeId}
           groupName={null}
           onRename={null}
@@ -245,7 +245,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
             groupKey={String(num)}
             eventIds={groups[num] || []}
             eventsMap={eventsMap}
-            onDogClick={onDogClick}
+            onDogClick={(ev) => onDogClick({ ...ev, _groupKey: num, _groupName: groupNames[num] || `Group ${num}` })}
             activeId={activeId}
             groupName={groupNames[num] || null}
             onRename={(name) => renameGroup(num, name)}

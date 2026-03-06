@@ -1,22 +1,33 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
-function getMapsLinks(address) {
-  if (!address) return null
-  const encoded = encodeURIComponent(address)
-  return {
-    apple: `https://maps.apple.com/?q=${encoded}`,
-    google: `https://maps.google.com/?q=${encoded}`,
+// Matches the color cycle in GroupOrganizer
+const GROUP_COLORS = [
+  { bg: 'bg-blue-100',   text: 'text-blue-700'   },
+  { bg: 'bg-green-100',  text: 'text-green-700'  },
+  { bg: 'bg-purple-100', text: 'text-purple-700' },
+  { bg: 'bg-amber-100',  text: 'text-amber-700'  },
+  { bg: 'bg-rose-100',   text: 'text-rose-700'   },
+  { bg: 'bg-teal-100',   text: 'text-teal-700'   },
+]
+
+function groupBadge(groupKey, groupName) {
+  if (!groupKey || groupKey === 'unassigned') {
+    return { label: 'Unassigned', bg: 'bg-gray-100', text: 'text-gray-500' }
   }
+  const { bg, text } = GROUP_COLORS[(Number(groupKey) - 1) % GROUP_COLORS.length]
+  return { label: groupName || `Group ${groupKey}`, bg, text }
 }
 
-function isIOS() {
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+function mapsUrl(address) {
+  if (!address) return null
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
 }
 
 const EDIT_FIELDS = [
-  { key: 'address', label: 'Address' },
+  { key: 'address',   label: 'Address' },
   { key: 'door_info', label: 'Door Info / Code' },
   { key: 'must_know', label: 'Must Know', multiline: true },
   { key: 'extra_info', label: 'Extra Info', multiline: true },
@@ -25,14 +36,13 @@ const EDIT_FIELDS = [
 export default function DogDrawer({ event, onClose, onDogUpdated }) {
   const { isAdmin } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
-  const [imgError, setImgError] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState(null)
+  const [imgError, setImgError]         = useState(false)
+  const [editing, setEditing]           = useState(false)
+  const [creating, setCreating]         = useState(false)
+  const [form, setForm]                 = useState({})
+  const [saving, setSaving]             = useState(false)
+  const [saveError, setSaveError]       = useState(null)
 
-  /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when event prop changes */
   useEffect(() => {
     setDoorRevealed(false)
     setImgError(false)
@@ -41,18 +51,17 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setSaveError(null)
     if (event?.dog) {
       setForm({
-        name: event.dog.name || '',
-        address: event.dog.address || '',
+        name:      event.dog.name      || '',
+        address:   event.dog.address   || '',
         door_info: event.dog.door_info || '',
         must_know: event.dog.must_know || '',
         extra_info: event.dog.extra_info || '',
-        sector: event.dog.sector || event.sector || 'Plateau',
+        sector:    event.dog.sector || event.sector || 'Plateau',
       })
     }
   }, [event])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Trap scroll when drawer is open
+  // Trap body scroll while open
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -60,10 +69,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   function startCreate() {
     setForm({
-      name: event.displayName || '',
-      address: event.location || '',
-      door_info: event.calendarDoorCode || '',
-      must_know: '',
+      name:      event.displayName       || '',
+      address:   event.location          || '',
+      door_info: event.calendarDoorCode  || '',
+      must_know:  '',
       extra_info: '',
       sector: event.sector || 'Plateau',
     })
@@ -76,20 +85,13 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setSaveError(null)
 
     if (creating) {
-      // Create new dog profile
-      const { data, error } = await supabase
-        .from('dogs')
-        .insert([form])
-        .select()
-        .single()
-
+      const { data, error } = await supabase.from('dogs').insert([form]).select().single()
       setSaving(false)
       if (error) { setSaveError(error.message); return }
       onDogUpdated?.(data)
       setEditing(false)
       setCreating(false)
     } else {
-      // Update existing dog
       const { address, door_info, must_know, extra_info } = form
       const { data, error } = await supabase
         .from('dogs')
@@ -97,7 +99,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
         .eq('id', event.dog.id)
         .select()
         .single()
-
       setSaving(false)
       if (error) { setSaveError(error.message); return }
       onDogUpdated?.(data)
@@ -107,42 +108,51 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   if (!event) return null
 
-  const dog = creating ? null : event.dog
-  const address = editing ? form.address : (event.location || dog?.address || '')
-  const maps = getMapsLinks(address)
-  const mapsUrl = isIOS() ? maps?.apple : maps?.google
-  const doorCode = editing ? form.door_info : (event.calendarDoorCode || dog?.door_info || null)
-  const mustKnow = editing ? form.must_know : (dog?.must_know || null)
-  const extraInfo = editing ? form.extra_info : (dog?.extra_info || null)
-  const photoUrl = dog?.photo_url && !imgError ? dog.photo_url : null
+  const dog        = creating ? null : event.dog
+  const address    = editing ? form.address : (dog?.address || event.location || '')
+  const doorCode   = editing ? form.door_info : (dog?.door_info || event.calendarDoorCode || null)
+  const mustKnow   = editing ? form.must_know  : (dog?.must_know  || null)
+  const extraInfo  = editing ? form.extra_info : (dog?.extra_info  || null)
+  const photoUrl   = dog?.photo_url && !imgError ? dog.photo_url : null
+  const badge      = groupBadge(event._groupKey, event._groupName)
+  const directionsUrl = mapsUrl(address)
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Bottom sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+      {/* Slide-up sheet */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col"
+      >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>
 
-        {/* Close button */}
+        {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-lg font-medium active:bg-gray-200"
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200"
         >
-          x
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
         </button>
 
-        <div className="px-5 pb-8 pt-2">
-          {/* Dog photo / avatar + header */}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 pb-10 pt-2">
+
+          {/* ── Header: photo + name + badges ── */}
           <div className="flex items-center gap-4 mb-5">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center flex-shrink-0">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center flex-shrink-0 shadow-sm">
               {photoUrl ? (
                 <img
                   src={photoUrl}
@@ -154,25 +164,33 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 <span className="text-4xl">🐶</span>
               )}
             </div>
+
             <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold text-[#1A1A1A]">{event.displayName}</h2>
+              <h2 className="text-xl font-bold text-[#1A1A1A] leading-tight">{event.displayName}</h2>
               {event.breed && (
                 <p className="text-sm text-gray-400 capitalize mt-0.5">{event.breed}</p>
               )}
-              {!editing && event.matchType === 'none' && (
-                <span className="inline-flex items-center gap-1 mt-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                  Profile Missing
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {/* Group badge */}
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
+                  {badge.label}
                 </span>
-              )}
-              {!editing && event.matchType === 'fuzzy' && (
-                <span className="inline-flex items-center gap-1 mt-1 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">
-                  ~ Fuzzy match
-                </span>
-              )}
+                {/* Match badges */}
+                {!editing && event.matchType === 'none' && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                    Profile Missing
+                  </span>
+                )}
+                {!editing && event.matchType === 'fuzzy' && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">
+                    Fuzzy match
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* ========== EDIT MODE ========== */}
+          {/* ── Edit mode ── */}
           {editing && (
             <div className="flex flex-col gap-3 mb-4">
               {creating && (
@@ -208,7 +226,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                   </div>
                 </>
               )}
-
               {EDIT_FIELDS.map(({ key, label, multiline }) => (
                 <div key={key}>
                   <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{label}</label>
@@ -229,9 +246,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                   )}
                 </div>
               ))}
-
               {saveError && <p className="text-sm text-red-500">{saveError}</p>}
-
               <div className="flex gap-2 mt-1">
                 <button
                   onClick={() => { setEditing(false); setCreating(false); setSaveError(null) }}
@@ -250,96 +265,113 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
             </div>
           )}
 
-          {/* ========== VIEW MODE ========== */}
+          {/* ── View mode ── */}
           {!editing && (
-            <>
-              {/* Must Know */}
+            <div className="flex flex-col gap-3">
+
+              {/* Must Know alert */}
               {mustKnow && (
-                <div className="bg-[#E8634A] text-white rounded-xl p-3 mb-4 flex gap-2">
-                  <span className="text-lg flex-shrink-0">!</span>
+                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start">
+                  <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide opacity-80 mb-0.5">Must Know</p>
-                    <p className="text-sm font-medium">{mustKnow}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Must Know</p>
+                    <p className="text-sm font-medium leading-snug">{mustKnow}</p>
                   </div>
                 </div>
               )}
 
-              {/* Address */}
-              {address && (
-                <div className="bg-gray-50 rounded-xl p-3 mb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <span className="text-base mt-0.5">📍</span>
-                      <p className="text-sm text-gray-700 leading-snug">{address}</p>
-                    </div>
-                    {mapsUrl && (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 bg-[#E8634A] text-white text-xs font-semibold px-3 py-1.5 rounded-lg active:bg-[#d4552d]"
-                      >
-                        Open Maps
-                      </a>
-                    )}
-                  </div>
-                  {maps && (
-                    <div className="flex gap-3 mt-2 ml-6">
-                      <a href={maps.apple} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-gray-400 underline underline-offset-2">Apple Maps</a>
-                      <a href={maps.google} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-gray-400 underline underline-offset-2">Google Maps</a>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Door code */}
+              {/* Door code — tap to reveal, then show large */}
               {doorCode && (
-                <div className="bg-gray-50 rounded-xl p-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">🔑</span>
-                    <span className="text-sm text-gray-600 font-medium">Door / Access</span>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0">
+                      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                    </svg>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Door / Access Code</span>
                   </div>
                   {doorRevealed ? (
-                    <p className="mt-2 ml-6 text-sm font-mono font-semibold text-[#1A1A1A] bg-white rounded-lg px-3 py-2 border border-gray-200">
-                      {doorCode}
-                    </p>
+                    <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center">
+                      <p className="text-2xl font-mono font-bold text-[#1A1A1A] tracking-widest">{doorCode}</p>
+                    </div>
                   ) : (
                     <button
                       onClick={() => setDoorRevealed(true)}
-                      className="mt-2 ml-6 text-xs text-[#E8634A] font-semibold underline underline-offset-2 active:opacity-70"
+                      className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors"
                     >
-                      Tap to reveal code
+                      Tap to Reveal Code
                     </button>
                   )}
                 </div>
               )}
 
-              {/* Extra info */}
+              {/* Address */}
+              {address && (
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      <p className="text-sm text-gray-700 leading-snug">{address}</p>
+                    </div>
+                    {directionsUrl && (
+                      <a
+                        href={directionsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 bg-[#E8634A] text-white text-xs font-semibold px-3 py-1.5 rounded-lg active:bg-[#d4552d]"
+                      >
+                        Directions
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
               {extraInfo && (
-                <div className="bg-gray-50 rounded-xl p-3 mb-3">
+                <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
-                    <span className="text-base">📝</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
                     <div>
-                      <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Extra Info</p>
-                      <p className="text-sm text-gray-700">{extraInfo}</p>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Notes</p>
+                      <p className="text-sm text-gray-700 leading-snug">{extraInfo}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Calendar description (raw, if no dog profile) */}
+              {/* Emergency contact */}
+              {(dog?.emergency_contact || dog?.emergency_phone) && (
+                <div className="bg-red-50 rounded-2xl p-4">
+                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-2">Emergency Contact</p>
+                  {dog.emergency_contact && (
+                    <p className="text-sm font-semibold text-gray-800 mb-0.5">{dog.emergency_contact}</p>
+                  )}
+                  {dog.emergency_phone && (
+                    <a
+                      href={`tel:${dog.emergency_phone}`}
+                      className="text-sm font-bold text-[#E8634A] active:opacity-70"
+                    >
+                      {dog.emergency_phone}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Calendar notes (no profile) */}
               {!dog && event.description && (
-                <div className="bg-gray-50 rounded-xl p-3 mb-3">
-                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Calendar Notes</p>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{event.description}</p>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Calendar Notes</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">{event.description}</p>
                 </div>
               )}
 
               {/* Admin actions */}
               {isAdmin && (
-                <div className="mt-4">
+                <div className="mt-1">
                   {dog ? (
                     <button
                       onClick={() => setEditing(true)}
@@ -357,10 +389,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                   )}
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </>
   )
 }
