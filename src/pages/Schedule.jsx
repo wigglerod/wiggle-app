@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
+import BottomTabs from '../components/BottomTabs'
 import WalkCard from '../components/WalkCard'
 import DogDrawer from '../components/DogDrawer'
 import WalkLogModal from '../components/WalkLogModal'
@@ -188,6 +189,8 @@ export default function Schedule() {
           onLogged={handleLogged}
         />
       )}
+
+      <BottomTabs />
     </div>
   )
 }

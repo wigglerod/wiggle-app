@@ -132,6 +132,25 @@ export default function Dashboard() {
       <Header date={today} />
 
       <main className="px-4 py-4 max-w-lg mx-auto">
+        {/* Organizer / Map pill toggle */}
+        {!loading && allEvents.length > 0 && (
+          <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100 mb-4">
+            {['organizer', 'map'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${
+                  activeTab === tab
+                    ? 'bg-[#E8634A] text-white shadow-sm'
+                    : 'text-gray-500'
+                }`}
+              >
+                {tab === 'organizer' ? '📋 Organizer' : '🗺️ Map'}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Progress banner */}
         {!loading && allEvents.length > 0 && (
           <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
@@ -189,8 +208,7 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Bottom tabs */}
-      <BottomTabs active={activeTab} onChange={setActiveTab} />
+      <BottomTabs />
 
       {/* Dog profile drawer */}
       {selectedEvent && (

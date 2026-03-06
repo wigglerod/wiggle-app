@@ -4,6 +4,8 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
+import DogsPage from './pages/DogsPage'
+import SettingsPage from './pages/SettingsPage'
 import LoadingDog from './components/LoadingDog'
 
 function ProtectedRoute({ children }) {
@@ -66,6 +68,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dogs"
+        element={
+          <ProtectedRoute>
+            <DogsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />
