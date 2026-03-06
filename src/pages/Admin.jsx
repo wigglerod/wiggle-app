@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import LoadingDog from '../components/LoadingDog'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -284,7 +285,7 @@ export default function Admin() {
 
         {loading && (
           <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-3 border-[#E8634A] border-t-transparent rounded-full animate-spin" />
+            <LoadingDog />
           </div>
         )}
 

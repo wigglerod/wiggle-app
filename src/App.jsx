@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
 import Admin from './pages/Admin'
+import LoadingDog from './components/LoadingDog'
 
 function ProtectedRoute({ children }) {
   const { session, isLoading } = useAuth()
@@ -11,10 +12,7 @@ function ProtectedRoute({ children }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#FFF4F1] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-[#E8634A] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Loading…</p>
-        </div>
+        <LoadingDog />
       </div>
     )
   }
@@ -36,7 +34,7 @@ function AppRoutes() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#FFF4F1] flex items-center justify-center">
-        <div className="w-10 h-10 border-3 border-[#E8634A] border-t-transparent rounded-full animate-spin" />
+        <LoadingDog />
       </div>
     )
   }

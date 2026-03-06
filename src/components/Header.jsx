@@ -30,7 +30,7 @@ export default function Header({ date }) {
       <div className="px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <img
-          src="/LogoWiggleRGB-01.png"
+          src="/WiggleLogo.png"
           alt="Wiggle Dog Walks"
           className="h-8 w-auto object-contain"
         />

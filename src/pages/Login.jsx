@@ -27,7 +27,7 @@ export default function Login() {
       {/* Logo */}
       <div className="flex flex-col items-center mb-10">
         <img
-          src="/LogoWiggleRGB-01.png"
+          src="/WiggleLogo.png"
           alt="Wiggle Dog Walks"
           className="w-48 object-contain"
         />
