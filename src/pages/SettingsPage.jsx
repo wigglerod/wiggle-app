@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import BottomTabs from '../components/BottomTabs'
+import { roleLabel, roleColor } from '../lib/roles'
 
 const SECTOR_COLORS = {
   Plateau: 'bg-amber-100 text-amber-700',
@@ -45,6 +46,11 @@ export default function SettingsPage() {
                 {profile?.full_name || user?.email || 'Walker'}
               </p>
               <p className="text-sm text-gray-400 truncate">{user?.email}</p>
+              {profile?.role && (
+                <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 ${roleColor(profile.role)}`}>
+                  {roleLabel(profile.role)}
+                </span>
+              )}
             </div>
           </div>
         </div>

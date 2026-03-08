@@ -14,6 +14,12 @@ import { extractDoorCode } from '../lib/extractDoorCode'
 let _idCounter = 0
 function uid() { return ++_idCounter }
 
+function torontoDate(offset = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+}
+
 export default function Schedule() {
   const { profile } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -26,16 +32,14 @@ export default function Schedule() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [dayOffset, setDayOffset] = useState(0) // 0 = today, 1 = tomorrow
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
   const PULL_THRESHOLD = 64
   const PULL_MAX = 90
 
-  const today = useMemo(() => {
-    const d = new Date()
-    return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-  }, [])
+  const selectedDate = useMemo(() => torontoDate(dayOffset), [dayOffset])
 
   // Fetch dogs from Supabase — re-runs on pull-to-refresh
   useEffect(() => {
@@ -66,7 +70,7 @@ export default function Schedule() {
       let allEvents = []
 
       try {
-        const res = await fetch(`/api/acuity?date=${today}`)
+        const res = await fetch(`/api/acuity?date=${selectedDate}`)
         if (res.ok) {
           const acuityEvents = await res.json()
           allEvents = acuityEvents
@@ -102,7 +106,15 @@ export default function Schedule() {
     }
 
     buildSchedule()
-  }, [dogsReady, dogs, today, profile])
+  }, [dogsReady, dogs, selectedDate, profile])
+
+  function switchDay(offset) {
+    if (offset === dayOffset) return
+    setDayOffset(offset)
+    setLoading(true)
+    setGroups([])
+    setLoggedIds(new Set())
+  }
 
   function handleLogged(ids) {
     setLoggedIds((prev) => {
@@ -113,9 +125,7 @@ export default function Schedule() {
   }
 
   function handleDogUpdated(updatedDog) {
-    // Update the dog in local state so drawer and cards reflect changes immediately
     setDogs((prev) => prev.map((d) => (d.id === updatedDog.id ? updatedDog : d)))
-    // Also update the dog reference in any group events
     setGroups((prev) =>
       prev.map((g) => ({
         ...g,
@@ -124,7 +134,6 @@ export default function Schedule() {
         ),
       }))
     )
-    // Update the selected event if it's the one being edited
     setSelectedEvent((prev) =>
       prev?.dog?.id === updatedDog.id ? { ...prev, dog: updatedDog } : prev
     )
@@ -172,6 +181,8 @@ export default function Schedule() {
     0
   )
 
+  const dayLabel = dayOffset === 0 ? "Today's" : "Tomorrow's"
+
   return (
     <div
       className="min-h-screen bg-[#FFF4F1]"
@@ -179,7 +190,7 @@ export default function Schedule() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <Header date={today} />
+      <Header date={selectedDate} />
 
       {/* Pull-to-refresh indicator */}
       <div
@@ -192,10 +203,27 @@ export default function Schedule() {
       </div>
 
       <main className="px-4 py-4 pb-24 max-w-lg mx-auto">
+        {/* Today / Tomorrow toggle */}
+        <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-gray-200">
+          {[{ label: 'Today', offset: 0 }, { label: 'Tomorrow', offset: 1 }].map(({ label, offset }) => (
+            <button
+              key={offset}
+              onClick={() => switchDay(offset)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                dayOffset === offset
+                  ? 'bg-[#E8634A] text-white shadow-sm'
+                  : 'text-gray-500 active:bg-gray-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Progress banner */}
         {!loading && totalWalks > 0 && (
           <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
-            <span className="text-sm text-gray-500">Today's walks</span>
+            <span className="text-sm text-gray-500">{dayLabel} walks</span>
             <span className="text-sm font-bold text-[#E8634A]">
               {loggedCount}/{totalWalks} logged
             </span>
@@ -211,8 +239,12 @@ export default function Schedule() {
         {!loading && groups.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <span className="text-5xl">🐾</span>
-            <p className="text-lg font-semibold text-gray-600">No walks today</p>
-            <p className="text-sm text-gray-400">Enjoy your day off!</p>
+            <p className="text-lg font-semibold text-gray-600">
+              No walks {dayOffset === 0 ? 'today' : 'tomorrow'}
+            </p>
+            <p className="text-sm text-gray-400">
+              {dayOffset === 0 ? 'Enjoy your day off!' : 'Nothing scheduled yet'}
+            </p>
           </div>
         )}
 

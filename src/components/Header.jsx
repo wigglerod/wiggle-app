@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import { roleLabel, roleColor } from '../lib/roles'
 
 const SECTOR_COLORS = {
   Plateau: 'bg-amber-100 text-amber-800',
@@ -37,6 +38,11 @@ export default function Header({ date }) {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          {profile?.role && (
+            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${roleColor(profile.role)}`}>
+              {roleLabel(profile.role)}
+            </span>
+          )}
           {isAdmin && (
             <a
               href="/admin"
