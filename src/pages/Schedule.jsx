@@ -43,8 +43,7 @@ export default function Schedule() {
       const { data, error } = await supabase
         .from('dogs')
         .select('*')
-        .eq('active', true)
-        .order('name')
+        .order('dog_name')
 
       if (error) {
         console.warn('Failed to fetch dogs from Supabase:', error.message)

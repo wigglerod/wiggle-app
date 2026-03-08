@@ -8,14 +8,18 @@ const SECTORS = ['Plateau', 'Laurier']
 
 function DogFormModal({ dog, onClose, onSaved }) {
   const [form, setForm] = useState({
-    name: dog?.name || '',
-    last_name: dog?.last_name || '',
-    address: dog?.address || '',
-    door_info: dog?.door_info || '',
-    must_know: dog?.must_know || '',
-    extra_info: dog?.extra_info || '',
-    email: dog?.email || '',
-    sector: dog?.sector || 'Plateau',
+    dog_name:    dog?.dog_name    || '',
+    owner_first: dog?.owner_first || '',
+    owner_last:  dog?.owner_last  || '',
+    breed:       dog?.breed       || '',
+    address:     dog?.address     || '',
+    door_code:   dog?.door_code   || '',
+    phone:       dog?.phone       || '',
+    email:       dog?.email       || '',
+    notes:       dog?.notes       || '',
+    bff:         dog?.bff         || '',
+    goals:       dog?.goals       || '',
+    sector:      dog?.sector      || 'Plateau',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -25,7 +29,7 @@ function DogFormModal({ dog, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    if (!form.name.trim()) { setError('Name is required'); return }
+    if (!form.dog_name.trim()) { setError('Name is required'); return }
     setSaving(true)
     setError(null)
 
@@ -44,13 +48,17 @@ function DogFormModal({ dog, onClose, onSaved }) {
   }
 
   const fields = [
-    { key: 'name', label: 'Dog Name', required: true },
-    { key: 'last_name', label: 'Last Name (admin only)' },
-    { key: 'address', label: 'Address' },
-    { key: 'door_info', label: 'Door Info / Code' },
-    { key: 'must_know', label: 'Must Know', multiline: true },
-    { key: 'extra_info', label: 'Extra Info', multiline: true },
-    { key: 'email', label: 'Email (admin only)', type: 'email' },
+    { key: 'dog_name',    label: 'Dog Name', required: true },
+    { key: 'breed',       label: 'Breed' },
+    { key: 'owner_first', label: 'Owner First Name' },
+    { key: 'owner_last',  label: 'Owner Last Name' },
+    { key: 'address',     label: 'Address' },
+    { key: 'door_code',   label: 'Door / Access Code' },
+    { key: 'phone',       label: 'Phone' },
+    { key: 'email',       label: 'Email', type: 'email' },
+    { key: 'notes',       label: 'Notes', multiline: true },
+    { key: 'bff',         label: 'BFF (Best Friends)' },
+    { key: 'goals',       label: 'Goals' },
   ]
 
   return (
@@ -152,8 +160,8 @@ export default function Admin() {
   async function fetchData() {
     setLoading(true)
     const [{ data: dogsData }, { data: logsData }] = await Promise.all([
-      supabase.from('dogs').select('*').order('name'),
-      supabase.from('walk_logs').select('*, dogs(name), profiles(email)').order('walk_date', { ascending: false }).limit(50),
+      supabase.from('dogs').select('*').order('dog_name'),
+      supabase.from('walk_logs').select('*, dogs(dog_name), profiles(email)').order('walk_date', { ascending: false }).limit(50),
     ])
     setDogs(dogsData || [])
     setLogs(logsData || [])
@@ -301,7 +309,7 @@ export default function Admin() {
                   {/* Photo */}
                   <label className="w-12 h-12 rounded-xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center cursor-pointer flex-shrink-0 relative group">
                     {dog.photo_url ? (
-                      <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                      <img src={dog.photo_url} alt={dog.dog_name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-2xl">🐶</span>
                     )}
@@ -318,15 +326,15 @@ export default function Admin() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-[#1A1A1A]">{dog.name}</h3>
+                      <h3 className="font-bold text-[#1A1A1A]">{dog.dog_name}</h3>
                       {dog.sector && (
                         <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
                           {dog.sector}
                         </span>
                       )}
                     </div>
-                    {dog.address && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{dog.address}</p>
+                    {dog.breed && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{dog.breed}</p>
                     )}
                   </div>
 
@@ -346,9 +354,9 @@ export default function Admin() {
                   </div>
                 </div>
 
-                {dog.must_know && (
+                {dog.notes && (
                   <div className="bg-[#E8634A] text-white rounded-lg px-3 py-1.5 text-xs font-medium">
-                    ⚠️ {dog.must_know}
+                    ⚠️ {dog.notes}
                   </div>
                 )}
               </div>
@@ -367,7 +375,7 @@ export default function Admin() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-sm text-[#1A1A1A]">
-                      {log.dogs?.name || 'Unknown dog'}
+                      {log.dogs?.dog_name || 'Unknown dog'}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {log.walk_date} · {log.profiles?.email || 'Unknown walker'}

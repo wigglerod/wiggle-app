@@ -28,9 +28,8 @@ function mapsUrl(address) {
 
 const EDIT_FIELDS = [
   { key: 'address',   label: 'Address' },
-  { key: 'door_info', label: 'Door Info / Code' },
-  { key: 'must_know', label: 'Must Know', multiline: true },
-  { key: 'extra_info', label: 'Extra Info', multiline: true },
+  { key: 'door_code', label: 'Door / Access Code' },
+  { key: 'notes',     label: 'Notes', multiline: true },
 ]
 
 export default function DogDrawer({ event, onClose, onDogUpdated }) {
@@ -51,11 +50,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setSaveError(null)
     if (event?.dog) {
       setForm({
-        name:      event.dog.name      || '',
+        dog_name:  event.dog.dog_name  || '',
         address:   event.dog.address   || '',
-        door_info: event.dog.door_info || '',
-        must_know: event.dog.must_know || '',
-        extra_info: event.dog.extra_info || '',
+        door_code: event.dog.door_code || '',
+        notes:     event.dog.notes     || '',
         sector:    event.dog.sector || event.sector || 'Plateau',
       })
     }
@@ -69,11 +67,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   function startCreate() {
     setForm({
-      name:      event.displayName       || '',
+      dog_name:  event.displayName       || '',
       address:   event.location          || '',
-      door_info: event.calendarDoorCode  || '',
-      must_know:  '',
-      extra_info: '',
+      door_code: event.calendarDoorCode  || '',
+      notes:     '',
       sector: event.sector || 'Plateau',
     })
     setCreating(true)
@@ -92,10 +89,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
       setEditing(false)
       setCreating(false)
     } else {
-      const { address, door_info, must_know, extra_info } = form
+      const { address, door_code, notes } = form
       const { data, error } = await supabase
         .from('dogs')
-        .update({ address, door_info, must_know, extra_info })
+        .update({ address, door_code, notes })
         .eq('id', event.dog.id)
         .select()
         .single()
@@ -110,9 +107,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   const dog        = creating ? null : event.dog
   const address    = editing ? form.address : (dog?.address || event.location || '')
-  const doorCode   = editing ? form.door_info : (dog?.door_info || event.calendarDoorCode || null)
-  const mustKnow   = editing ? form.must_know  : (dog?.must_know  || null)
-  const extraInfo  = editing ? form.extra_info : (dog?.extra_info  || null)
+  const doorCode   = editing ? form.door_code : (dog?.door_code || event.calendarDoorCode || null)
+  const dogNotes   = editing ? form.notes : (dog?.notes || null)
   const photoUrl   = dog?.photo_url && !imgError ? dog.photo_url : null
   const badge      = groupBadge(event._groupKey, event._groupName)
   const directionsUrl = mapsUrl(address)
@@ -167,8 +163,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-[#1A1A1A] leading-tight">{event.displayName}</h2>
-              {event.breed && (
-                <p className="text-sm text-gray-400 capitalize mt-0.5">{event.breed}</p>
+              {(event.breed || dog?.breed) && (
+                <p className="text-sm text-gray-400 capitalize mt-0.5">{dog?.breed || event.breed}</p>
               )}
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {/* Group badge */}
@@ -201,8 +197,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                     </label>
                     <input
                       type="text"
-                      value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      value={form.dog_name}
+                      onChange={(e) => setForm((f) => ({ ...f, dog_name: e.target.value }))}
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A]"
                     />
                   </div>
@@ -256,7 +252,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={saving || (creating && !form.name?.trim())}
+                  disabled={saving || (creating && !form.dog_name?.trim())}
                   className="flex-1 py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
@@ -269,13 +265,13 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
           {!editing && (
             <div className="flex flex-col gap-3">
 
-              {/* Must Know alert */}
-              {mustKnow && (
+              {/* Notes alert */}
+              {dogNotes && (
                 <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start">
                   <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Must Know</p>
-                    <p className="text-sm font-medium leading-snug">{mustKnow}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
+                    <p className="text-sm font-medium leading-snug">{dogNotes}</p>
                   </div>
                 </div>
               )}
@@ -328,36 +324,38 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </div>
               )}
 
-              {/* Notes */}
-              {extraInfo && (
+              {/* Owner info */}
+              {(dog?.owner_first || dog?.owner_last || dog?.phone) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                     </svg>
                     <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Notes</p>
-                      <p className="text-sm text-gray-700 leading-snug">{extraInfo}</p>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Owner</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {[dog.owner_first, dog.owner_last].filter(Boolean).join(' ')}
+                      </p>
+                      {dog.phone && (
+                        <a href={`tel:${dog.phone}`} className="text-sm text-[#E8634A] font-medium block mt-0.5">
+                          {dog.phone}
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Emergency contact */}
-              {(dog?.emergency_contact || dog?.emergency_phone) && (
-                <div className="bg-red-50 rounded-2xl p-4">
-                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-2">Emergency Contact</p>
-                  {dog.emergency_contact && (
-                    <p className="text-sm font-semibold text-gray-800 mb-0.5">{dog.emergency_contact}</p>
-                  )}
-                  {dog.emergency_phone && (
-                    <a
-                      href={`tel:${dog.emergency_phone}`}
-                      className="text-sm font-bold text-[#E8634A] active:opacity-70"
-                    >
-                      {dog.emergency_phone}
-                    </a>
-                  )}
+              {/* BFF */}
+              {dog?.bff && (
+                <div className="bg-pink-50 rounded-2xl p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-base flex-shrink-0">💕</span>
+                    <div>
+                      <p className="text-xs font-semibold text-pink-400 uppercase tracking-wide mb-0.5">Best Friends</p>
+                      <p className="text-sm text-gray-700 leading-snug">{dog.bff}</p>
+                    </div>
+                  </div>
                 </div>
               )}
 

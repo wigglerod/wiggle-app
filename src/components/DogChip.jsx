@@ -19,7 +19,7 @@ export default function DogChip({ event, onClick, isDragging: externalDrag }) {
   }
 
   const isMissing = !event.dog
-  const hasAlert = event.dog?.must_know
+  const hasAlert = event.dog?.notes
 
   return (
     <div

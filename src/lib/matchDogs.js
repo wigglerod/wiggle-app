@@ -21,14 +21,14 @@ export function matchDog(calendarName, dogs) {
   const normalized = calendarName.toLowerCase().trim()
 
   // 1. Exact match (case-insensitive)
-  const exact = dogs.find((d) => d.name.toLowerCase().trim() === normalized)
+  const exact = dogs.find((d) => d.dog_name.toLowerCase().trim() === normalized)
   if (exact) return { dog: exact, matchType: 'exact' }
 
   // 2. Fuzzy match (Levenshtein distance ≤ 2)
   let best = null
   let bestDist = Infinity
   for (const dog of dogs) {
-    const dist = levenshtein.get(normalized, dog.name.toLowerCase().trim())
+    const dist = levenshtein.get(normalized, dog.dog_name.toLowerCase().trim())
     if (dist < bestDist) {
       bestDist = dist
       best = dog

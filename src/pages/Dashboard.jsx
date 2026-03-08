@@ -46,8 +46,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('dogs')
         .select('*')
-        .eq('active', true)
-        .order('name')
+        .order('dog_name')
 
       if (error) {
         console.warn('Failed to fetch dogs:', error.message)
