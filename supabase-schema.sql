@@ -8,16 +8,21 @@
 -- STEP 1 — CLEAN RESET
 -- ============================================================
 
-drop policy if exists "walk_logs_admin_all"     on walk_logs;
-drop policy if exists "walk_logs_walker_read"    on walk_logs;
-drop policy if exists "walk_logs_walker_insert"  on walk_logs;
-drop policy if exists "dogs_admin_write"         on dogs;
-drop policy if exists "dogs_walker_read"         on dogs;
-drop policy if exists "profiles_own"             on profiles;
+drop policy if exists "walk_logs_admin_all"      on walk_logs;
+drop policy if exists "walk_logs_senior_read"     on walk_logs;
+drop policy if exists "walk_logs_senior_insert"   on walk_logs;
+drop policy if exists "walk_logs_senior_update"   on walk_logs;
+drop policy if exists "walk_logs_junior_read"     on walk_logs;
+drop policy if exists "dogs_admin_all"            on dogs;
+drop policy if exists "dogs_senior_read"          on dogs;
+drop policy if exists "dogs_senior_insert"        on dogs;
+drop policy if exists "dogs_senior_update"        on dogs;
+drop policy if exists "dogs_junior_read"          on dogs;
+drop policy if exists "profiles_own"              on profiles;
 
-drop table if exists walk_logs cascade;
-drop table if exists dogs      cascade;
-drop table if exists profiles  cascade;
+drop table if exists walk_logs   cascade;
+drop table if exists dogs        cascade;
+drop table if exists profiles    cascade;
 
 drop trigger   if exists on_auth_user_created on auth.users;
 drop function  if exists handle_new_user();
@@ -31,8 +36,8 @@ create table profiles (
   id           uuid        primary key references auth.users on delete cascade,
   email        text        not null,
   full_name    text,
-  role         text        not null default 'walker'
-                           check (role in ('admin', 'walker')),
+  role         text        not null default 'junior_walker'
+                           check (role in ('admin', 'senior_walker', 'junior_walker')),
   sector       text        not null default 'both'
                            check (sector in ('Plateau', 'Laurier', 'both')),
   created_at   timestamptz not null default now(),
@@ -41,19 +46,21 @@ create table profiles (
 
 create table dogs (
   id           uuid        primary key default gen_random_uuid(),
-  name         text        not null,
-  last_name    text,
+  dog_name     text        not null,
+  sector       text        check (sector in ('Plateau', 'Laurier')),
+  owner_first  text,
+  owner_last   text,
+  breed        text,
   address      text,
-  door_info    text,
-  must_know    text,
-  extra_info   text,
+  door_code    text,
   email        text,
-  sector       text        not null
-                           check (sector in ('Plateau', 'Laurier')),
+  phone        text,
+  notes        text,
   photo_url    text,
-  active       boolean     not null default true,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  bff          text,
+  goals        text,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
 );
 
 create table walk_logs (
@@ -76,7 +83,7 @@ create index on walk_logs (walker_id);
 create index on walk_logs (dog_id);
 create index on walk_logs (walk_date desc);
 create index on dogs      (sector);
-create index on dogs      (active);
+create index on dogs      (dog_name);
 
 
 -- ============================================================
@@ -99,7 +106,7 @@ create trigger on_auth_user_created
 
 
 -- ============================================================
--- STEP 5 — ROW LEVEL SECURITY
+-- STEP 5 — ROW LEVEL SECURITY (3 roles)
 -- ============================================================
 
 alter table profiles  enable row level security;
@@ -112,51 +119,62 @@ create policy "profiles_own" on profiles
   using     (auth.uid() = id)
   with check(auth.uid() = id);
 
--- Dogs: walkers see their sector (or all if sector = 'both'); admins see everything
-create policy "dogs_walker_read" on dogs
-  for select
-  using (
-    (select role   from profiles where id = auth.uid()) = 'admin'
-    or (select sector from profiles where id = auth.uid()) = 'both'
-    or sector = (select sector from profiles where id = auth.uid())
-  );
-
--- Dogs: only admins can insert / update / delete
-create policy "dogs_admin_write" on dogs
+-- Dogs: admin — full CRUD
+create policy "dogs_admin_all" on dogs
   for all
   using     ((select role from profiles where id = auth.uid()) = 'admin')
   with check((select role from profiles where id = auth.uid()) = 'admin');
 
--- Walk logs: walkers insert their own; walkers & admins can read
-create policy "walk_logs_walker_insert" on walk_logs
+-- Dogs: senior_walker — SELECT + INSERT + UPDATE (no DELETE)
+create policy "dogs_senior_read" on dogs
+  for select
+  using ((select role from profiles where id = auth.uid()) = 'senior_walker');
+
+create policy "dogs_senior_insert" on dogs
   for insert
-  with check (auth.uid() = walker_id);
+  with check ((select role from profiles where id = auth.uid()) = 'senior_walker');
 
-create policy "walk_logs_read" on walk_logs
+create policy "dogs_senior_update" on dogs
+  for update
+  using     ((select role from profiles where id = auth.uid()) = 'senior_walker')
+  with check((select role from profiles where id = auth.uid()) = 'senior_walker');
+
+-- Dogs: junior_walker — SELECT only
+create policy "dogs_junior_read" on dogs
   for select
-  using (
-    auth.uid() = walker_id
-    or (select role from profiles where id = auth.uid()) = 'admin'
-  );
+  using ((select role from profiles where id = auth.uid()) = 'junior_walker');
 
--- Walk logs: admins can update / delete
-create policy "walk_logs_admin_write" on walk_logs
+-- Walk logs: admin — full CRUD
+create policy "walk_logs_admin_all" on walk_logs
   for all
   using     ((select role from profiles where id = auth.uid()) = 'admin')
   with check((select role from profiles where id = auth.uid()) = 'admin');
+
+-- Walk logs: senior_walker — SELECT + INSERT + UPDATE
+create policy "walk_logs_senior_read" on walk_logs
+  for select
+  using ((select role from profiles where id = auth.uid()) = 'senior_walker');
+
+create policy "walk_logs_senior_insert" on walk_logs
+  for insert
+  with check ((select role from profiles where id = auth.uid()) = 'senior_walker');
+
+create policy "walk_logs_senior_update" on walk_logs
+  for update
+  using     ((select role from profiles where id = auth.uid()) = 'senior_walker')
+  with check((select role from profiles where id = auth.uid()) = 'senior_walker');
+
+-- Walk logs: junior_walker — SELECT only
+create policy "walk_logs_junior_read" on walk_logs
+  for select
+  using ((select role from profiles where id = auth.uid()) = 'junior_walker');
 
 
 -- ============================================================
 -- STEP 6 — SEED DATA
 -- ============================================================
-
-insert into dogs (name, address, door_info, must_know, extra_info, email, sector) values
-  ('Lito',   '3742 Rue Saint-Denis, Montréal, QC',         null,                null,                                          null,                                  'mont0370@mylaurier.ca',    'Laurier'),
-  ('Maikan', '4521 Avenue du Parc, Montréal, QC',          'Key under mat',     null,                                          'Feed after walk',                     'christinegueth@gmail.com', 'Plateau'),
-  ('Nico',   '2891 Boulevard Saint-Laurent, Montréal, QC', 'Code 4892',         'Reactive to other dogs on leash',             'Very energetic — needs full hour',    'hewon00yang@gmail.com',    'Plateau'),
-  ('Cleo',   '1204 Avenue Laurier Est, Montréal, QC',      'Lockbox code 7531', 'Nervous around strangers',                    null,                                  null,                       'Plateau'),
-  ('Indie',  '3301 Rue Rachel Est, Montréal, QC',          'Door code 2244',    null,                                          'Loves fetch',                         null,                       'Plateau'),
-  ('Cedar',  '987 Rue Gilford, Montréal, QC',              null,                'Pulls hard on leash — use front clip harness','Has a favourite red ball, bring it',  null,                       'Plateau');
+-- Use scripts/seed-dogs.mjs to insert all 93 dogs from CSV:
+--   node scripts/seed-dogs.mjs
 
 
 -- ============================================================
@@ -166,7 +184,8 @@ insert into dogs (name, address, door_info, must_know, extra_info, email, sector
 create table if not exists walk_groups (
   id           uuid        primary key default gen_random_uuid(),
   walk_date    date        not null,
-  group_num    int         not null check (group_num between 1 and 3),
+  group_num    int         not null,
+  group_name   text,
   dog_ids      text[]      not null default '{}',
   sector       text        not null check (sector in ('Plateau', 'Laurier')),
   updated_by   uuid        references profiles(id),
@@ -180,11 +199,11 @@ alter table walk_groups enable row level security;
 create policy "walk_groups_read" on walk_groups
   for select using (auth.uid() is not null);
 
--- Walkers and admins can insert/update walk groups
+-- Admins and senior walkers can insert/update walk groups
 create policy "walk_groups_write" on walk_groups
   for all
-  using     (auth.uid() is not null)
-  with check(auth.uid() is not null);
+  using     ((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'))
+  with check((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'));
 
 -- Enable realtime for walk_groups
 alter publication supabase_realtime add table walk_groups;
@@ -199,41 +218,16 @@ alter publication supabase_realtime add table walk_groups;
 --    Dashboard → Storage → New Bucket
 --    Name: photos  |  Public: ON
 --
--- 2. Create your admin user:
---    a) Sign up via the app login page (or Supabase Dashboard → Authentication → Add User)
---    b) Then run this in the SQL Editor (replace with your email):
---       update profiles set role = 'admin' where email = 'you@example.com';
--- ============================================================
-
-
--- ============================================================
--- TROUBLESHOOTING — Run in SQL Editor if you hit issues
--- ============================================================
-
--- 1. Check if the signup trigger exists:
---    select tgname from pg_trigger where tgname = 'on_auth_user_created';
---    (Should return 1 row. If empty, re-run STEP 4 above.)
-
--- 2. If you signed up but have NO profile row (common if trigger was missing):
---    insert into profiles (id, email, role)
---    select id, email, 'admin'
---    from auth.users
---    where email = 'you@example.com'
---    on conflict (id) do update set role = 'admin';
-
--- 3. Recreate the trigger if it's missing (safe to re-run):
---    create or replace function handle_new_user()
---    returns trigger language plpgsql security definer
---    set search_path = public as $$
---    begin
---      insert into profiles (id, email)
---      values (new.id, new.email);
---      return new;
---    end;
---    $$;
+-- 2. Seed the dogs from CSV:
+--    node scripts/seed-dogs.mjs
 --
---    drop trigger if exists on_auth_user_created on auth.users;
---    create trigger on_auth_user_created
---      after insert on auth.users
---      for each row execute procedure handle_new_user();
+-- 3. Create your admin user:
+--    a) Sign up via the app login page
+--    b) Run in SQL Editor:
+--       update profiles set role = 'admin' where email = 'you@example.com';
+--
+-- Roles:
+--   admin          — full access to everything
+--   senior_walker  — view/edit dogs, manage groups, log walks (no delete)
+--   junior_walker  — read-only (default for new signups)
 -- ============================================================
