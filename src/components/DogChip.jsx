@@ -1,7 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useAuth } from '../context/AuthContext'
 
 export default function DogChip({ event, onClick, isDragging: externalDrag }) {
+  const { canEdit } = useAuth()
   const {
     attributes,
     listeners,
@@ -9,7 +11,7 @@ export default function DogChip({ event, onClick, isDragging: externalDrag }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: String(event._id) })
+  } = useSortable({ id: String(event._id), disabled: !canEdit })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -26,9 +28,9 @@ export default function DogChip({ event, onClick, isDragging: externalDrag }) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
+      {...(canEdit ? listeners : {})}
       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
-        cursor-grab active:cursor-grabbing select-none transition-shadow
+        ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} select-none transition-shadow
         ${isMissing
           ? 'bg-amber-50 text-amber-700 border border-amber-200'
           : hasAlert
@@ -38,8 +40,8 @@ export default function DogChip({ event, onClick, isDragging: externalDrag }) {
         ${isDragging ? 'shadow-lg ring-2 ring-[#E8634A]/30 z-50' : ''}
       `}
     >
-      {/* Drag handle dots */}
-      <span className="text-gray-300 text-xs mr-0.5">⠿</span>
+      {/* Drag handle dots — only shown for editors */}
+      {canEdit && <span className="text-gray-300 text-xs mr-0.5">⠿</span>}
 
       {/* Dog photo or emoji */}
       {event.dog?.photo_url ? (

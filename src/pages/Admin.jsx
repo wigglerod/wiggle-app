@@ -142,7 +142,7 @@ function DogFormModal({ dog, onClose, onSaved }) {
 }
 
 export default function Admin() {
-  const { isAdmin, signOut } = useAuth()
+  const { isAdmin, canDelete, signOut } = useAuth()
   const navigate = useNavigate()
   const [dogs, setDogs] = useState([])
   const [logs, setLogs] = useState([])
@@ -345,12 +345,14 @@ export default function Admin() {
                     >
                       ✏️
                     </button>
-                    <button
-                      onClick={() => deleteDog(dog.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 text-sm active:bg-red-100"
-                    >
-                      🗑️
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => deleteDog(dog.id)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 text-sm active:bg-red-100"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </div>
                 </div>
 

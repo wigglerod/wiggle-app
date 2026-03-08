@@ -33,7 +33,7 @@ const EDIT_FIELDS = [
 ]
 
 export default function DogDrawer({ event, onClose, onDogUpdated }) {
-  const { isAdmin } = useAuth()
+  const { canEdit } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError]         = useState(false)
   const [editing, setEditing]           = useState(false)
@@ -368,7 +368,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
               )}
 
               {/* Admin actions */}
-              {isAdmin && (
+              {canEdit && (
                 <div className="mt-1">
                   {dog ? (
                     <button

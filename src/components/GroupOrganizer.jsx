@@ -16,6 +16,7 @@ import {
 import { useDroppable } from '@dnd-kit/core'
 import DogChip from './DogChip'
 import { useWalkGroups } from '../lib/useWalkGroups'
+import { useAuth } from '../context/AuthContext'
 
 // Color cycle for numbered groups — repeats if > 6 groups
 const GROUP_COLORS = [
@@ -139,6 +140,7 @@ function DroppableGroup({ groupKey, eventIds, eventsMap, onDogClick, activeId, g
 }
 
 export default function GroupOrganizer({ events, date, sector, onDogClick }) {
+  const { canEdit } = useAuth()
   const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded } =
     useWalkGroups(events, date, sector)
   const [activeId, setActiveId] = useState(null)
@@ -151,10 +153,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     return m
   }, [events])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
-  )
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  const sensors = useSensors(...(canEdit ? [pointerSensor, touchSensor] : []))
 
   // Set of all valid droppable group keys (as strings)
   const groupKeySet = useMemo(
@@ -252,14 +253,16 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           />
         ))}
 
-        {/* Add group button */}
-        <button
-          onClick={addGroup}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#E8634A]/40 py-3 text-sm font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors"
-        >
-          <span className="w-6 h-6 rounded-full bg-[#E8634A] text-white flex items-center justify-center text-base leading-none">+</span>
-          Add Group
-        </button>
+        {/* Add group button — only for users who can edit */}
+        {canEdit && (
+          <button
+            onClick={addGroup}
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#E8634A]/40 py-3 text-sm font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors"
+          >
+            <span className="w-6 h-6 rounded-full bg-[#E8634A] text-white flex items-center justify-center text-base leading-none">+</span>
+            Add Group
+          </button>
+        )}
       </div>
 
       {/* Drag overlay — floating chip following cursor */}

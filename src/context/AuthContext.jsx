@@ -31,11 +31,17 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  const role = profile?.role || null
   const value = {
     session,
     profile,
     user: session?.user ?? null,
-    isAdmin: profile?.role === 'admin',
+    role,
+    isAdmin: role === 'admin',
+    isSenior: role === 'senior_walker',
+    isJunior: role === 'junior_walker',
+    canEdit: role === 'admin' || role === 'senior_walker',
+    canDelete: role === 'admin',
     isLoading: session === undefined,
     signOut: () => supabase.auth.signOut(),
   }
