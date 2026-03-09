@@ -236,7 +236,33 @@ create policy "daily_notes_admin_write" on daily_notes
 
 
 -- ============================================================
--- STEP 9 — DOG PHOTOS STORAGE
+-- STEP 9 — ROUTE ORDERS (per-walker pickup sequence)
+-- ============================================================
+
+create table if not exists route_orders (
+  id          uuid        primary key default gen_random_uuid(),
+  walk_date   date        not null,
+  time_slot   text        not null,
+  user_id     uuid        not null references profiles(id) on delete cascade,
+  event_order text[]      not null default '{}',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique(walk_date, time_slot, user_id)
+);
+
+alter table route_orders enable row level security;
+
+-- Each user can read/write only their own route orders
+create policy "route_orders_own" on route_orders
+  for all
+  using     (auth.uid() = user_id)
+  with check(auth.uid() = user_id);
+
+create index on route_orders (walk_date, user_id);
+
+
+-- ============================================================
+-- STEP 10 — DOG PHOTOS STORAGE
 -- ============================================================
 -- Storage bucket "dog-photos" created via scripts/setup-features.mjs
 -- Policies on storage.objects:

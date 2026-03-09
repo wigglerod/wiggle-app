@@ -6,6 +6,7 @@ import BottomTabs from '../components/BottomTabs'
 import WalkCard from '../components/WalkCard'
 import DogDrawer from '../components/DogDrawer'
 import WalkLogModal from '../components/WalkLogModal'
+import RouteBuilder from '../components/RouteBuilder'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
@@ -47,6 +48,7 @@ export default function Schedule() {
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [logGroup, setLogGroup] = useState(null)
+  const [routeGroup, setRouteGroup] = useState(null)
   const [loggedIds, setLoggedIds] = useState(new Set())
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
@@ -377,6 +379,7 @@ export default function Schedule() {
                   loggedIds={loggedIds}
                   onDogClick={setSelectedEvent}
                   onLogWalk={setLogGroup}
+                  onStartRoute={setRouteGroup}
                 />
               </motion.div>
             ))}
@@ -397,6 +400,13 @@ export default function Schedule() {
           group={logGroup}
           onClose={() => setLogGroup(null)}
           onLogged={handleLogged}
+        />
+      )}
+
+      {routeGroup && (
+        <RouteBuilder
+          group={routeGroup}
+          onClose={() => setRouteGroup(null)}
         />
       )}
 

@@ -1,6 +1,6 @@
 import { formatTime } from '../lib/parseICS'
 
-export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
+export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk, onStartRoute }) {
   const { startTime, endTime, events } = group
   const allLogged = events.every((ev) => loggedIds.has(ev._id))
 
@@ -93,18 +93,29 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
         </p>
       )}
 
-      {/* Log walk button — all authenticated walkers can log */}
-      <button
-        onClick={() => onLogWalk(group)}
-        className={`w-full py-3 rounded-full text-sm font-semibold transition-all active:scale-[0.98] min-h-[48px] ${
-          allLogged
-            ? 'bg-green-100 text-green-700 cursor-default'
-            : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
-        }`}
-        disabled={allLogged}
-      >
-        {allLogged ? '✅ Walk Logged' : '📝 Log Walk'}
-      </button>
+      {/* Action buttons */}
+      <div className="flex flex-col gap-2">
+        {/* Start Route button */}
+        <button
+          onClick={() => onStartRoute(group)}
+          className="w-full py-3 rounded-full text-sm font-semibold border-2 border-[#E8634A] text-[#E8634A] transition-all active:scale-[0.98] active:bg-[#E8634A]/5 min-h-[48px]"
+        >
+          🗺️ Start Route
+        </button>
+
+        {/* Log walk button — all authenticated walkers can log */}
+        <button
+          onClick={() => onLogWalk(group)}
+          className={`w-full py-3 rounded-full text-sm font-semibold transition-all active:scale-[0.98] min-h-[48px] ${
+            allLogged
+              ? 'bg-green-100 text-green-700 cursor-default'
+              : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
+          }`}
+          disabled={allLogged}
+        >
+          {allLogged ? '✅ Walk Logged' : '📝 Log Walk'}
+        </button>
+      </div>
     </div>
   )
 }
