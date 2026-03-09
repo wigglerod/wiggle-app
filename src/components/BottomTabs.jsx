@@ -56,7 +56,7 @@ export default function BottomTabs() {
             <button
               key={tab.id}
               onClick={() => navigate(tab.navigate)}
-              className="relative flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 transition-colors"
+              className="relative flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 min-h-[48px] transition-colors"
             >
               {/* Sliding coral bar */}
               {isActive && (
@@ -69,7 +69,7 @@ export default function BottomTabs() {
               <span className={isActive ? 'text-[#E8634A]' : 'text-gray-400'}>
                 {tab.icon}
               </span>
-              <span className={`text-[10px] font-semibold tracking-wide ${isActive ? 'text-[#E8634A]' : 'text-gray-400'}`}>
+              <span className={`text-[11px] font-semibold tracking-tight ${isActive ? 'text-[#E8634A]' : 'text-gray-400'}`}>
                 {tab.label}
               </span>
             </button>

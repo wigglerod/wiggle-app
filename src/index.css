@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 * {
-  font-family: 'Inter', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
 }
@@ -12,7 +12,39 @@ body {
   color: #1A1A1A;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Prevent iOS zoom on input focus */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Smooth scroll with containment */
+.scroll-container {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* Photo upload success pulse */
+@keyframes photo-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(232, 99, 74, 0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(232, 99, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(232, 99, 74, 0); }
+}
+.photo-pulse {
+  animation: photo-pulse 0.6s ease-out;
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { motion } from 'framer-motion'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
@@ -20,6 +21,24 @@ function torontoDate(offset = 0) {
   return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
 }
 
+function SkeletonWalkCard() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 skeleton-pulse">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-6 h-6 bg-gray-200 rounded-full" />
+        <div className="h-4 w-28 bg-gray-200 rounded-lg" />
+        <div className="h-5 w-14 bg-gray-100 rounded-full" />
+      </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="h-9 w-20 bg-gray-100 rounded-full" />
+        <div className="h-9 w-24 bg-gray-100 rounded-full" />
+        <div className="h-9 w-18 bg-gray-100 rounded-full" />
+      </div>
+      <div className="h-12 w-full bg-gray-100 rounded-full" />
+    </div>
+  )
+}
+
 export default function Schedule() {
   const { profile, isAdmin, user } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -32,7 +51,7 @@ export default function Schedule() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
-  const [dayOffset, setDayOffset] = useState(0) // 0 = today, 1 = tomorrow
+  const [dayOffset, setDayOffset] = useState(0)
   const [dailyNote, setDailyNote] = useState(null)
   const [noteInput, setNoteInput] = useState('')
   const [noteSaving, setNoteSaving] = useState(false)
@@ -45,7 +64,6 @@ export default function Schedule() {
 
   const selectedDate = useMemo(() => torontoDate(dayOffset), [dayOffset])
 
-  // Fetch dogs from Supabase — re-runs on pull-to-refresh
   useEffect(() => {
     async function fetchDogs() {
       const { data, error } = await supabase
@@ -65,7 +83,6 @@ export default function Schedule() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
-  // Fetch daily note for selected date
   useEffect(() => {
     async function fetchNote() {
       const { data } = await supabase
@@ -100,7 +117,6 @@ export default function Schedule() {
     }
   }
 
-  // Fetch schedule from Acuity and build walk groups
   useEffect(() => {
     if (!dogsReady) return
 
@@ -120,7 +136,6 @@ export default function Schedule() {
         // Acuity unavailable
       }
 
-      // Enrich events with dog matching (against Supabase dogs)
       const enriched = allEvents.map((ev) => {
         const rawName = extractDogName(ev.summary)
         const { dog, matchType } = matchDog(rawName, dogs)
@@ -178,7 +193,6 @@ export default function Schedule() {
     )
   }
 
-  // Clear refreshing indicator once loading finishes
   useEffect(() => {
     if (!loading) setRefreshing(false)
   }, [loading])
@@ -233,7 +247,7 @@ export default function Schedule() {
 
       {/* Pull-to-refresh indicator */}
       <div
-        className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
+        className="flex items-center justify-center overflow-hidden transition-[height] duration-200 ease-out"
         style={{ height: refreshing ? 88 : pullY }}
       >
         {(pullY > 8 || refreshing) && (
@@ -242,28 +256,33 @@ export default function Schedule() {
       </div>
 
       <main className="px-4 py-4 pb-24 max-w-lg mx-auto">
-        {/* Today / Tomorrow toggle */}
-        <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-gray-200">
+        {/* Today / Tomorrow toggle with animated pill */}
+        <div className="relative flex gap-1 mb-4 bg-white rounded-xl p-1 border border-gray-200">
           {[{ label: 'Today', offset: 0 }, { label: 'Tomorrow', offset: 1 }].map(({ label, offset }) => (
             <button
               key={offset}
               onClick={() => switchDay(offset)}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                dayOffset === offset
-                  ? 'bg-[#E8634A] text-white shadow-sm'
-                  : 'text-gray-500 active:bg-gray-50'
-              }`}
+              className="relative flex-1 py-2 rounded-lg text-sm font-semibold z-[1] min-h-[40px]"
             >
-              {label}
+              {dayOffset === offset && (
+                <motion.div
+                  layoutId="day-pill"
+                  className="absolute inset-0 bg-[#E8634A] rounded-lg shadow-sm"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <span className={`relative z-[2] ${dayOffset === offset ? 'text-white' : 'text-gray-500'}`}>
+                {label}
+              </span>
             </button>
           ))}
         </div>
 
-        {/* Note of the Day — admin edit / all view */}
+        {/* Note of the Day */}
         {isAdmin && !dailyNote && !noteEditing && (
           <button
             onClick={() => setNoteEditing(true)}
-            className="w-full mb-4 py-3 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-[#E8634A] text-sm font-semibold active:bg-[#FFF4F1] transition-colors"
+            className="w-full mb-4 py-3 rounded-full border-2 border-dashed border-[#E8634A]/30 text-[#E8634A] text-sm font-semibold active:bg-[#FFF4F1] transition-colors min-h-[48px]"
           >
             + Add Note of the Day
           </button>
@@ -276,20 +295,20 @@ export default function Schedule() {
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="Write a note for the team..."
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none mb-3"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none mb-3"
               autoFocus
             />
             <div className="flex gap-2">
               <button
                 onClick={() => { setNoteEditing(false); setNoteInput(dailyNote?.note_text || '') }}
-                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold"
+                className="flex-1 py-2.5 rounded-full bg-gray-100 text-gray-600 text-sm font-semibold min-h-[44px]"
               >
                 Cancel
               </button>
               <button
                 onClick={saveDailyNote}
                 disabled={noteSaving || !noteInput.trim()}
-                className="flex-1 py-2 rounded-lg bg-[#E8634A] text-white text-sm font-bold disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-full bg-[#E8634A] text-white text-sm font-bold disabled:opacity-50 min-h-[44px] active:bg-[#d4552d]"
               >
                 {noteSaving ? 'Saving...' : 'Save Note'}
               </button>
@@ -328,40 +347,45 @@ export default function Schedule() {
           </div>
         )}
 
+        {/* Skeleton loading */}
         {loading && !refreshing && (
-          <div className="flex justify-center py-20">
-            <LoadingDog />
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2].map((i) => <SkeletonWalkCard key={i} />)}
           </div>
         )}
 
+        {/* Empty state */}
         {!loading && groups.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <span className="text-5xl">🐾</span>
-            <p className="text-lg font-semibold text-gray-600">
-              No walks {dayOffset === 0 ? 'today' : 'tomorrow'}
-            </p>
-            <p className="text-sm text-gray-400">
-              {dayOffset === 0 ? 'Enjoy your day off!' : 'Nothing scheduled yet'}
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+            <LoadingDog text={dayOffset === 0
+              ? 'No adventures today! Time for belly rubs 🐾'
+              : 'Nothing scheduled yet'
+            } />
           </div>
         )}
 
+        {/* Walk cards with staggered entrance */}
         {!loading && groups.length > 0 && (
           <div className="flex flex-col gap-3">
-            {groups.map((group) => (
-              <WalkCard
+            {groups.map((group, i) => (
+              <motion.div
                 key={`${group.startTime.getTime()}-${group.endTime.getTime()}`}
-                group={group}
-                loggedIds={loggedIds}
-                onDogClick={setSelectedEvent}
-                onLogWalk={setLogGroup}
-              />
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.08 }}
+              >
+                <WalkCard
+                  group={group}
+                  loggedIds={loggedIds}
+                  onDogClick={setSelectedEvent}
+                  onLogWalk={setLogGroup}
+                />
+              </motion.div>
             ))}
           </div>
         )}
       </main>
 
-      {/* Dog profile drawer */}
       {selectedEvent && (
         <DogDrawer
           event={selectedEvent}
@@ -370,7 +394,6 @@ export default function Schedule() {
         />
       )}
 
-      {/* Walk log modal */}
       {logGroup && (
         <WalkLogModal
           group={logGroup}

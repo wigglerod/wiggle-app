@@ -81,11 +81,11 @@ export default function PhotoUpload({ dogId, onUploaded }) {
       {showMenu && (
         <>
           <div className="fixed inset-0 bg-black/30 z-[60]" onClick={() => setShowMenu(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[61] bg-white rounded-t-2xl p-4 pb-8 shadow-2xl">
+          <div className="fixed bottom-0 left-0 right-0 z-[61] bg-white rounded-t-2xl p-4 shadow-2xl" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => cameraRef.current?.click()}
-                className="w-full py-3.5 rounded-xl bg-[#FFF4F1] text-[#E8634A] text-sm font-semibold flex items-center justify-center gap-2 active:bg-[#ffe8e0]"
+                className="w-full py-3.5 rounded-full bg-[#FFF4F1] text-[#E8634A] text-sm font-semibold flex items-center justify-center gap-2 active:bg-[#ffe8e0] min-h-[48px]"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
                   <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
@@ -95,7 +95,7 @@ export default function PhotoUpload({ dogId, onUploaded }) {
               </button>
               <button
                 onClick={() => fileRef.current?.click()}
-                className="w-full py-3.5 rounded-xl bg-[#FFF4F1] text-[#E8634A] text-sm font-semibold flex items-center justify-center gap-2 active:bg-[#ffe8e0]"
+                className="w-full py-3.5 rounded-full bg-[#FFF4F1] text-[#E8634A] text-sm font-semibold flex items-center justify-center gap-2 active:bg-[#ffe8e0] min-h-[48px]"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
                   <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
@@ -105,7 +105,7 @@ export default function PhotoUpload({ dogId, onUploaded }) {
               </button>
               <button
                 onClick={() => setShowMenu(false)}
-                className="w-full py-3.5 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold mt-1"
+                className="w-full py-3.5 rounded-full bg-gray-100 text-gray-600 text-sm font-semibold mt-1 min-h-[48px]"
               >
                 Cancel
               </button>

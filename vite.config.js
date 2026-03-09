@@ -32,6 +32,11 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts-cache' },
           },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'google-fonts-webfonts', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
         ],
       },
     }),

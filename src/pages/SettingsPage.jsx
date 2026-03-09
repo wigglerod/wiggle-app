@@ -4,8 +4,8 @@ import BottomTabs from '../components/BottomTabs'
 import { roleLabel, roleColor } from '../lib/roles'
 
 const SECTOR_COLORS = {
-  Plateau: 'bg-amber-100 text-amber-700',
-  Laurier:  'bg-blue-100 text-blue-700',
+  Plateau: 'bg-blue-100 text-blue-700',
+  Laurier:  'bg-[#FDEBE7] text-[#E8634A]',
   both:     'bg-purple-100 text-purple-700',
 }
 
@@ -25,7 +25,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#FFF4F1] pb-20">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="px-4 py-4 max-w-lg mx-auto flex items-center justify-between">
           <img src="/WiggleLogo.png" alt="Wiggle" className="h-8 w-auto object-contain" />
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${sectorColor}`}>
@@ -60,7 +60,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button
               onClick={() => navigate('/admin')}
-              className="w-full flex items-center justify-between px-5 py-4 active:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-5 py-4 active:bg-gray-50 transition-colors min-h-[56px]"
             >
               <div className="flex items-center gap-3">
                 <span className="text-xl">⚙️</span>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-5 py-4 text-red-500 active:bg-red-50 transition-colors"
+            className="w-full flex items-center gap-3 px-5 py-4 text-red-500 active:bg-red-50 transition-colors min-h-[56px]"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />

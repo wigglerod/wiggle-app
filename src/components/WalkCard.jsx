@@ -36,7 +36,9 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
       {events.some((e) => e.sector !== events[0].sector) && (
         <div className="mb-2 flex gap-1 flex-wrap">
           {[...new Set(events.map((e) => e.sector))].map((s) => (
-            <span key={s} className="text-xs bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 font-medium">
+            <span key={s} className={`text-xs rounded-full px-2 py-0.5 font-medium ${
+              s === 'Plateau' ? 'bg-blue-100 text-blue-700' : 'bg-[#FDEBE7] text-[#E8634A]'
+            }`}>
               {s}
             </span>
           ))}
@@ -52,7 +54,7 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
             <button
               key={ev._id}
               onClick={() => onDogClick(ev)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all active:scale-95 ${
+              className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium transition-all active:scale-95 min-h-[40px] ${
                 isLogged
                   ? 'bg-green-100 text-green-700'
                   : isMissing
@@ -93,11 +95,11 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
         </p>
       )}
 
-      {/* Log walk button — only for users who can edit */}
+      {/* Log walk button */}
       {canEdit && (
         <button
           onClick={() => onLogWalk(group)}
-          className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 ${
+          className={`w-full py-3 rounded-full text-sm font-semibold transition-all active:scale-[0.98] min-h-[48px] ${
             allLogged
               ? 'bg-green-100 text-green-700 cursor-default'
               : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
@@ -108,7 +110,7 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
         </button>
       )}
       {!canEdit && allLogged && (
-        <p className="text-center text-sm font-semibold text-green-600">✅ Walk Logged</p>
+        <p className="text-center text-sm font-semibold text-green-600 py-2">✅ Walk Logged</p>
       )}
     </div>
   )
