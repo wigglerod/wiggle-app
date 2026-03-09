@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense, Component } from 'react'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
@@ -6,6 +6,23 @@ import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
 
 const MapView = lazy(() => import('../components/MapView'))
+
+class MapTabBoundary extends Component {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-center px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <span className="text-4xl">🗺️</span>
+          <p className="text-sm font-semibold text-gray-600">Map coming soon!</p>
+          <p className="text-xs text-gray-400">Use the organizer to plan your route.</p>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
@@ -248,13 +265,15 @@ export default function Dashboard() {
 
         {/* Map Tab */}
         {!loading && allEvents.length > 0 && activeTab === 'map' && (
-          <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
-            <MapView
-              events={allEvents}
-              groups={groups}
-              onDogClick={setSelectedEvent}
-            />
-          </Suspense>
+          <MapTabBoundary>
+            <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
+              <MapView
+                events={allEvents}
+                groups={groups}
+                onDogClick={setSelectedEvent}
+              />
+            </Suspense>
+          </MapTabBoundary>
         )}
       </main>
 
