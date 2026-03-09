@@ -320,7 +320,35 @@ create index on match_log (walk_date);
 
 
 -- ============================================================
--- STEP 12 — DOG PHOTOS STORAGE
+-- STEP 12 — SCHEDULE CHECKS (Monday cron job results)
+-- ============================================================
+
+create table if not exists schedule_checks (
+  id           uuid        primary key default gen_random_uuid(),
+  check_date   date        not null,
+  check_time   text        not null,
+  status       text        not null,
+  issues_found int         not null default 0,
+  details      jsonb,
+  created_at   timestamptz not null default now(),
+  unique(check_date, check_time)
+);
+
+alter table schedule_checks enable row level security;
+
+create policy "schedule_checks_read" on schedule_checks
+  for select using (auth.uid() is not null);
+
+create policy "schedule_checks_write" on schedule_checks
+  for all
+  using     ((select role from profiles where id = auth.uid()) = 'admin')
+  with check((select role from profiles where id = auth.uid()) = 'admin');
+
+create index on schedule_checks (check_date);
+
+
+-- ============================================================
+-- STEP 13 — DOG PHOTOS STORAGE
 -- ============================================================
 -- Storage bucket "dog-photos" created via scripts/setup-features.mjs
 -- Policies on storage.objects:
