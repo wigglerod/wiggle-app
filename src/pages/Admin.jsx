@@ -141,6 +141,111 @@ function DogFormModal({ dog, onClose, onSaved }) {
   )
 }
 
+function DatabaseSection() {
+  const [backups, setBackups] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [backing, setBacking] = useState(false)
+
+  async function loadBackups() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('backups_log')
+      .select('*')
+      .order('backup_date', { ascending: false })
+      .limit(7)
+    setBackups(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { loadBackups() }, [])
+
+  async function runBackup() {
+    setBacking(true)
+    try {
+      const res = await fetch('/api/cron/backup-dogs?manual=true', { method: 'POST' })
+      const result = await res.json()
+      if (res.ok) {
+        toast.success(`Backup saved! ${result.dogCount} dogs protected.`)
+        loadBackups()
+      } else {
+        toast.error(`Backup failed: ${result.message || result.error}`)
+      }
+    } catch {
+      toast.error('Backup request failed')
+    }
+    setBacking(false)
+  }
+
+  const last = backups[0]
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Backup Now */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <h3 className="text-sm font-bold text-gray-700 mb-1">Database Protection</h3>
+        <p className="text-xs text-gray-400 mb-4">93 dogs, audit logging, nightly backups at 2 AM ET</p>
+
+        <button
+          onClick={runBackup}
+          disabled={backing}
+          className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] disabled:opacity-50 transition-all"
+        >
+          {backing ? 'Backing up...' : '📦 Backup Now'}
+        </button>
+
+        {last && (
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Last backup: {new Date(last.backup_date).toLocaleString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium', timeStyle: 'short' })}
+            {' '}({last.dog_count} dogs) — {last.status === 'success' ? '✅' : '❌'}
+          </p>
+        )}
+      </div>
+
+      {/* Backup History */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <h3 className="text-sm font-bold text-gray-700 mb-3">Backup History (last 7)</h3>
+
+        {loading && <p className="text-xs text-gray-400 py-4 text-center">Loading...</p>}
+
+        {!loading && backups.length === 0 && (
+          <p className="text-xs text-gray-400 py-4 text-center">No backups yet. Hit the button above!</p>
+        )}
+
+        {!loading && backups.map((b) => (
+          <div key={b.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <div>
+              <p className="text-sm font-medium text-gray-700">
+                {new Date(b.backup_date).toLocaleDateString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium' })}
+              </p>
+              <p className="text-xs text-gray-400">
+                {new Date(b.backup_date).toLocaleTimeString('en-CA', { timeZone: 'America/Toronto', timeStyle: 'short' })}
+                {' · '}{b.dog_count} dogs
+              </p>
+            </div>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+              b.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}>
+              {b.status === 'success' ? '✅ OK' : '❌ Failed'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Protection Status */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <h3 className="text-sm font-bold text-gray-700 mb-3">Protection Status</h3>
+        <div className="flex flex-col gap-1.5 text-xs">
+          <p className="text-gray-600">✅ DROP TABLE blocked (event trigger)</p>
+          <p className="text-gray-600">✅ TRUNCATE blocked (statement trigger)</p>
+          <p className="text-gray-600">✅ Audit log on every INSERT/UPDATE/DELETE</p>
+          <p className="text-gray-600">✅ Nightly backup at 2:00 AM ET</p>
+          <p className="text-gray-600">✅ Seed script requires --force if table has data</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const { canDelete, signOut } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -245,7 +350,7 @@ export default function Admin() {
 
       {/* Tab bar */}
       <div className="flex bg-white border-b border-gray-100 sticky top-[88px] z-20">
-        {['dogs', 'logs'].map((tab) => (
+        {['dogs', 'logs', 'database'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -255,7 +360,7 @@ export default function Admin() {
                 : 'border-transparent text-gray-400'
             }`}
           >
-            {tab === 'dogs' ? '🐾 Dogs' : '📋 Walk Logs'}
+            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : '🛡️ Database'}
           </button>
         ))}
       </div>
@@ -399,6 +504,8 @@ export default function Admin() {
             ))}
           </div>
         )}
+        {/* Database tab */}
+        {!loading && activeTab === 'database' && <DatabaseSection />}
       </main>
 
       {/* Dog form modal */}

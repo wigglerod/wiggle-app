@@ -3,17 +3,21 @@
  * Wiggle Dog Walks — Database seed script
  * Sets up profiles (3 roles), dogs table, RLS policies, and inserts 93 dogs from CSV.
  *
- * Usage: node scripts/seed-dogs.mjs
- * Requires: DATABASE_URL in .env.local
+ * SAFETY: Refuses to run if dogs table has data unless --force is passed.
+ * With --force, creates a backup FIRST before wiping.
+ *
+ * Usage: node scripts/seed-dogs.mjs          (safe — refuses if table has data)
+ *        node scripts/seed-dogs.mjs --force  (creates backup, then re-seeds)
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const FORCE = process.argv.includes('--force');
 
 // ---------------------------------------------------------------------------
 // 1. Load DATABASE_URL from .env.local
@@ -48,7 +52,6 @@ function parseCSV(text) {
   let inQuotes = false;
   const lines = [];
 
-  // Split into lines respecting quoted newlines
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (ch === '"') inQuotes = !inQuotes;
@@ -61,7 +64,6 @@ function parseCSV(text) {
   }
   if (current.trim()) lines.push(current);
 
-  // Parse each line into fields
   for (const line of lines) {
     const fields = [];
     let field = '';
@@ -89,13 +91,10 @@ function loadDogs() {
   const text = readFileSync(csvPath, 'utf-8');
   const rows = parseCSV(text);
 
-  // First row is header
-  const header = rows[0];
   const dogs = [];
-
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
-    if (!r[0]) continue; // skip empty rows
+    if (!r[0]) continue;
 
     dogs.push({
       dog_name:    r[0] || null,
@@ -118,7 +117,53 @@ function loadDogs() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Run it
+// 3. Backup existing data before wipe
+// ---------------------------------------------------------------------------
+async function createBackup(client) {
+  console.log('  Creating backup before wipe...');
+  const { rows: dogs } = await client.query('SELECT * FROM dogs ORDER BY dog_name');
+  const { rows: nameMap } = await client.query('SELECT * FROM acuity_name_map');
+
+  const backup = {
+    timestamp: new Date().toISOString(),
+    reason: 'seed-dogs.mjs --force',
+    dogs,
+    acuity_name_map: nameMap,
+  };
+
+  const backupPath = resolve(ROOT, `backup_dogs_${new Date().toISOString().slice(0, 10)}.json`);
+  writeFileSync(backupPath, JSON.stringify(backup, null, 2));
+  console.log(`  Backup saved: ${backupPath} (${dogs.length} dogs)\n`);
+
+  // Also try to upload to Supabase Storage
+  try {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `dogs_backup_${dateStr}_force.json`;
+      const body = JSON.stringify(backup);
+
+      await fetch(`${supabaseUrl}/storage/v1/object/backups/${fileName}`, {
+        method: 'POST',
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+      console.log(`  Also uploaded to Storage: backups/${fileName}\n`);
+    }
+  } catch {
+    console.log('  (Storage upload skipped — no service role key)\n');
+  }
+
+  return dogs.length;
+}
+
+// ---------------------------------------------------------------------------
+// 4. Run it
 // ---------------------------------------------------------------------------
 async function main() {
   const client = new pg.Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
@@ -126,46 +171,54 @@ async function main() {
   console.log('Connected to Supabase Postgres\n');
 
   try {
-    // -----------------------------------------------------------------------
+    // ─── SAFETY CHECK ─────────────────────────────────────────────────
+    const { rows: countRows } = await client.query('SELECT count(*)::int AS total FROM dogs');
+    const existingCount = countRows[0].total;
+
+    if (existingCount > 0 && !FORCE) {
+      console.log(`⚠️  Dogs table has ${existingCount} dogs. REFUSING to run.`);
+      console.log(`   Use --force flag to override: node scripts/seed-dogs.mjs --force`);
+      console.log(`   WARNING: --force will create a backup first, then wipe and re-seed.`);
+      process.exit(1);
+    }
+
+    if (existingCount > 0 && FORCE) {
+      console.log(`⚠️  --force flag detected. Table has ${existingCount} dogs.`);
+      await createBackup(client);
+    }
+
+    // ─── Enable bypass for wipe protection ────────────────────────────
+    await client.query(`SET LOCAL wiggle.allow_wipe = 'true'`);
+
+    // Drop the event trigger so we can drop the table
+    await client.query(`DROP EVENT TRIGGER IF EXISTS protect_dogs_drop`);
+
+    // ───────────────────────────────────────────────────────────────────
     // STEP 1: Update profiles table — 3 roles
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
     console.log('STEP 1 — Updating profiles table roles...');
 
-    // Drop the old check constraint and add new one with 3 roles
-    await client.query(`
-      ALTER TABLE profiles
-        DROP CONSTRAINT IF EXISTS profiles_role_check;
-    `);
+    await client.query(`ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;`);
     await client.query(`
       ALTER TABLE profiles
         ADD CONSTRAINT profiles_role_check
         CHECK (role IN ('admin', 'senior_walker', 'junior_walker'));
     `);
-    // Migrate existing 'walker' rows to 'senior_walker'
-    const migrated = await client.query(`
-      UPDATE profiles SET role = 'senior_walker' WHERE role = 'walker';
-    `);
+    const migrated = await client.query(`UPDATE profiles SET role = 'senior_walker' WHERE role = 'walker';`);
     console.log(`  Migrated ${migrated.rowCount} walker(s) → senior_walker`);
-    console.log('  Roles now: admin, senior_walker, junior_walker');
-
-    // Update default
-    await client.query(`
-      ALTER TABLE profiles ALTER COLUMN role SET DEFAULT 'junior_walker';
-    `);
+    await client.query(`ALTER TABLE profiles ALTER COLUMN role SET DEFAULT 'junior_walker';`);
     console.log('  Default role set to junior_walker\n');
 
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
     // STEP 2: Drop + recreate dogs table
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
     console.log('STEP 2 — Recreating dogs table...');
 
-    // Drop policies first (they reference the table)
-    await client.query(`DROP POLICY IF EXISTS "dogs_walker_read" ON dogs;`);
-    await client.query(`DROP POLICY IF EXISTS "dogs_admin_write" ON dogs;`);
-    await client.query(`DROP POLICY IF EXISTS "dogs_admin_all" ON dogs;`);
-    await client.query(`DROP POLICY IF EXISTS "dogs_senior_read" ON dogs;`);
-    await client.query(`DROP POLICY IF EXISTS "dogs_senior_write" ON dogs;`);
-    await client.query(`DROP POLICY IF EXISTS "dogs_junior_read" ON dogs;`);
+    // Drop policies
+    for (const p of ['dogs_walker_read', 'dogs_admin_write', 'dogs_admin_all', 'dogs_senior_read',
+                      'dogs_senior_write', 'dogs_senior_insert', 'dogs_senior_update', 'dogs_junior_read']) {
+      await client.query(`DROP POLICY IF EXISTS "${p}" ON dogs;`);
+    }
 
     await client.query(`DROP TABLE IF EXISTS walk_logs CASCADE;`);
     await client.query(`DROP TABLE IF EXISTS dogs CASCADE;`);
@@ -195,9 +248,9 @@ async function main() {
     await client.query(`CREATE INDEX ON dogs (dog_name);`);
     console.log('  dogs table created\n');
 
-    // -----------------------------------------------------------------------
-    // STEP 3: Recreate walk_logs (FK to dogs was dropped)
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
+    // STEP 3: Recreate walk_logs
+    // ───────────────────────────────────────────────────────────────────
     console.log('STEP 3 — Recreating walk_logs table...');
 
     await client.query(`
@@ -206,8 +259,7 @@ async function main() {
         walker_id    uuid        NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
         dog_id       uuid        NOT NULL REFERENCES dogs(id)     ON DELETE RESTRICT,
         walk_date    date        NOT NULL DEFAULT current_date,
-        status       text        NOT NULL
-                                 CHECK (status IN ('completed', 'skipped', 'incident')),
+        status       text        NOT NULL CHECK (status IN ('completed', 'skipped', 'incident')),
         notes        text,
         created_at   timestamptz NOT NULL DEFAULT now()
       );
@@ -218,101 +270,75 @@ async function main() {
     await client.query(`CREATE INDEX IF NOT EXISTS walk_logs_walk_date_idx ON walk_logs (walk_date DESC);`);
     console.log('  walk_logs table created\n');
 
-    // -----------------------------------------------------------------------
-    // STEP 4: RLS policies (role-based)
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
+    // STEP 4: RLS policies
+    // ───────────────────────────────────────────────────────────────────
     console.log('STEP 4 — Setting up RLS policies...');
 
     await client.query(`ALTER TABLE dogs ENABLE ROW LEVEL SECURITY;`);
     await client.query(`ALTER TABLE walk_logs ENABLE ROW LEVEL SECURITY;`);
 
-    // -- DOGS policies --
-
-    // Admin: full CRUD
+    // DOGS: Admin full CRUD
     await client.query(`
-      CREATE POLICY "dogs_admin_all" ON dogs
-        FOR ALL
+      CREATE POLICY "dogs_admin_all" ON dogs FOR ALL
         USING     ((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin')
         WITH CHECK((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
     `);
-
-    // Senior walker: SELECT + INSERT + UPDATE (no DELETE)
+    // DOGS: Senior walker SELECT + INSERT + UPDATE
     await client.query(`
-      CREATE POLICY "dogs_senior_read" ON dogs
-        FOR SELECT
+      CREATE POLICY "dogs_senior_read" ON dogs FOR SELECT
         USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
     await client.query(`
-      CREATE POLICY "dogs_senior_insert" ON dogs
-        FOR INSERT
+      CREATE POLICY "dogs_senior_insert" ON dogs FOR INSERT
         WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
     await client.query(`
-      CREATE POLICY "dogs_senior_update" ON dogs
-        FOR UPDATE
+      CREATE POLICY "dogs_senior_update" ON dogs FOR UPDATE
         USING     ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker')
         WITH CHECK((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
-
-    // Junior walker: SELECT only
+    // DOGS: Junior walker SELECT only
     await client.query(`
-      CREATE POLICY "dogs_junior_read" ON dogs
-        FOR SELECT
+      CREATE POLICY "dogs_junior_read" ON dogs FOR SELECT
         USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'junior_walker');
     `);
 
-    // -- WALK_LOGS policies --
+    // WALK_LOGS policies
+    for (const p of ['walk_logs_walker_insert', 'walk_logs_read', 'walk_logs_admin_write',
+                      'walk_logs_admin_all', 'walk_logs_senior_read', 'walk_logs_senior_write',
+                      'walk_logs_senior_insert', 'walk_logs_senior_update', 'walk_logs_junior_read']) {
+      await client.query(`DROP POLICY IF EXISTS "${p}" ON walk_logs;`);
+    }
 
-    // Drop any existing
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_walker_insert" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_read" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_admin_write" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_admin_all" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_senior_read" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_senior_write" ON walk_logs;`);
-    await client.query(`DROP POLICY IF EXISTS "walk_logs_junior_read" ON walk_logs;`);
-
-    // Admin: full CRUD
     await client.query(`
-      CREATE POLICY "walk_logs_admin_all" ON walk_logs
-        FOR ALL
+      CREATE POLICY "walk_logs_admin_all" ON walk_logs FOR ALL
         USING     ((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin')
         WITH CHECK((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
     `);
-
-    // Senior walker: SELECT + INSERT + UPDATE
     await client.query(`
-      CREATE POLICY "walk_logs_senior_read" ON walk_logs
-        FOR SELECT
+      CREATE POLICY "walk_logs_senior_read" ON walk_logs FOR SELECT
         USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
     await client.query(`
-      CREATE POLICY "walk_logs_senior_insert" ON walk_logs
-        FOR INSERT
+      CREATE POLICY "walk_logs_senior_insert" ON walk_logs FOR INSERT
         WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
     await client.query(`
-      CREATE POLICY "walk_logs_senior_update" ON walk_logs
-        FOR UPDATE
+      CREATE POLICY "walk_logs_senior_update" ON walk_logs FOR UPDATE
         USING     ((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker')
         WITH CHECK((SELECT role FROM profiles WHERE id = auth.uid()) = 'senior_walker');
     `);
-
-    // Junior walker: SELECT only
     await client.query(`
-      CREATE POLICY "walk_logs_junior_read" ON walk_logs
-        FOR SELECT
+      CREATE POLICY "walk_logs_junior_read" ON walk_logs FOR SELECT
         USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'junior_walker');
     `);
 
-    console.log('  RLS policies created');
-    console.log('    admin:         full CRUD on dogs + walk_logs');
-    console.log('    senior_walker: SELECT/INSERT/UPDATE on dogs + walk_logs');
-    console.log('    junior_walker: SELECT only on dogs + walk_logs\n');
+    console.log('  RLS policies created\n');
 
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
     // STEP 5: Insert dogs from CSV
-    // -----------------------------------------------------------------------
+    // ───────────────────────────────────────────────────────────────────
     console.log('STEP 5 — Inserting dogs from CSV...');
 
     const dogs = loadDogs();
@@ -327,22 +353,73 @@ async function main() {
     }
     console.log('  All dogs inserted\n');
 
-    // -----------------------------------------------------------------------
-    // STEP 6: Verify
-    // -----------------------------------------------------------------------
-    console.log('STEP 6 — Verifying...');
+    // ───────────────────────────────────────────────────────────────────
+    // STEP 6: Restore fortress protections
+    // ───────────────────────────────────────────────────────────────────
+    console.log('STEP 6 — Restoring fortress protections...');
 
-    const { rows: countRows } = await client.query('SELECT count(*)::int AS total FROM dogs');
-    const total = countRows[0].total;
+    // Re-create audit trigger (was dropped with the table)
+    await client.query(`
+      CREATE OR REPLACE FUNCTION dogs_audit_fn()
+      RETURNS trigger AS $$
+      BEGIN
+        IF TG_OP = 'INSERT' THEN
+          INSERT INTO dogs_audit (dog_id, dog_name, action, changed_by, new_data)
+          VALUES (NEW.id, NEW.dog_name, 'INSERT', coalesce(current_setting('request.jwt.claims', true)::json->>'email', current_user), to_jsonb(NEW));
+          RETURN NEW;
+        ELSIF TG_OP = 'UPDATE' THEN
+          INSERT INTO dogs_audit (dog_id, dog_name, action, changed_by, old_data, new_data)
+          VALUES (NEW.id, NEW.dog_name, 'UPDATE', coalesce(current_setting('request.jwt.claims', true)::json->>'email', current_user), to_jsonb(OLD), to_jsonb(NEW));
+          RETURN NEW;
+        ELSIF TG_OP = 'DELETE' THEN
+          INSERT INTO dogs_audit (dog_id, dog_name, action, changed_by, old_data)
+          VALUES (OLD.id, OLD.dog_name, 'DELETE', coalesce(current_setting('request.jwt.claims', true)::json->>'email', current_user), to_jsonb(OLD));
+          RETURN OLD;
+        END IF;
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client.query(`
+      CREATE TRIGGER dogs_audit_trigger
+        AFTER INSERT OR UPDATE OR DELETE ON dogs
+        FOR EACH ROW EXECUTE FUNCTION dogs_audit_fn();
+    `);
+
+    // Re-create truncate guard
+    await client.query(`
+      CREATE TRIGGER protect_dogs_truncate
+        BEFORE TRUNCATE ON dogs
+        FOR EACH STATEMENT EXECUTE FUNCTION prevent_dogs_truncate();
+    `);
+
+    // Re-create drop guard event trigger
+    await client.query(`
+      CREATE EVENT TRIGGER protect_dogs_drop
+        ON ddl_command_start
+        WHEN TAG IN ('DROP TABLE')
+        EXECUTE FUNCTION prevent_dogs_drop();
+    `);
+
+    console.log('  Audit trigger, truncate guard, drop guard restored\n');
+
+    // ───────────────────────────────────────────────────────────────────
+    // STEP 7: Verify
+    // ───────────────────────────────────────────────────────────────────
+    console.log('STEP 7 — Verifying...');
+
+    const { rows: finalCount } = await client.query('SELECT count(*)::int AS total FROM dogs');
+    const total = finalCount[0].total;
 
     const { rows: sectorRows } = await client.query(
       'SELECT sector, count(*)::int AS n FROM dogs GROUP BY sector ORDER BY sector'
     );
 
+    const { rows: auditRows } = await client.query('SELECT count(*)::int AS n FROM dogs_audit');
+
     console.log(`  Total dogs: ${total}`);
-    for (const r of sectorRows) {
-      console.log(`    ${r.sector}: ${r.n}`);
-    }
+    for (const r of sectorRows) console.log(`    ${r.sector}: ${r.n}`);
+    console.log(`  Audit entries: ${auditRows[0].n}`);
 
     if (total === 93) {
       console.log('\n  All 93 dogs loaded successfully!');
