@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import BottomTabs from '../components/BottomTabs'
@@ -30,19 +31,23 @@ export default function DogsPage() {
   const [sector, setSector] = useState('All')
   const [selectedDog, setSelectedDog] = useState(null)
 
-  useEffect(() => {
-    fetchDogs()
-  }, [])
-
   async function fetchDogs() {
     setLoading(true)
     const { data, error } = await supabase
       .from('dogs')
       .select('*')
       .order('dog_name')
-    if (!error) setDogs(data || [])
+    if (error) {
+      toast.error('Failed to load dogs')
+    } else {
+      setDogs(data || [])
+    }
     setLoading(false)
   }
+
+  /* eslint-disable react-hooks/set-state-in-effect -- fetch from external DB on mount */
+  useEffect(() => { fetchDogs() }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filtered = dogs.filter((d) => {
     if (sector !== 'All' && d.sector !== sector) return false
@@ -65,6 +70,7 @@ export default function DogsPage() {
             placeholder="Search dogs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search dogs"
             className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] focus:border-transparent placeholder:text-gray-400"
           />
         </div>

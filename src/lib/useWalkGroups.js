@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -35,11 +36,15 @@ export function useWalkGroups(events, date, sector) {
     if (!date || !sector || allEventIds.length === 0) return
 
     async function load() {
-      const { data } = await supabase
+      const { data, error: loadError } = await supabase
         .from('walk_groups')
         .select('*')
         .eq('walk_date', date)
         .eq('sector', sector)
+
+      if (loadError) {
+        toast.error('Failed to load walk groups')
+      }
 
       const saved = {}
       const names = {}
@@ -131,7 +136,7 @@ export function useWalkGroups(events, date, sector) {
     async (groupNum, dogIds) => {
       if (!date || !sector || !user) return
 
-      await supabase.from('walk_groups').upsert(
+      const { error } = await supabase.from('walk_groups').upsert(
         {
           walk_date: date,
           group_num: groupNum,
@@ -143,6 +148,7 @@ export function useWalkGroups(events, date, sector) {
         },
         { onConflict: 'walk_date,group_num,sector' }
       )
+      if (error) toast.error('Failed to save group changes')
     },
     [date, sector, user]
   )
@@ -196,7 +202,9 @@ export function useWalkGroups(events, date, sector) {
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'walk_date,group_num,sector' }
-      )
+      ).then(({ error }) => {
+        if (error) toast.error('Failed to add group')
+      })
     }
   }, [date, sector, user])
 
@@ -208,7 +216,7 @@ export function useWalkGroups(events, date, sector) {
       if (!date || !sector || !user) return
 
       // Upsert with current dog_ids from ref so we don't wipe them
-      await supabase.from('walk_groups').upsert(
+      const { error } = await supabase.from('walk_groups').upsert(
         {
           walk_date: date,
           group_num: groupNum,
@@ -220,6 +228,7 @@ export function useWalkGroups(events, date, sector) {
         },
         { onConflict: 'walk_date,group_num,sector' }
       )
+      if (error) toast.error('Failed to rename group')
     },
     [date, sector, user]
   )

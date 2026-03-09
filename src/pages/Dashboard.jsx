@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
 import GroupOrganizer from '../components/GroupOrganizer'
-import MapView from '../components/MapView'
 import DogDrawer from '../components/DogDrawer'
+
+const MapView = lazy(() => import('../components/MapView'))
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
@@ -49,7 +50,6 @@ export default function Dashboard() {
         .order('dog_name')
 
       if (error) {
-        console.warn('Failed to fetch dogs:', error.message)
         setDogs([])
       } else {
         setDogs(data || [])
@@ -57,7 +57,6 @@ export default function Dashboard() {
       setDogsReady(true)
     }
     fetchDogs()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
   // Fetch schedule from Acuity
@@ -124,9 +123,8 @@ export default function Dashboard() {
   }, [allEvents, sector])
 
   // Clear refreshing indicator once loading finishes
-  useEffect(() => {
-    if (!loading) setRefreshing(false)
-  }, [loading])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync derived UI flag
+  useEffect(() => { if (!loading) setRefreshing(false) }, [loading])
 
   function handleTouchStart(e) {
     if (window.scrollY === 0) {
@@ -259,11 +257,13 @@ export default function Dashboard() {
 
         {/* Map Tab */}
         {!loading && allEvents.length > 0 && activeTab === 'map' && (
-          <MapView
-            events={allEvents}
-            groups={groups}
-            onDogClick={setSelectedEvent}
-          />
+          <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
+            <MapView
+              events={allEvents}
+              groups={groups}
+              onDogClick={setSelectedEvent}
+            />
+          </Suspense>
         )}
       </main>
 

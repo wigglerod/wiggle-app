@@ -24,8 +24,7 @@ export function getEventsForDate(icsText, targetDate, sector = '') {
   let jcal
   try {
     jcal = ICAL.parse(icsText)
-  } catch (e) {
-    console.error('ICS parse error:', e)
+  } catch {
     return []
   }
 

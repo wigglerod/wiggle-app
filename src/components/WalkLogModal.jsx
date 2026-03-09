@@ -28,13 +28,12 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
   }
 
   async function handleSubmit() {
-    if (selectedDogs.size === 0) return
+    if (selectedDogs.size === 0 || saving) return
     setSaving(true)
     setError(null)
 
     const selected = group.events.filter((ev) => selectedDogs.has(ev._id))
     const matched = selected.filter((ev) => ev.dog?.id)
-    const unmatched = selected.filter((ev) => !ev.dog?.id)
 
     if (matched.length > 0) {
       const logs = matched.map((ev) => ({
@@ -48,18 +47,10 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
       const { error: dbError } = await supabase.from('walk_logs').insert(logs)
 
       if (dbError) {
-        console.warn('Walk log insert failed:', dbError.message)
         setError('Failed to save walk log. Please try again.')
         setSaving(false)
         return
       }
-    }
-
-    if (unmatched.length > 0) {
-      console.warn(
-        'Skipped logging for unmatched dogs:',
-        unmatched.map((ev) => ev.displayName).join(', ')
-      )
     }
 
     onLogged([...selectedDogs])
@@ -146,6 +137,7 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
                   : 'Add any notes about this walk...'
               }
               rows={3}
+              aria-label="Walk notes"
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#E8634A] focus:border-transparent resize-none"
             />
           </div>

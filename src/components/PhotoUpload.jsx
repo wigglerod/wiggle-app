@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 
 export default function PhotoUpload({ dogId, onUploaded }) {
@@ -20,7 +21,7 @@ export default function PhotoUpload({ dogId, onUploaded }) {
       .upload(path, file, { upsert: true })
 
     if (uploadError) {
-      console.error('Upload failed:', uploadError.message)
+      toast.error('Photo upload failed')
       setUploading(false)
       return
     }
@@ -37,7 +38,11 @@ export default function PhotoUpload({ dogId, onUploaded }) {
       .single()
 
     setUploading(false)
-    if (!error && data) {
+    if (error) {
+      toast.error('Failed to save photo')
+      return
+    }
+    if (data) {
       onUploaded?.(data)
     }
   }

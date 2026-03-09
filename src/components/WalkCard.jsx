@@ -1,8 +1,6 @@
 import { formatTime } from '../lib/parseICS'
-import { useAuth } from '../context/AuthContext'
 
 export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
-  const { canEdit } = useAuth()
   const { startTime, endTime, events } = group
   const allLogged = events.every((ev) => loggedIds.has(ev._id))
 
@@ -95,23 +93,18 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
         </p>
       )}
 
-      {/* Log walk button */}
-      {canEdit && (
-        <button
-          onClick={() => onLogWalk(group)}
-          className={`w-full py-3 rounded-full text-sm font-semibold transition-all active:scale-[0.98] min-h-[48px] ${
-            allLogged
-              ? 'bg-green-100 text-green-700 cursor-default'
-              : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
-          }`}
-          disabled={allLogged}
-        >
-          {allLogged ? '✅ Walk Logged' : '📝 Log Walk'}
-        </button>
-      )}
-      {!canEdit && allLogged && (
-        <p className="text-center text-sm font-semibold text-green-600 py-2">✅ Walk Logged</p>
-      )}
+      {/* Log walk button — all authenticated walkers can log */}
+      <button
+        onClick={() => onLogWalk(group)}
+        className={`w-full py-3 rounded-full text-sm font-semibold transition-all active:scale-[0.98] min-h-[48px] ${
+          allLogged
+            ? 'bg-green-100 text-green-700 cursor-default'
+            : 'bg-[#E8634A] text-white shadow-sm active:bg-[#d4552d]'
+        }`}
+        disabled={allLogged}
+      >
+        {allLogged ? '✅ Walk Logged' : '📝 Log Walk'}
+      </button>
     </div>
   )
 }

@@ -1,12 +1,23 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
-import Admin from './pages/Admin'
-import DogsPage from './pages/DogsPage'
 import SettingsPage from './pages/SettingsPage'
 import LoadingDog from './components/LoadingDog'
+
+const Admin = lazy(() => import('./pages/Admin'))
+const DogsPage = lazy(() => import('./pages/DogsPage'))
+
+function LazyFallback() {
+  return (
+    <div className="min-h-screen bg-[#FFF4F1] flex items-center justify-center">
+      <LoadingDog />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }) {
   const { session, isLoading } = useAuth()
@@ -67,7 +78,11 @@ function AppRoutes() {
         path="/admin"
         element={
           <ProtectedRoute>
-            <Admin />
+            <AdminRoute>
+              <Suspense fallback={<LazyFallback />}>
+                <Admin />
+              </Suspense>
+            </AdminRoute>
           </ProtectedRoute>
         }
       />
@@ -75,7 +90,9 @@ function AppRoutes() {
         path="/dogs"
         element={
           <ProtectedRoute>
-            <DogsPage />
+            <Suspense fallback={<LazyFallback />}>
+              <DogsPage />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -97,6 +114,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <Toaster position="top-center" richColors closeButton />
       </AuthProvider>
     </BrowserRouter>
   )

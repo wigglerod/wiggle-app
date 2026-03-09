@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
@@ -29,6 +30,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
   const [photoPulse, setPhotoPulse] = useState(false)
   const scrollRef = useRef(null)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when dog prop changes */
   useEffect(() => {
     setDoorRevealed(false)
     setImgError(false)
@@ -36,6 +38,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
     setSaveError(null)
     setPhotoPulse(false)
   }, [dog])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -79,6 +82,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
 
     setSaving(false)
     if (error) { setSaveError(error.message); return }
+    toast.success('Profile updated')
     onDogUpdated?.(data)
     setEditing(false)
   }
@@ -234,11 +238,11 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
 
               {/* Notes alert */}
               {dog.notes && (
-                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start">
+                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
                   <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <p className="text-sm font-medium leading-snug">{dog.notes}</p>
+                    <p className="text-sm font-medium leading-snug break-words">{dog.notes}</p>
                   </div>
                 </div>
               )}

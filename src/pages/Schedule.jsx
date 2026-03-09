@@ -72,7 +72,6 @@ export default function Schedule() {
         .order('dog_name')
 
       if (error) {
-        console.warn('Failed to fetch dogs from Supabase:', error.message)
         setDogs([])
       } else {
         setDogs(data || [])
@@ -80,7 +79,6 @@ export default function Schedule() {
       setDogsReady(true)
     }
     fetchDogs()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
   useEffect(() => {
@@ -193,9 +191,8 @@ export default function Schedule() {
     )
   }
 
-  useEffect(() => {
-    if (!loading) setRefreshing(false)
-  }, [loading])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync derived UI flag
+  useEffect(() => { if (!loading) setRefreshing(false) }, [loading])
 
   function handleTouchStart(e) {
     if (window.scrollY === 0) {
@@ -295,6 +292,7 @@ export default function Schedule() {
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="Write a note for the team..."
               rows={2}
+              aria-label="Note of the Day"
               className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none mb-3"
               autoFocus
             />

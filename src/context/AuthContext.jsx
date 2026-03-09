@@ -9,11 +9,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     async function fetchProfile(userId) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
+      if (error) {
+        setProfile(null)
+        return
+      }
       setProfile(data)
     }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
@@ -46,6 +47,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
   const [saveError, setSaveError]       = useState(null)
   const [photoPulse, setPhotoPulse]     = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when event prop changes */
   useEffect(() => {
     setDoorRevealed(false)
     setImgError(false)
@@ -66,6 +68,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
       })
     }
   }, [event])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -92,6 +95,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
       const { data, error } = await supabase.from('dogs').insert([form]).select().single()
       setSaving(false)
       if (error) { setSaveError(error.message); return }
+      toast.success('Dog profile created')
       onDogUpdated?.(data)
       setEditing(false)
       setCreating(false)
@@ -110,6 +114,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
         .single()
       setSaving(false)
       if (error) { setSaveError(error.message); return }
+      toast.success('Profile updated')
       onDogUpdated?.(data)
       setEditing(false)
     }
@@ -294,11 +299,11 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
               {/* Notes alert */}
               {dogNotes && (
-                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start">
+                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
                   <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <p className="text-sm font-medium leading-snug">{dogNotes}</p>
+                    <p className="text-sm font-medium leading-snug break-words">{dogNotes}</p>
                   </div>
                 </div>
               )}

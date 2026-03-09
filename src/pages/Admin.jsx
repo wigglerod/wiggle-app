@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingDog from '../components/LoadingDog'
@@ -142,8 +142,7 @@ function DogFormModal({ dog, onClose, onSaved }) {
 }
 
 export default function Admin() {
-  const { isAdmin, canDelete, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { canDelete, signOut } = useAuth()
   const [dogs, setDogs] = useState([])
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -153,16 +152,15 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('dogs')
   const [syncing, setSyncing] = useState(false)
 
-  useEffect(() => {
-    if (!isAdmin) navigate('/')
-  }, [isAdmin, navigate])
+  // Admin access is enforced by AdminRoute in App.jsx
 
   async function fetchData() {
     setLoading(true)
-    const [{ data: dogsData }, { data: logsData }] = await Promise.all([
+    const [{ data: dogsData, error: dogsErr }, { data: logsData, error: logsErr }] = await Promise.all([
       supabase.from('dogs').select('*').order('dog_name'),
       supabase.from('walk_logs').select('*, dogs(dog_name), profiles(email)').order('walk_date', { ascending: false }).limit(50),
     ])
+    if (dogsErr || logsErr) toast.error('Failed to load some data')
     setDogs(dogsData || [])
     setLogs(logsData || [])
     setLoading(false)
@@ -176,7 +174,12 @@ export default function Admin() {
 
   async function deleteDog(id) {
     if (!confirm('Delete this dog profile?')) return
-    await supabase.from('dogs').delete().eq('id', id)
+    const { error } = await supabase.from('dogs').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to delete dog profile')
+      return
+    }
+    toast.success('Dog profile deleted')
     fetchData()
   }
 
@@ -184,9 +187,11 @@ export default function Admin() {
     const ext = file.name.split('.').pop()
     const path = `dogs/${dog.id}.${ext}`
     const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
-    if (error) { alert('Upload failed: ' + error.message); return }
+    if (error) { toast.error('Upload failed: ' + error.message); return }
     const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(path)
-    await supabase.from('dogs').update({ photo_url: publicUrl }).eq('id', dog.id)
+    const { error: updateError } = await supabase.from('dogs').update({ photo_url: publicUrl }).eq('id', dog.id)
+    if (updateError) { toast.error('Failed to save photo'); return }
+    toast.success('Photo uploaded')
     fetchData()
   }
 
@@ -274,15 +279,15 @@ export default function Admin() {
                 if (res.ok) {
                   const events = await res.json()
                   setSyncing(false)
-                  alert(`Acuity sync OK: ${events.length} appointments today`)
+                  toast.success(`Acuity sync OK: ${events.length} appointments today`)
                 } else {
                   const err = await res.json().catch(() => ({}))
                   setSyncing(false)
-                  alert(`Acuity returned ${res.status}: ${err.error || 'Check ACUITY_USER_ID and ACUITY_API_KEY env vars'}`)
+                  toast.error(`Acuity returned ${res.status}: ${err.error || 'Check ACUITY_USER_ID and ACUITY_API_KEY env vars'}`)
                 }
               } catch {
                 setSyncing(false)
-                alert('Acuity API unreachable. Set ACUITY_USER_ID and ACUITY_API_KEY in Vercel env vars.')
+                toast.error('Acuity API unreachable. Check ACUITY_USER_ID and ACUITY_API_KEY env vars.')
               }
             }}
             className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-semibold shadow-sm active:bg-gray-50"
