@@ -28,7 +28,6 @@ import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
-import { useWalkGroups } from '../lib/useWalkGroups'
 
 let _idCounter = 0
 function uid() { return String(++_idCounter) }
@@ -111,9 +110,6 @@ export default function Dashboard() {
 
     buildSchedule()
   }, [dogsReady, dogs, nameMap, today, sector])
-
-  // Walk groups hook (for passing to MapView)
-  const { groups } = useWalkGroups(allEvents, today, effectiveSector)
 
   // Group events by time slot for display purposes
   const timeGroups = useMemo(() => groupEventsByTimeSlot(allEvents), [allEvents])
@@ -269,7 +265,8 @@ export default function Dashboard() {
             <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
               <MapView
                 events={allEvents}
-                groups={groups}
+                date={today}
+                sector={sector}
                 onDogClick={setSelectedEvent}
               />
             </Suspense>
