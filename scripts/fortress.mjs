@@ -37,6 +37,11 @@ async function main() {
   console.log('Connected to Supabase Postgres\n');
 
   try {
+    // ═══ 0. ENSURE updated_by COLUMN EXISTS ═══
+    console.log('0. Ensuring updated_by column on dogs...');
+    await client.query(`ALTER TABLE dogs ADD COLUMN IF NOT EXISTS updated_by text;`);
+    console.log('   done\n');
+
     // ═══ 1. AUDIT TABLE ═══
     console.log('1. Creating dogs_audit table...');
     await client.query(`

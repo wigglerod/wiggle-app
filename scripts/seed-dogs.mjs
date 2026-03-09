@@ -240,7 +240,8 @@ async function main() {
         bff          text,
         goals        text,
         created_at   timestamptz DEFAULT now(),
-        updated_at   timestamptz DEFAULT now()
+        updated_at   timestamptz DEFAULT now(),
+        updated_by   text
       );
     `);
 
