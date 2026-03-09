@@ -1,10 +1,24 @@
 import { useState, useEffect, useMemo, Component } from 'react'
 import { supabase } from '../lib/supabase'
+import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
 
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+const MONTREAL_CENTER = { lat: 45.5231, lng: -73.5828 }
 const GROUP_COLORS = ['#3B82F6', '#22C55E', '#A855F7', '#F59E0B', '#EC4899', '#14B8A6']
 
 function getGroupColor(groupNum) {
   return GROUP_COLORS[(groupNum - 1) % GROUP_COLORS.length]
+}
+
+// Geocode cache — persists across re-renders, avoids repeat API calls
+const geocodeCache = new Map()
+
+function markerSvg(color) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40"><path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 26 14 26s14-15.5 14-26C28 6.3 21.7 0 14 0z" fill="${color}" stroke="white" stroke-width="2"/><circle cx="14" cy="14" r="5" fill="white" opacity="0.9"/></svg>`
+}
+
+function markerIcon(color) {
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markerSvg(color))}`
 }
 
 function buildRouteUrl(addresses) {
@@ -36,12 +50,119 @@ class MapErrorBoundary extends Component {
   }
 }
 
+// ── Interactive Google Map with geocoded markers ────────────────────
+function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
+  const geocodingLib = useMapsLibrary('geocoding')
+  const [markers, setMarkers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  // Stable key so we only re-geocode when addresses actually change
+  const addressKey = useMemo(
+    () => allDogs.map((d) => d.address).sort().join('|'),
+    [allDogs]
+  )
+
+  useEffect(() => {
+    if (!geocodingLib || allDogs.length === 0) return
+    setLoading(true)
+
+    const gc = new geocodingLib.Geocoder()
+
+    async function geocodeAll() {
+      const results = await Promise.all(
+        allDogs.map(async (dog) => {
+          const addr =
+            dog.address.toLowerCase().includes('montréal') ||
+            dog.address.toLowerCase().includes('montreal')
+              ? dog.address
+              : `${dog.address}, Montréal, QC`
+
+          if (geocodeCache.has(addr)) {
+            return { ...dog, ...geocodeCache.get(addr) }
+          }
+
+          try {
+            const { results: geo } = await gc.geocode({ address: addr })
+            const loc = geo?.[0]?.geometry?.location
+            if (loc) {
+              const coords = { lat: loc.lat(), lng: loc.lng() }
+              geocodeCache.set(addr, coords)
+              return { ...dog, ...coords }
+            }
+          } catch {
+            // Individual geocode failure — skip this dog
+          }
+          return null
+        })
+      )
+
+      const valid = results.filter(Boolean)
+      setMarkers(valid)
+      setLoading(false)
+    }
+
+    geocodeAll().catch(() => {
+      setError(true)
+      setLoading(false)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geocodingLib, addressKey])
+
+  if (error) return null
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm mb-4">
+      <GoogleMap
+        defaultCenter={MONTREAL_CENTER}
+        defaultZoom={14}
+        style={{ width: '100%', height: '260px' }}
+        gestureHandling="cooperative"
+        disableDefaultUI
+        zoomControl
+      >
+        {markers.map((m, i) => (
+          <Marker
+            key={m.event._id || i}
+            position={{ lat: m.lat, lng: m.lng }}
+            icon={markerIcon(m.color)}
+            title={m.event.displayName}
+            onClick={() => onDogClick?.(m.event)}
+          />
+        ))}
+      </GoogleMap>
+
+      {/* Loading indicator */}
+      {loading && allDogs.length > 0 && (
+        <div className="bg-gray-50 px-3 py-1.5 text-xs text-gray-400 text-center">
+          Placing pins on map...
+        </div>
+      )}
+
+      {/* Group color legend */}
+      {!loading && markers.length > 0 && groupLegend.length > 0 && (
+        <div className="bg-gray-50 px-3 py-2 flex flex-wrap gap-x-3 gap-y-1 justify-center">
+          {groupLegend.map((g) => (
+            <span key={g.name} className="flex items-center gap-1 text-xs text-gray-500">
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: g.color }}
+              />
+              {g.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main export ─────────────────────────────────────────────────────
 export default function MapView({ events, date, sector, onDogClick }) {
   const [walkGroups, setWalkGroups] = useState([])
   const [loaded, setLoaded] = useState(false)
 
-  // Load walk_groups for today (all sectors)
+  // Load walk_groups for today
   useEffect(() => {
     if (!date) return
     async function load() {
@@ -74,15 +195,11 @@ export default function MapView({ events, date, sector, onDogClick }) {
       return { sections: [], unassigned: [], dogsWithoutAddress: [] }
     }
 
-    // Track which event _ids are assigned to a walk group
     const assignedIds = new Set()
-
-    // Determine which sectors to show
     const sectorOrder = sector === 'both' ? ['Plateau', 'Laurier'] : [sector]
     const sectionsOut = []
 
     for (const sectorName of sectorOrder) {
-      // Get walk_groups for this sector, sorted by group_num
       const sectorGroups = walkGroups
         .filter((wg) => wg.sector === sectorName)
         .sort((a, b) => a.group_num - b.group_num)
@@ -121,13 +238,12 @@ export default function MapView({ events, date, sector, onDogClick }) {
       }
     }
 
-    // Unassigned events (not in any walk_group)
+    // Unassigned events
     const unassignedOut = []
     const noAddrOut = []
 
     for (const ev of events) {
       if (assignedIds.has(String(ev._id))) continue
-      // Filter by sector if needed
       const evSector = ev.dog?.sector || ev.sector
       if (sector !== 'both' && evSector && evSector !== sector) continue
       const addr = ev.dog?.address || ev.location
@@ -140,6 +256,27 @@ export default function MapView({ events, date, sector, onDogClick }) {
 
     return { sections: sectionsOut, unassigned: unassignedOut, dogsWithoutAddress: noAddrOut }
   }, [events, walkGroups, eventsMap, loaded, sector])
+
+  // Collect all dogs with group colors for the interactive map
+  const { allMapDogs, groupLegend } = useMemo(() => {
+    const dogs = []
+    const legend = []
+
+    for (const sec of sections) {
+      for (const group of sec.groups) {
+        const color = getGroupColor(group.groupNum)
+        legend.push({ name: group.groupName, color })
+        for (const dog of group.dogs) {
+          dogs.push({ ...dog, color, groupName: group.groupName })
+        }
+      }
+    }
+    for (const dog of unassigned) {
+      dogs.push({ ...dog, color: '#9CA3AF', groupName: 'Not grouped' })
+    }
+
+    return { allMapDogs: dogs, groupLegend: legend }
+  }, [sections, unassigned])
 
   if (!loaded) {
     return (
@@ -171,6 +308,19 @@ export default function MapView({ events, date, sector, onDogClick }) {
       }
     >
       <div className="flex flex-col gap-4">
+        {/* Interactive Google Map */}
+        {GOOGLE_MAPS_KEY && allMapDogs.length > 0 && (
+          <MapErrorBoundary fallback={null}>
+            <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+              <MapWithMarkers
+                allDogs={allMapDogs}
+                groupLegend={groupLegend}
+                onDogClick={onDogClick}
+              />
+            </APIProvider>
+          </MapErrorBoundary>
+        )}
+
         {/* Sector sections */}
         {sections.map((sec) => (
           <SectorSection
