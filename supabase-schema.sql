@@ -262,7 +262,65 @@ create index on route_orders (walk_date, user_id);
 
 
 -- ============================================================
--- STEP 10 — DOG PHOTOS STORAGE
+-- STEP 10 — ACUITY NAME MAP (manual override for dog matching)
+-- ============================================================
+
+create table if not exists acuity_name_map (
+  id          uuid        primary key default gen_random_uuid(),
+  acuity_name text        not null unique,
+  dog_name    text        not null,
+  created_at  timestamptz not null default now()
+);
+
+alter table acuity_name_map enable row level security;
+
+-- Everyone authenticated can read
+create policy "acuity_name_map_read" on acuity_name_map
+  for select using (auth.uid() is not null);
+
+-- Only admins and senior walkers can write
+create policy "acuity_name_map_write" on acuity_name_map
+  for all
+  using     ((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'))
+  with check((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'));
+
+-- Seed known mappings
+INSERT INTO acuity_name_map (acuity_name, dog_name) VALUES
+  ('Enzo', 'Enzo OG'),
+  ('Django Dali', 'Django and Dali'),
+  ('Halloumi (Pauline)', 'Halloumi'),
+  ('Chessy', 'Cheesy'),
+  ('Maxime', 'Muji')
+ON CONFLICT (acuity_name) DO NOTHING;
+
+
+-- ============================================================
+-- STEP 11 — MATCH LOG (track matching patterns over time)
+-- ============================================================
+
+create table if not exists match_log (
+  id           uuid        primary key default gen_random_uuid(),
+  acuity_name  text        not null,
+  matched_dog  text,
+  match_method text        not null,
+  walk_date    date        not null default current_date,
+  created_at   timestamptz not null default now(),
+  unique(acuity_name, walk_date)
+);
+
+alter table match_log enable row level security;
+
+-- All authenticated users can read and write match logs
+create policy "match_log_all" on match_log
+  for all
+  using     (auth.uid() is not null)
+  with check(auth.uid() is not null);
+
+create index on match_log (walk_date);
+
+
+-- ============================================================
+-- STEP 12 — DOG PHOTOS STORAGE
 -- ============================================================
 -- Storage bucket "dog-photos" created via scripts/setup-features.mjs
 -- Policies on storage.objects:

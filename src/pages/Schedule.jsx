@@ -10,7 +10,7 @@ import RouteBuilder from '../components/RouteBuilder'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
-import { extractDogName, matchDog } from '../lib/matchDogs'
+import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
 
 let _idCounter = 0
@@ -43,6 +43,7 @@ function SkeletonWalkCard() {
 export default function Schedule() {
   const { profile, isAdmin, user } = useAuth()
   const [dogs, setDogs] = useState([])
+  const [nameMap, setNameMap] = useState(new Map())
   const [dogsReady, setDogsReady] = useState(false)
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
@@ -68,16 +69,12 @@ export default function Schedule() {
 
   useEffect(() => {
     async function fetchDogs() {
-      const { data, error } = await supabase
-        .from('dogs')
-        .select('*')
-        .order('dog_name')
-
-      if (error) {
-        setDogs([])
-      } else {
-        setDogs(data || [])
-      }
+      const [dogsRes, mapRes] = await Promise.all([
+        supabase.from('dogs').select('*').order('dog_name'),
+        supabase.from('acuity_name_map').select('acuity_name, dog_name'),
+      ])
+      setDogs(dogsRes.error ? [] : dogsRes.data || [])
+      setNameMap(buildNameMap(mapRes.data))
       setDogsReady(true)
     }
     fetchDogs()
@@ -136,23 +133,30 @@ export default function Schedule() {
         // Acuity unavailable
       }
 
-      const enriched = allEvents.map((ev) => {
-        const rawName = extractDogName(ev.summary)
-        const { dog, matchType } = matchDog(rawName, dogs)
-        const calendarDoorCode = extractDoorCode(ev.description)
-        const parts = ev.summary.trim().split(/\s+/)
-        const breed = parts.length > 1 ? parts.slice(1).join(' ') : null
+      const matched = matchEvents(allEvents, dogs, nameMap)
+      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod }) => ({
+        ...event,
+        _id: uid(),
+        displayName,
+        breed,
+        dog,
+        matchType,
+        matchMethod,
+        calendarDoorCode: extractDoorCode(event.description),
+      }))
 
-        return {
-          ...ev,
-          _id: uid(),
-          displayName: rawName,
-          breed,
-          dog,
-          matchType,
-          calendarDoorCode,
-        }
-      })
+      // Log matches (fire-and-forget)
+      const logs = matched
+        .filter((m) => m.matchMethod !== 'none')
+        .map((m) => ({
+          acuity_name: m.event.summary || m.displayName,
+          matched_dog: m.dog?.dog_name || null,
+          match_method: m.matchMethod,
+          walk_date: selectedDate,
+        }))
+      if (logs.length > 0) {
+        supabase.from('match_log').upsert(logs, { onConflict: 'acuity_name,walk_date' })
+      }
 
       const grouped = groupEventsByTimeSlot(enriched)
       setGroups(grouped)
@@ -160,7 +164,7 @@ export default function Schedule() {
     }
 
     buildSchedule()
-  }, [dogsReady, dogs, selectedDate, profile])
+  }, [dogsReady, dogs, nameMap, selectedDate, profile])
 
   function switchDay(offset) {
     if (offset === dayOffset) return

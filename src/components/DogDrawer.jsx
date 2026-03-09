@@ -46,6 +46,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
   const [saving, setSaving]             = useState(false)
   const [saveError, setSaveError]       = useState(null)
   const [photoPulse, setPhotoPulse]     = useState(false)
+  const [linking, setLinking]           = useState(false)
+  const [linkSearch, setLinkSearch]     = useState('')
+  const [allDogs, setAllDogs]           = useState([])
+  const [linkSaving, setLinkSaving]     = useState(false)
 
   /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when event prop changes */
   useEffect(() => {
@@ -55,6 +59,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setCreating(false)
     setSaveError(null)
     setPhotoPulse(false)
+    setLinking(false)
+    setLinkSearch('')
     if (event?.dog) {
       setForm({
         dog_name:  event.dog.dog_name  || '',
@@ -125,6 +131,30 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setPhotoPulse(true)
     setTimeout(() => setPhotoPulse(false), 800)
     onDogUpdated?.(d)
+  }
+
+  async function startLink() {
+    setLinking(true)
+    setLinkSearch('')
+    const { data } = await supabase.from('dogs').select('id, dog_name, sector').order('dog_name')
+    setAllDogs(data || [])
+  }
+
+  async function handleLink(dog) {
+    setLinkSaving(true)
+    const acuityName = event.displayName || event.summary?.trim().split(/\s+/)[0] || ''
+    const { error } = await supabase.from('acuity_name_map').upsert(
+      { acuity_name: acuityName, dog_name: dog.dog_name },
+      { onConflict: 'acuity_name' }
+    )
+    setLinkSaving(false)
+    if (error) {
+      toast.error('Failed to save mapping')
+      return
+    }
+    toast.success(`Linked "${acuityName}" → ${dog.dog_name}`)
+    onDogUpdated?.(dog)
+    setLinking(false)
   }
 
   if (!event) return null
@@ -206,12 +236,20 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </span>
                 {!editing && event.matchType === 'none' && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                    Profile Missing
+                    Unknown Explorer
                   </span>
                 )}
                 {!editing && event.matchType === 'fuzzy' && (
                   <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">
                     Fuzzy match
+                  </span>
+                )}
+                {!editing && event.matchMethod && !['dog_name', 'name_map', 'none'].includes(event.matchMethod) && event.matchType !== 'fuzzy' && (
+                  <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                    {event.matchMethod === 'email' ? 'Email match' :
+                     event.matchMethod === 'email_household' ? 'Household' :
+                     event.matchMethod === 'owner_last_name' ? 'Owner match' :
+                     event.matchMethod === 'phone' ? 'Phone match' : event.matchMethod}
                   </span>
                 )}
               </div>
@@ -416,6 +454,16 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </div>
               )}
 
+              {/* Acuity booking info (no profile) */}
+              {!dog && (event.email || event.ownerName) && (
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1">Booking Info</p>
+                  {event.ownerName && <p className="text-sm text-gray-700">{event.ownerName}</p>}
+                  {event.email && <p className="text-sm text-gray-500">{event.email}</p>}
+                  {event.phone && <p className="text-sm text-gray-500">{event.phone}</p>}
+                </div>
+              )}
+
               {/* Calendar notes (no profile) */}
               {!dog && event.description && (
                 <div className="bg-gray-50 rounded-2xl p-4">
@@ -433,7 +481,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
               {/* Admin actions */}
               {canEdit && (
-                <div className="mt-1">
+                <div className="mt-1 flex flex-col gap-2">
                   {dog ? (
                     <button
                       onClick={() => setEditing(true)}
@@ -441,13 +489,58 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                     >
                       Edit Profile
                     </button>
+                  ) : linking ? (
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-2">Link to Existing Dog</p>
+                      <input
+                        type="text"
+                        value={linkSearch}
+                        onChange={(e) => setLinkSearch(e.target.value)}
+                        placeholder="Search dogs..."
+                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-[#E8634A]"
+                        autoFocus
+                      />
+                      <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+                        {allDogs
+                          .filter((d) => !linkSearch || d.dog_name.toLowerCase().includes(linkSearch.toLowerCase()))
+                          .map((d) => (
+                            <button
+                              key={d.id}
+                              onClick={() => handleLink(d)}
+                              disabled={linkSaving}
+                              className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-[#FFF4F1] active:bg-[#FDEBE7] transition-colors flex items-center justify-between"
+                            >
+                              <span className="font-medium text-gray-700">{d.dog_name}</span>
+                              {d.sector && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  d.sector === 'Plateau' ? 'bg-blue-100 text-blue-700' : 'bg-[#FDEBE7] text-[#E8634A]'
+                                }`}>{d.sector}</span>
+                              )}
+                            </button>
+                          ))}
+                      </div>
+                      <button
+                        onClick={() => setLinking(false)}
+                        className="w-full mt-2 py-2 text-sm text-gray-400 active:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={startCreate}
-                      className="w-full py-3 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-all min-h-[48px]"
-                    >
-                      + Create Dog Profile
-                    </button>
+                    <>
+                      <button
+                        onClick={startLink}
+                        className="w-full py-3 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-all min-h-[48px]"
+                      >
+                        🔗 Link to Existing Dog
+                      </button>
+                      <button
+                        onClick={startCreate}
+                        className="w-full py-3 rounded-full bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200 transition-all min-h-[48px]"
+                      >
+                        + Create New Profile
+                      </button>
+                    </>
                   )}
                 </div>
               )}

@@ -9,7 +9,7 @@ const MapView = lazy(() => import('../components/MapView'))
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
-import { extractDogName, matchDog } from '../lib/matchDogs'
+import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
 import { useWalkGroups } from '../lib/useWalkGroups'
 
@@ -19,6 +19,7 @@ function uid() { return String(++_idCounter) }
 export default function Dashboard() {
   const { profile } = useAuth()
   const [dogs, setDogs] = useState([])
+  const [nameMap, setNameMap] = useState(new Map())
   const [dogsReady, setDogsReady] = useState(false)
   const [allEvents, setAllEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -41,19 +42,15 @@ export default function Dashboard() {
   const sector = profile?.sector || 'both'
   const effectiveSector = sector === 'both' ? 'Plateau' : sector
 
-  // Fetch dogs — re-runs on pull-to-refresh
+  // Fetch dogs + name map — re-runs on pull-to-refresh
   useEffect(() => {
     async function fetchDogs() {
-      const { data, error } = await supabase
-        .from('dogs')
-        .select('*')
-        .order('dog_name')
-
-      if (error) {
-        setDogs([])
-      } else {
-        setDogs(data || [])
-      }
+      const [dogsRes, mapRes] = await Promise.all([
+        supabase.from('dogs').select('*').order('dog_name'),
+        supabase.from('acuity_name_map').select('acuity_name, dog_name'),
+      ])
+      setDogs(dogsRes.error ? [] : dogsRes.data || [])
+      setNameMap(buildNameMap(mapRes.data))
       setDogsReady(true)
     }
     fetchDogs()
@@ -78,31 +75,25 @@ export default function Dashboard() {
         // Acuity unavailable
       }
 
-      // Enrich events with dog matching
-      const enriched = rawEvents.map((ev) => {
-        const rawName = extractDogName(ev.summary)
-        const { dog, matchType } = matchDog(rawName, dogs)
-        const calendarDoorCode = extractDoorCode(ev.description)
-        const parts = ev.summary.trim().split(/\s+/)
-        const breed = parts.length > 1 ? parts.slice(1).join(' ') : null
-
-        return {
-          ...ev,
-          _id: uid(),
-          displayName: rawName,
-          breed,
-          dog,
-          matchType,
-          calendarDoorCode,
-        }
-      })
+      // Enrich events with multi-signal dog matching
+      const matched = matchEvents(rawEvents, dogs, nameMap)
+      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod }) => ({
+        ...event,
+        _id: uid(),
+        displayName,
+        breed,
+        dog,
+        matchType,
+        matchMethod,
+        calendarDoorCode: extractDoorCode(event.description),
+      }))
 
       setAllEvents(enriched)
       setLoading(false)
     }
 
     buildSchedule()
-  }, [dogsReady, dogs, today, sector])
+  }, [dogsReady, dogs, nameMap, today, sector])
 
   // Walk groups hook (for passing to MapView)
   const { groups } = useWalkGroups(allEvents, today, effectiveSector)
