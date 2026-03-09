@@ -44,16 +44,39 @@ export function matchDog(calendarName, dogs) {
 // ---------------------------------------------------------------------------
 
 /**
- * Build a name map (lowercase acuity_name → dog_name) from Supabase rows.
+ * Build a name map from Supabase rows.
+ * Supports optional acuity_email for email-conditional disambiguation.
+ * Returns Map of lowercase_name → Array of { dogName, email (lowercase|null) }
  */
 export function buildNameMap(rows) {
   const map = new Map()
   for (const row of rows || []) {
     if (row.acuity_name && row.dog_name) {
-      map.set(row.acuity_name.toLowerCase().trim(), row.dog_name.trim())
+      const key = row.acuity_name.toLowerCase().trim()
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push({
+        dogName: row.dog_name.trim(),
+        email: row.acuity_email?.trim() || null,
+      })
     }
   }
   return map
+}
+
+/**
+ * Look up a name in the name map, optionally filtering by email.
+ * Email-specific entries take priority over generic ones.
+ */
+function lookupNameMap(nameMap, name, eventEmail) {
+  const entries = nameMap.get(name.toLowerCase().trim())
+  if (!entries) return null
+  if (eventEmail) {
+    const emailLower = eventEmail.toLowerCase().trim()
+    const emailMatch = entries.find((e) => e.email === emailLower)
+    if (emailMatch) return emailMatch.dogName
+  }
+  const generic = entries.find((e) => !e.email)
+  return generic ? generic.dogName : null
 }
 
 /**
@@ -84,7 +107,7 @@ function matchSingleEvent(ev, dogs, nameMap) {
   // ── 1. MANUAL OVERRIDE MAP (check longest prefix first) ─────────
   for (let len = Math.min(words.length, 5); len >= 1; len--) {
     const candidate = words.slice(0, len).join(' ')
-    const mapped = nameMap.get(candidate.toLowerCase())
+    const mapped = lookupNameMap(nameMap, candidate, ev.email)
     if (mapped) {
       const dog = dogs.find((d) => d.dog_name.toLowerCase() === mapped.toLowerCase())
       const breed = words.slice(len).join(' ') || null

@@ -47,7 +47,7 @@ export default function Dashboard() {
     async function fetchDogs() {
       const [dogsRes, mapRes] = await Promise.all([
         supabase.from('dogs').select('*').order('dog_name'),
-        supabase.from('acuity_name_map').select('acuity_name, dog_name'),
+        supabase.from('acuity_name_map').select('acuity_name, dog_name, acuity_email'),
       ])
       setDogs(dogsRes.error ? [] : dogsRes.data || [])
       setNameMap(buildNameMap(mapRes.data))

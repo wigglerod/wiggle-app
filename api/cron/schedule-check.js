@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     // ── 3. Load dogs + name map ───────────────────────────────────────
     const [dogsRes, mapRes, groupsRes] = await Promise.all([
       supabase.from('dogs').select('*').order('dog_name'),
-      supabase.from('acuity_name_map').select('acuity_name, dog_name'),
+      supabase.from('acuity_name_map').select('acuity_name, dog_name, acuity_email'),
       supabase.from('walk_groups').select('*').eq('walk_date', todayStr),
     ])
 
@@ -118,9 +118,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Rule: Dogs in correct sector
+    // Rule: Dogs in correct sector (skip overrides — name_map/email matches are authoritative)
+    const skipSectorMethods = new Set(['email', 'email_household', 'name_map'])
     for (const m of matchedOk) {
-      if (m.dog?.sector && m.event.sector && m.dog.sector !== m.event.sector) {
+      if (m.dog?.sector && m.event.sector && m.dog.sector !== m.event.sector
+          && !skipSectorMethods.has(m.matchMethod)) {
         issues.push({
           type: 'sector_mismatch',
           severity: 'warning',

@@ -144,8 +144,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setLinkSaving(true)
     const acuityName = event.displayName || event.summary?.trim().split(/\s+/)[0] || ''
     const { error } = await supabase.from('acuity_name_map').upsert(
-      { acuity_name: acuityName, dog_name: dog.dog_name },
-      { onConflict: 'acuity_name' }
+      { acuity_name: acuityName, dog_name: dog.dog_name, acuity_email: '' },
+      { onConflict: 'acuity_name,acuity_email' }
     )
     setLinkSaving(false)
     if (error) {

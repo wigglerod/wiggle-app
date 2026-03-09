@@ -266,10 +266,12 @@ create index on route_orders (walk_date, user_id);
 -- ============================================================
 
 create table if not exists acuity_name_map (
-  id          uuid        primary key default gen_random_uuid(),
-  acuity_name text        not null unique,
-  dog_name    text        not null,
-  created_at  timestamptz not null default now()
+  id           uuid        primary key default gen_random_uuid(),
+  acuity_name  text        not null,
+  dog_name     text        not null,
+  acuity_email text        not null default '',
+  created_at   timestamptz not null default now(),
+  unique(acuity_name, acuity_email)
 );
 
 alter table acuity_name_map enable row level security;
@@ -290,8 +292,16 @@ INSERT INTO acuity_name_map (acuity_name, dog_name) VALUES
   ('Django Dali', 'Django and Dali'),
   ('Halloumi (Pauline)', 'Halloumi'),
   ('Chessy', 'Cheesy'),
-  ('Maxime', 'Muji')
-ON CONFLICT (acuity_name) DO NOTHING;
+  ('Maxime', 'Muji'),
+  ('Mina', 'Paloma')
+ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
+
+-- Luna disambiguation (email-conditional)
+INSERT INTO acuity_name_map (acuity_name, dog_name, acuity_email) VALUES
+  ('Luna', 'Luna GS', 'rgodbout66@gmail.com'),
+  ('Luna', 'Luna GS', 'rgodbout@hotmail.com'),
+  ('Luna', 'Luna', 'beaudoin.florence23@gmail.com')
+ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
 
 
 -- ============================================================
