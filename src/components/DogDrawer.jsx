@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import PhotoUpload from './PhotoUpload'
 
 // Matches the color cycle in GroupOrganizer
 const GROUP_COLORS = [
@@ -27,13 +28,16 @@ function mapsUrl(address) {
 }
 
 const EDIT_FIELDS = [
+  { key: 'breed',     label: 'Breed' },
   { key: 'address',   label: 'Address' },
   { key: 'door_code', label: 'Door / Access Code' },
   { key: 'notes',     label: 'Notes', multiline: true },
+  { key: 'bff',       label: 'Best Friends (BFF)' },
+  { key: 'goals',     label: 'Goals', multiline: true },
 ]
 
 export default function DogDrawer({ event, onClose, onDogUpdated }) {
-  const { canEdit } = useAuth()
+  const { canEdit, profile } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError]         = useState(false)
   const [editing, setEditing]           = useState(false)
@@ -51,9 +55,12 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     if (event?.dog) {
       setForm({
         dog_name:  event.dog.dog_name  || '',
+        breed:     event.dog.breed     || '',
         address:   event.dog.address   || '',
         door_code: event.dog.door_code || '',
         notes:     event.dog.notes     || '',
+        bff:       event.dog.bff       || '',
+        goals:     event.dog.goals     || '',
         sector:    event.dog.sector || event.sector || 'Plateau',
       })
     }
@@ -89,10 +96,15 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
       setEditing(false)
       setCreating(false)
     } else {
-      const { address, door_code, notes } = form
+      const { breed, address, door_code, notes, bff, goals } = form
       const { data, error } = await supabase
         .from('dogs')
-        .update({ address, door_code, notes })
+        .update({
+          breed: breed || null, address: address || null, door_code: door_code || null,
+          notes: notes || null, bff: bff || null, goals: goals || null,
+          updated_at: new Date().toISOString(),
+          updated_by: profile?.full_name || profile?.email || 'Unknown',
+        })
         .eq('id', event.dog.id)
         .select()
         .single()
@@ -148,16 +160,21 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
           {/* ── Header: photo + name + badges ── */}
           <div className="flex items-center gap-4 mb-5">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center flex-shrink-0 shadow-sm">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={event.displayName}
-                  className="w-full h-full object-cover"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <span className="text-4xl">🐶</span>
+            <div className="relative w-20 h-20 flex-shrink-0">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center shadow-sm">
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt={event.displayName}
+                    className="w-full h-full object-cover"
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <span className="text-4xl">🐶</span>
+                )}
+              </div>
+              {canEdit && dog?.id && !editing && (
+                <PhotoUpload dogId={dog.id} onUploaded={(d) => { setImgError(false); onDogUpdated?.(d) }} />
               )}
             </div>
 
@@ -359,12 +376,32 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </div>
               )}
 
+              {/* Goals */}
+              {dog?.goals && (
+                <div className="bg-green-50 rounded-2xl p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-base flex-shrink-0">🎯</span>
+                    <div>
+                      <p className="text-xs font-semibold text-green-500 uppercase tracking-wide mb-0.5">Goals</p>
+                      <p className="text-sm text-gray-700 leading-snug">{dog.goals}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Calendar notes (no profile) */}
               {!dog && event.description && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Calendar Notes</p>
                   <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">{event.description}</p>
                 </div>
+              )}
+
+              {/* Last updated footer */}
+              {dog?.updated_by && dog?.updated_at && (
+                <p className="text-xs text-gray-300 text-center mt-2">
+                  Last updated by {dog.updated_by} on {new Date(dog.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
               )}
 
               {/* Admin actions */}

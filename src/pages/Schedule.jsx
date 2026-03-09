@@ -21,7 +21,7 @@ function torontoDate(offset = 0) {
 }
 
 export default function Schedule() {
-  const { profile } = useAuth()
+  const { profile, isAdmin, user } = useAuth()
   const [dogs, setDogs] = useState([])
   const [dogsReady, setDogsReady] = useState(false)
   const [groups, setGroups] = useState([])
@@ -33,6 +33,10 @@ export default function Schedule() {
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [dayOffset, setDayOffset] = useState(0) // 0 = today, 1 = tomorrow
+  const [dailyNote, setDailyNote] = useState(null)
+  const [noteInput, setNoteInput] = useState('')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [noteEditing, setNoteEditing] = useState(false)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
@@ -60,6 +64,41 @@ export default function Schedule() {
     fetchDogs()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
+
+  // Fetch daily note for selected date
+  useEffect(() => {
+    async function fetchNote() {
+      const { data } = await supabase
+        .from('daily_notes')
+        .select('*')
+        .eq('note_date', selectedDate)
+        .single()
+      setDailyNote(data || null)
+      if (data) setNoteInput(data.note_text)
+      else setNoteInput('')
+      setNoteEditing(false)
+    }
+    fetchNote()
+  }, [selectedDate, refreshKey])
+
+  async function saveDailyNote() {
+    if (!noteInput.trim()) return
+    setNoteSaving(true)
+    const { data, error } = await supabase
+      .from('daily_notes')
+      .upsert({
+        note_date: selectedDate,
+        note_text: noteInput.trim(),
+        created_by: user?.id,
+      }, { onConflict: 'note_date' })
+      .select()
+      .single()
+    setNoteSaving(false)
+    if (!error && data) {
+      setDailyNote(data)
+      setNoteEditing(false)
+    }
+  }
 
   // Fetch schedule from Acuity and build walk groups
   useEffect(() => {
@@ -219,6 +258,65 @@ export default function Schedule() {
             </button>
           ))}
         </div>
+
+        {/* Note of the Day — admin edit / all view */}
+        {isAdmin && !dailyNote && !noteEditing && (
+          <button
+            onClick={() => setNoteEditing(true)}
+            className="w-full mb-4 py-3 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-[#E8634A] text-sm font-semibold active:bg-[#FFF4F1] transition-colors"
+          >
+            + Add Note of the Day
+          </button>
+        )}
+
+        {noteEditing && isAdmin && (
+          <div className="mb-4 bg-white rounded-xl border border-[#E8634A]/30 p-4 shadow-sm">
+            <textarea
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              placeholder="Write a note for the team..."
+              rows={2}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none mb-3"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setNoteEditing(false); setNoteInput(dailyNote?.note_text || '') }}
+                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveDailyNote}
+                disabled={noteSaving || !noteInput.trim()}
+                className="flex-1 py-2 rounded-lg bg-[#E8634A] text-white text-sm font-bold disabled:opacity-50"
+              >
+                {noteSaving ? 'Saving...' : 'Save Note'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {dailyNote && !noteEditing && (
+          <div
+            className="mb-4 bg-[#E8634A] text-white rounded-xl px-4 py-3 shadow-sm"
+            onClick={isAdmin ? () => { setNoteInput(dailyNote.note_text); setNoteEditing(true) } : undefined}
+          >
+            <div className="flex items-start gap-2">
+              <span className="text-base flex-shrink-0 mt-0.5">📣</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Note of the Day</p>
+                <p className="text-sm font-medium leading-snug">{dailyNote.note_text}</p>
+              </div>
+              {isAdmin && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 opacity-60 flex-shrink-0 mt-0.5">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Progress banner */}
         {!loading && totalWalks > 0 && (

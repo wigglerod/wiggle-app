@@ -37,10 +37,16 @@ export default async function handler(req, res) {
       const durationMin = parseInt(appt.duration, 10) || 60
       const end = new Date(start.getTime() + durationMin * 60000)
 
+      // Client notes (separate from description for UI display)
+      const clientNotes = appt.notes?.trim() || ''
+      const ownerName = [appt.firstName, appt.lastName].filter(Boolean).join(' ')
+
       return {
         summary: summary.trim(),
         location: appt.location || '',
         description: description.trim(),
+        clientNotes,
+        ownerName,
         start: start.toISOString(),
         end: end.toISOString(),
         sector: appt.calendar || '',

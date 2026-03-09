@@ -140,6 +140,10 @@ export default function DogsPage() {
         <DogProfileDrawer
           dog={selectedDog}
           onClose={() => setSelectedDog(null)}
+          onDogUpdated={(updated) => {
+            setSelectedDog(updated)
+            setDogs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
+          }}
         />
       )}
 

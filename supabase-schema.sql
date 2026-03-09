@@ -210,13 +210,53 @@ alter publication supabase_realtime add table walk_groups;
 
 
 -- ============================================================
+-- STEP 8 — DAILY NOTES (admin note of the day)
+-- ============================================================
+
+create table if not exists daily_notes (
+  id          uuid        primary key default gen_random_uuid(),
+  note_text   text        not null,
+  created_by  uuid        not null references profiles(id),
+  note_date   date        not null default current_date,
+  created_at  timestamptz not null default now(),
+  unique(note_date)
+);
+
+alter table daily_notes enable row level security;
+
+-- All authenticated users can read daily notes
+create policy "daily_notes_read" on daily_notes
+  for select using (auth.uid() is not null);
+
+-- Only admins can create/update/delete daily notes
+create policy "daily_notes_admin_write" on daily_notes
+  for all
+  using     ((select role from profiles where id = auth.uid()) = 'admin')
+  with check((select role from profiles where id = auth.uid()) = 'admin');
+
+
+-- ============================================================
+-- STEP 9 — DOG PHOTOS STORAGE
+-- ============================================================
+-- Storage bucket "dog-photos" created via scripts/setup-features.mjs
+-- Policies on storage.objects:
+--   dog_photos_read   — public read
+--   dog_photos_upload — admin + senior_walker insert
+--   dog_photos_update — admin + senior_walker update
+--   dog_photos_delete — admin + senior_walker delete
+
+-- Dogs table updated_by column (tracks who last edited a dog profile)
+-- ALTER TABLE dogs ADD COLUMN IF NOT EXISTS updated_by text;
+-- (run via scripts/setup-features.mjs)
+
+
+-- ============================================================
 -- DONE — POST-SETUP STEPS
 -- ============================================================
 -- After running this:
 --
--- 1. Create storage bucket manually:
---    Dashboard → Storage → New Bucket
---    Name: photos  |  Public: ON
+-- 1. Run storage + daily_notes setup:
+--    node scripts/setup-features.mjs
 --
 -- 2. Seed the dogs from CSV:
 --    node scripts/seed-dogs.mjs

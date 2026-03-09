@@ -68,6 +68,24 @@ export default function WalkCard({ group, loggedIds, onDogClick, onLogWalk }) {
         })}
       </div>
 
+      {/* Today's Notes from Acuity */}
+      {events.filter((ev) => ev.clientNotes).map((ev) => (
+        <div
+          key={`note-${ev._id}`}
+          className="rounded-xl border-2 border-[#E8634A]/30 bg-[#FFF4F1] px-3 py-2.5 mb-3"
+        >
+          <div className="flex items-start gap-2">
+            <span className="text-sm flex-shrink-0 mt-0.5">📝</span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[#E8634A] mb-0.5">
+                Note from {ev.ownerName || ev.displayName}
+              </p>
+              <p className="text-sm text-gray-700 leading-snug">{ev.clientNotes}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+
       {/* Address preview (first event) */}
       {events[0]?.location && (
         <p className="text-xs text-gray-400 mb-3 truncate">
