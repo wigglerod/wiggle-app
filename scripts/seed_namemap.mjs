@@ -50,9 +50,19 @@ try {
     ['Papi Chulo', 'Papi Chulo', null],
     ['Maxime', 'Muji', null],
     ['Mina', 'Paloma', null],
+    ['Lou', 'Lou Bouvier', null],
+    ['Cleo', 'Cleo Golden', null],
+    ['Léa', 'Lea', null],
+    ['Pippin', 'Pippen', null],
+    ['Indie', 'Indie Lab', null],
+    ['Alissa', 'Brindu', null],
 
     // Email-conditional: Enzo disambiguation
     ['Enzo', 'Enzo OG', 'avm.00@outlook.com'],
+
+    // Email-conditional: Pepper disambiguation
+    ['Pepper', 'Pepper Husky', 'cdbarrie@gmail.com'],
+    ['Pepper', 'Pepper Mini Aussie', 'hey@quinnkeast.com'],
 
     // Email-conditional: Luna disambiguation
     ['Luna', 'Luna GS', 'rgodbout66@gmail.com'],
@@ -75,13 +85,39 @@ try {
   const { rows: mapCount } = await client.query('SELECT count(*)::int AS n FROM acuity_name_map');
   console.log(`  acuity_name_map: ${mapCount[0].n} entries`);
 
-  // 2. SQL updates for Enzo OG and Luna GS
-  console.log('\nUpdating Enzo OG address...');
-  const r1 = await client.query(`UPDATE dogs SET address = '5412 Rue Garnier' WHERE dog_name = 'Enzo OG'`);
-  console.log(`  Updated ${r1.rowCount} row(s)`);
+  // 2. Sync emails in dogs table to match Acuity
+  console.log('\nSyncing dog emails...');
+  const emailUpdates = [
+    ['Gustav', 'alallo@gmail.com, g.arcand@gmail.com'],
+    ['Lupo', 'amandavincelli@gmail.com'],
+    ['Enzo OG', 'avm.00@outlook.com'],
+    ['Maya', 'brohart@gmail.com'],
+    ['Scotch', 'j_morgia@hotmail.com'],
+    ['Josie', 'lbenaiteau@gmail.com'],
+    ['Muji', 'maxime@cafepista.com'],
+    ['Lola', 'nisenson@videotron.ca'],
+    ['Halloumi', 'ppestre@hotmail.com, rigel.zifkin@gmail.com'],
+    ['Lucky', 'reessamu@gmail.com, livthomson.nz@gmail.com'],
+    ['Luna GS', 'rgodbout66@gmail.com'],
+    ['Brindu', 'adkoski@gmail.com'],
+  ];
+  for (const [dog, email] of emailUpdates) {
+    const r = await client.query('UPDATE dogs SET email = $1 WHERE dog_name = $2', [email, dog]);
+    console.log(`  ${dog}: ${r.rowCount ? 'OK' : 'NOT FOUND'}`);
+  }
 
-  console.log('Updating Luna GS profile...');
-  const r2 = await client.query(`
+  // 3. Fix addresses
+  console.log('\nUpdating addresses...');
+  const r1 = await client.query(`UPDATE dogs SET address = '5046 Rue Garnier H2J 3S9', door_code = '1212' WHERE dog_name = 'Pepper Husky'`);
+  console.log(`  Pepper Husky: ${r1.rowCount ? 'OK' : 'NOT FOUND'}`);
+  const r2 = await client.query(`UPDATE dogs SET address = '1129 Rue Rachel Est' WHERE dog_name = 'Pepper Mini Aussie'`);
+  console.log(`  Pepper Mini Aussie: ${r2.rowCount ? 'OK' : 'NOT FOUND'}`);
+  const r3 = await client.query(`UPDATE dogs SET address = '4332 Rue Saint-Hubert' WHERE dog_name = 'Brindu'`);
+  console.log(`  Brindu: ${r3.rowCount ? 'OK' : 'NOT FOUND'}`);
+
+  // Enzo OG + Luna GS profile updates
+  await client.query(`UPDATE dogs SET address = '5412 Rue Garnier' WHERE dog_name = 'Enzo OG'`);
+  await client.query(`
     UPDATE dogs
     SET address = '5327 Rue Saint-Andre',
         door_code = '514880',
@@ -90,7 +126,25 @@ try {
         breed = 'German Shepherd'
     WHERE dog_name = 'Luna GS'
   `);
-  console.log(`  Updated ${r2.rowCount} row(s)`);
+
+  // 4. Add Miyagi (if not exists)
+  console.log('\nChecking new dogs...');
+  const miyagi = await client.query(`
+    INSERT INTO dogs (dog_name, sector, owner_first, owner_last, email, address, breed)
+    SELECT 'Miyagi', 'Laurier', 'Amber', 'Johnson', 'arosejohnson1@gmail.com', '4305 Avenue Des Erables Apt A', 'Mixed'
+    WHERE NOT EXISTS (SELECT 1 FROM dogs WHERE dog_name = 'Miyagi')
+    RETURNING dog_name
+  `);
+  console.log(`  Miyagi: ${miyagi.rowCount ? 'INSERTED' : 'already exists'}`);
+
+  // 5. Add Cynthia placeholder (if not exists)
+  const cynthia = await client.query(`
+    INSERT INTO dogs (dog_name, sector, owner_first, owner_last, email, address, notes)
+    SELECT 'Cynthia Dog TBD', 'Plateau', 'Cynthia', 'Fish', 'cfishfr@yahoo.com', '4065 Rue Drolet H2W2L5', 'NEW CLIENT — dog name coming'
+    WHERE NOT EXISTS (SELECT 1 FROM dogs WHERE email = 'cfishfr@yahoo.com')
+    RETURNING dog_name
+  `);
+  console.log(`  Cynthia Dog TBD: ${cynthia.rowCount ? 'INSERTED' : 'already exists'}`);
 
   // 3. Verify counts
   console.log('\n--- VERIFICATION ---');

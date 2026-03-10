@@ -294,6 +294,12 @@ INSERT INTO acuity_name_map (acuity_name, dog_name) VALUES
   ('Papi Chulo', 'Papi Chulo'),
   ('Maxime', 'Muji'),
   ('Mina', 'Paloma'),
+  ('Lou', 'Lou Bouvier'),
+  ('Cleo', 'Cleo Golden'),
+  ('Léa', 'Lea'),
+  ('Pippin', 'Pippen'),
+  ('Indie', 'Indie Lab'),
+  ('Alissa', 'Brindu'),
   ('Loupette et Luna', 'Loupette et Luna'),
   ('Dante and Enzo', 'Dante and Enzo')
 ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
@@ -301,6 +307,8 @@ ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
 -- Email-conditional disambiguation
 INSERT INTO acuity_name_map (acuity_name, dog_name, acuity_email) VALUES
   ('Enzo', 'Enzo OG', 'avm.00@outlook.com'),
+  ('Pepper', 'Pepper Husky', 'cdbarrie@gmail.com'),
+  ('Pepper', 'Pepper Mini Aussie', 'hey@quinnkeast.com'),
   ('Luna', 'Luna GS', 'rgodbout66@gmail.com'),
   ('Luna', 'Luna GS', 'rgodbout@hotmail.com'),
   ('Luna', 'Luna', 'beaudoin.florence23@gmail.com'),

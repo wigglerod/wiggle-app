@@ -119,10 +119,13 @@ function matchSingleEvent(ev, dogs, nameMap) {
     return [{ event: ev, displayName: rawName, dog: nameResult.dog, matchType: nameResult.matchType, matchMethod: nameResult.matchMethod }]
   }
 
-  // 4. Email match
+  // 4. Email match (supports comma-separated emails in dogs)
   if (ev.email) {
     const emailLower = ev.email.toLowerCase().trim()
-    const emailMatches = dogs.filter((d) => d.email && d.email.toLowerCase().trim() === emailLower)
+    const emailMatches = dogs.filter((d) => {
+      if (!d.email) return false
+      return d.email.toLowerCase().split(',').some((e) => e.trim() === emailLower)
+    })
     if (emailMatches.length === 1) {
       return [{ event: ev, displayName: emailMatches[0].dog_name, dog: emailMatches[0], matchType: 'exact', matchMethod: 'email' }]
     }
