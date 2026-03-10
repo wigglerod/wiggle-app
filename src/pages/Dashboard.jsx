@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense, Component } from 'react'
+import { motion } from 'framer-motion'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
@@ -32,6 +33,11 @@ import { extractDoorCode } from '../lib/extractDoorCode'
 let _idCounter = 0
 function uid() { return String(++_idCounter) }
 
+function formatDayLabel(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 export default function Dashboard() {
   const { profile } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -44,16 +50,24 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedDay, setSelectedDay] = useState('today')
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
   const PULL_THRESHOLD = 64
   const PULL_MAX = 90
 
-  const today = useMemo(() => {
-    const d = new Date()
-    return d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+  // Calculate today and tomorrow dates
+  const { today, tomorrow } = useMemo(() => {
+    const now = new Date()
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+    const tom = new Date(now)
+    tom.setDate(tom.getDate() + 1)
+    const tomorrowStr = tom.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+    return { today: todayStr, tomorrow: tomorrowStr }
   }, [])
+
+  const activeDate = selectedDay === 'today' ? today : tomorrow
 
   const sector = profile?.sector || 'both'
   const effectiveSector = sector === 'both' ? 'Plateau' : sector
@@ -72,15 +86,17 @@ export default function Dashboard() {
     fetchDogs()
   }, [refreshKey])
 
-  // Fetch schedule from Acuity
+  // Fetch schedule from Acuity — re-runs when date or dogs change
   useEffect(() => {
     if (!dogsReady) return
+
+    setLoading(true)
 
     async function buildSchedule() {
       let rawEvents = []
 
       try {
-        const res = await fetch(`/api/acuity?date=${today}`)
+        const res = await fetch(`/api/acuity?date=${activeDate}`)
         if (res.ok) {
           const acuityEvents = await res.json()
           rawEvents = acuityEvents
@@ -90,6 +106,9 @@ export default function Dashboard() {
       } catch {
         // Acuity unavailable
       }
+
+      // Reset ID counter so IDs are consistent per date
+      _idCounter = 0
 
       // Enrich events with multi-signal dog matching
       const matched = matchEvents(rawEvents, dogs, nameMap)
@@ -109,7 +128,7 @@ export default function Dashboard() {
     }
 
     buildSchedule()
-  }, [dogsReady, dogs, nameMap, today, sector])
+  }, [dogsReady, dogs, nameMap, activeDate, sector])
 
   // Group events by time slot for display purposes
   const timeGroups = useMemo(() => groupEventsByTimeSlot(allEvents), [allEvents])
@@ -173,6 +192,12 @@ export default function Dashboard() {
     )
   }
 
+  function handleDaySwitch(day) {
+    if (day === selectedDay) return
+    setSelectedDay(day)
+    setAllEvents([])
+  }
+
   return (
     <div
       className="min-h-screen bg-[#FFF4F1] pb-20"
@@ -180,7 +205,36 @@ export default function Dashboard() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <Header date={today} />
+      <Header date={activeDate} />
+
+      {/* Today / Tomorrow toggle — directly below header */}
+      <div className="px-4 pt-3 pb-1 max-w-lg mx-auto">
+        <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100 gap-1">
+          {[
+            { key: 'today', label: `📅 Today · ${formatDayLabel(today)}` },
+            { key: 'tomorrow', label: `📅 Tomorrow · ${formatDayLabel(tomorrow)}` },
+          ].map((day) => (
+            <button
+              key={day.key}
+              onClick={() => handleDaySwitch(day.key)}
+              className={`relative flex-1 py-3 rounded-lg text-xs font-semibold transition-all min-h-[48px] ${
+                selectedDay === day.key
+                  ? 'text-white'
+                  : 'text-gray-500 active:bg-gray-50'
+              }`}
+            >
+              {selectedDay === day.key && (
+                <motion.div
+                  layoutId="dayToggle"
+                  className="absolute inset-0 bg-[#E8634A] rounded-lg shadow-sm"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{day.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Pull-to-refresh indicator */}
       <div
@@ -200,7 +254,7 @@ export default function Dashboard() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize ${
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all capitalize min-h-[40px] ${
                   activeTab === tab
                     ? 'bg-[#E8634A] text-white shadow-sm'
                     : 'text-gray-500'
@@ -215,7 +269,9 @@ export default function Dashboard() {
         {/* Progress banner */}
         {!loading && allEvents.length > 0 && (
           <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
-            <span className="text-sm text-gray-500">Today&apos;s roster</span>
+            <span className="text-sm text-gray-500">
+              {selectedDay === 'today' ? "Today\u2019s" : "Tomorrow\u2019s"} roster
+            </span>
             <span className="text-sm font-bold text-[#E8634A]">
               {allEvents.length} {allEvents.length === 1 ? 'dog' : 'dogs'}
               {timeGroups.length > 0 && ` · ${timeGroups.length} time slots`}
@@ -232,8 +288,12 @@ export default function Dashboard() {
         {!loading && allEvents.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <span className="text-5xl">🐾</span>
-            <p className="text-lg font-semibold text-gray-600">No walks today</p>
-            <p className="text-sm text-gray-400">Enjoy your day off!</p>
+            <p className="text-lg font-semibold text-gray-600">
+              No walks {selectedDay === 'today' ? 'today' : 'tomorrow'}
+            </p>
+            <p className="text-sm text-gray-400">
+              {selectedDay === 'today' ? 'Enjoy your day off!' : 'Nothing scheduled yet.'}
+            </p>
           </div>
         )}
 
@@ -250,7 +310,7 @@ export default function Dashboard() {
                 )}
                 <GroupOrganizer
                   events={events}
-                  date={today}
+                  date={activeDate}
                   sector={sectorName}
                   onDogClick={setSelectedEvent}
                 />
@@ -265,7 +325,7 @@ export default function Dashboard() {
             <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
               <MapView
                 events={allEvents}
-                date={today}
+                date={activeDate}
                 sector={sector}
                 onDogClick={setSelectedEvent}
               />

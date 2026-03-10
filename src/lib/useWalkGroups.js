@@ -53,7 +53,8 @@ export function useWalkGroups(events, date, sector) {
 
       if (data) {
         for (const row of data) {
-          const ids = (row.dog_ids || []).filter((id) => allEventIds.includes(id))
+          // Filter to valid event IDs and deduplicate (dog can only be in ONE group)
+          const ids = (row.dog_ids || []).filter((id) => allEventIds.includes(id) && !assignedSet.has(id))
           saved[row.group_num] = ids
           ids.forEach((id) => assignedSet.add(id))
           if (row.group_name) names[row.group_num] = row.group_name
@@ -153,29 +154,32 @@ export function useWalkGroups(events, date, sector) {
     [date, sector, user]
   )
 
-  // Move an event from one group to another
+  // Move an event from one group to another (removes from ALL groups first to prevent duplicates)
   const moveEvent = useCallback(
     (eventId, fromGroup, toGroup) => {
       if (fromGroup === toGroup) return
 
       const id = String(eventId)
+      const affectedGroups = new Set()
 
       setGroups((prev) => {
         const next = { ...prev }
-        next[fromGroup] = (prev[fromGroup] || []).filter((eid) => eid !== id)
-        next[toGroup] = [...(prev[toGroup] || []), id]
+        // Remove from ALL groups first to prevent duplicates
+        for (const key of ['unassigned', ...groupNumsRef.current]) {
+          const before = (prev[key] || []).length
+          next[key] = (prev[key] || []).filter((eid) => eid !== id)
+          if (next[key].length !== before && key !== 'unassigned') affectedGroups.add(key)
+        }
+        // Add to target
+        next[toGroup] = [...(next[toGroup] || []), id]
+        if (toGroup !== 'unassigned') affectedGroups.add(toGroup)
         return next
       })
 
-      if (fromGroup !== 'unassigned') {
+      // Persist all affected numbered groups
+      for (const gNum of affectedGroups) {
         setGroups((prev) => {
-          saveGroup(fromGroup, prev[fromGroup])
-          return prev
-        })
-      }
-      if (toGroup !== 'unassigned') {
-        setGroups((prev) => {
-          saveGroup(toGroup, prev[toGroup])
+          saveGroup(gNum, prev[gNum])
           return prev
         })
       }

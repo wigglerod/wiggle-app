@@ -23,11 +23,11 @@ function markerIcon(color) {
 
 function buildRouteUrl(addresses) {
   if (!addresses || addresses.length === 0) return null
-  const withCity = addresses.map((a) =>
-    a.toLowerCase().includes('montréal') || a.toLowerCase().includes('montreal')
-      ? a
-      : `${a}, Montréal, QC`
-  )
+  const withCity = addresses.map((a) => {
+    const lower = a.toLowerCase()
+    if (lower.includes('montréal') || lower.includes('montreal')) return `${a}, Canada`
+    return `${a}, Montréal, QC, Canada`
+  })
   if (withCity.length === 1) {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(withCity[0])}`
   }
@@ -72,11 +72,10 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
     async function geocodeAll() {
       const results = await Promise.all(
         allDogs.map(async (dog) => {
-          const addr =
-            dog.address.toLowerCase().includes('montréal') ||
-            dog.address.toLowerCase().includes('montreal')
-              ? dog.address
-              : `${dog.address}, Montréal, QC`
+          const lower = dog.address.toLowerCase()
+          const addr = lower.includes('montréal') || lower.includes('montreal')
+            ? `${dog.address}, Canada`
+            : `${dog.address}, Montréal, QC, Canada`
 
           if (geocodeCache.has(addr)) {
             return { ...dog, ...geocodeCache.get(addr) }
@@ -293,7 +292,7 @@ export default function MapView({ events, date, sector, onDogClick }) {
       <div className="flex flex-col items-center justify-center py-10 gap-3 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
         <span className="text-4xl">🗺️</span>
         <p className="text-sm font-semibold text-gray-600">No dogs assigned to groups yet</p>
-        <p className="text-xs text-gray-400">Use the Organizer tab to drag dogs into groups.</p>
+        <p className="text-xs text-gray-400">Use the Organizer tab to assign dogs to groups.</p>
       </div>
     )
   }

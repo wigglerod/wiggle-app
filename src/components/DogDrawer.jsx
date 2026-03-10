@@ -23,8 +23,13 @@ function groupBadge(groupKey, groupName) {
 }
 
 function mapsUrl(address) {
-  if (!address) return null
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
+  if (!address || !address.trim()) return null
+  const trimmed = address.trim()
+  const lower = trimmed.toLowerCase()
+  const full = lower.includes('montréal') || lower.includes('montreal')
+    ? `${trimmed}, Canada`
+    : `${trimmed}, Montréal, QC, Canada`
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(full)}`
 }
 
 const EDIT_FIELDS = [
@@ -37,7 +42,7 @@ const EDIT_FIELDS = [
 ]
 
 export default function DogDrawer({ event, onClose, onDogUpdated }) {
-  const { canEdit, profile } = useAuth()
+  const { canEdit, isAdmin, profile } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError]         = useState(false)
   const [editing, setEditing]           = useState(false)
@@ -160,7 +165,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
   if (!event) return null
 
   const dog        = creating ? null : event.dog
-  const address    = editing ? form.address : (dog?.address || event.location || '')
+  const address    = (editing ? form.address : (dog?.address || event.location || '')).trim()
   const doorCode   = editing ? form.door_code : (dog?.door_code || event.calendarDoorCode || null)
   const dogNotes   = editing ? form.notes : (dog?.notes || null)
   const photoUrl   = dog?.photo_url && !imgError ? dog.photo_url : null
@@ -234,17 +239,23 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
                   {badge.label}
                 </span>
-                {!editing && event.matchType === 'none' && (
+                {/* Match method badges — admin only */}
+                {!editing && isAdmin && event.matchType === 'none' && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                     Unknown Explorer
                   </span>
                 )}
-                {!editing && event.matchType === 'fuzzy' && (
+                {!editing && !isAdmin && event.matchType === 'none' && (
+                  <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-medium">
+                    New
+                  </span>
+                )}
+                {!editing && isAdmin && event.matchType === 'fuzzy' && (
                   <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">
                     Fuzzy match
                   </span>
                 )}
-                {!editing && event.matchMethod && !['dog_name', 'name_map', 'none'].includes(event.matchMethod) && event.matchType !== 'fuzzy' && (
+                {!editing && isAdmin && event.matchMethod && !['dog_name', 'name_map', 'none'].includes(event.matchMethod) && event.matchType !== 'fuzzy' && (
                   <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">
                     {event.matchMethod === 'email' ? 'Email match' :
                      event.matchMethod === 'email_household' ? 'Household' :
@@ -479,7 +490,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </p>
               )}
 
-              {/* Admin actions */}
+              {/* Actions — edit for canEdit users, link/create for admin only */}
               {canEdit && (
                 <div className="mt-1 flex flex-col gap-2">
                   {dog ? (
@@ -489,7 +500,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                     >
                       Edit Profile
                     </button>
-                  ) : linking ? (
+                  ) : !isAdmin ? null : linking ? (
                     <div className="bg-gray-50 rounded-2xl p-4">
                       <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-2">Link to Existing Dog</p>
                       <input
