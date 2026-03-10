@@ -99,9 +99,13 @@ async function main() {
     // Run matcher
     const results = matchEvents(events, dogs, nameMap)
 
-    // Collect emails
+    // Collect emails (split comma-separated)
     for (const ev of events) {
-      if (ev.email) acuityEmails.add(ev.email.toLowerCase().trim())
+      if (ev.email) {
+        for (const e of ev.email.toLowerCase().split(',')) {
+          acuityEmails.add(e.trim())
+        }
+      }
     }
 
     // Find problems
@@ -178,7 +182,7 @@ async function main() {
   output.push('='.repeat(70))
 
   const text = output.join('\n') + '\n'
-  const outPath = join(homedir(), 'Desktop', 'match_check_v2.txt')
+  const outPath = join(homedir(), 'Desktop', 'match_check_v3.txt')
   writeFileSync(outPath, text, 'utf-8')
   console.log(`\nResults written to ${outPath}`)
   console.log(text)

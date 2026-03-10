@@ -119,12 +119,13 @@ function matchSingleEvent(ev, dogs, nameMap) {
     return [{ event: ev, displayName: rawName, dog: nameResult.dog, matchType: nameResult.matchType, matchMethod: nameResult.matchMethod }]
   }
 
-  // 4. Email match (supports comma-separated emails in dogs)
+  // 4. Email match (supports comma-separated emails on both sides)
   if (ev.email) {
-    const emailLower = ev.email.toLowerCase().trim()
+    const evEmails = ev.email.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
     const emailMatches = dogs.filter((d) => {
       if (!d.email) return false
-      return d.email.toLowerCase().split(',').some((e) => e.trim() === emailLower)
+      const dogEmails = d.email.toLowerCase().split(',').map((e) => e.trim())
+      return evEmails.some((ae) => dogEmails.includes(ae))
     })
     if (emailMatches.length === 1) {
       return [{ event: ev, displayName: emailMatches[0].dog_name, dog: emailMatches[0], matchType: 'exact', matchMethod: 'email' }]

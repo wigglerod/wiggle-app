@@ -56,6 +56,11 @@ try {
     ['Pippin', 'Pippen', null],
     ['Indie', 'Indie Lab', null],
     ['Alissa', 'Brindu', null],
+    ['Marie-Pier', 'Louise', null],
+    ['Denisse', 'Uki', null],
+    ['Mélissa', 'Nala', null],
+    ['Jeanne', 'Oslo', null],
+    ['Cynthia', 'Cynthia Dog TBD', null],
 
     // Email-conditional: Enzo disambiguation
     ['Enzo', 'Enzo OG', 'avm.00@outlook.com'],

@@ -300,6 +300,11 @@ INSERT INTO acuity_name_map (acuity_name, dog_name) VALUES
   ('Pippin', 'Pippen'),
   ('Indie', 'Indie Lab'),
   ('Alissa', 'Brindu'),
+  ('Marie-Pier', 'Louise'),
+  ('Denisse', 'Uki'),
+  ('Mélissa', 'Nala'),
+  ('Jeanne', 'Oslo'),
+  ('Cynthia', 'Cynthia Dog TBD'),
   ('Loupette et Luna', 'Loupette et Luna'),
   ('Dante and Enzo', 'Dante and Enzo')
 ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
