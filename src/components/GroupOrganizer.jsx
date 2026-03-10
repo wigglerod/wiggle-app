@@ -219,7 +219,7 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
         <div className="flex flex-col gap-2">
           {sortedItems.length === 0 && !isTarget && (
             <p className="text-xs text-gray-400 italic py-2 w-full text-center">
-              {canEdit ? 'Tap a dog, then tap a group to assign' : 'No dogs assigned'}
+              {canEdit ? 'Tap a dog, then tap here to assign' : 'No dogs assigned'}
             </p>
           )}
           {isTarget && sortedItems.length === 0 && (
@@ -551,8 +551,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           isAdmin={isAdmin}
         />
 
-        {/* Numbered groups — hide empty unless assigning */}
-        {groupNums.filter(num => (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
+        {/* Numbered groups — always show 1-3, hide 4+ if empty unless assigning */}
+        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
           <MobileGroup
             key={num}
             groupKey={String(num)}
@@ -627,7 +627,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           isAdmin={isAdmin}
         />
 
-        {groupNums.filter(num => (groups[num] || []).length > 0 || activeId !== null).map((num) => (
+        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || activeId !== null).map((num) => (
           <DesktopGroup
             key={num}
             groupKey={String(num)}
