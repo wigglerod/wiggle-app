@@ -41,11 +41,11 @@ export function AuthProvider({ children }) {
     profile,
     user: session?.user ?? null,
     role,
-    isAdmin: role === 'admin',
+    isAdmin: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
     isSenior: role === 'senior_walker',
     isJunior: role === 'junior_walker',
     canEdit: role === 'admin' || role === 'senior_walker',
-    canDelete: role === 'admin',
+    canDelete: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
     isLoading: session === undefined,
     signOut: () => supabase.auth.signOut(),
   }
