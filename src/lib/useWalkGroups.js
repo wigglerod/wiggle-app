@@ -20,6 +20,7 @@ export function useWalkGroups(events, date, sector) {
   const [groupNums, setGroupNums] = useState([1, 2, 3])
   const [groupNames, setGroupNames] = useState({})
   const [loaded, setLoaded] = useState(false)
+  const [lastSaved, setLastSaved] = useState(null)
 
   // Refs to avoid stale closures in callbacks
   const groupsRef = useRef(groups)
@@ -149,7 +150,11 @@ export function useWalkGroups(events, date, sector) {
         },
         { onConflict: 'walk_date,group_num,sector' }
       )
-      if (error) toast.error('Failed to save group changes')
+      if (error) {
+        toast.error('Failed to save group changes')
+      } else {
+        setLastSaved(new Date())
+      }
     },
     [date, sector, user]
   )
@@ -160,29 +165,28 @@ export function useWalkGroups(events, date, sector) {
       if (fromGroup === toGroup) return
 
       const id = String(eventId)
+      const prev = groupsRef.current
+      const next = { ...prev }
       const affectedGroups = new Set()
 
-      setGroups((prev) => {
-        const next = { ...prev }
-        // Remove from ALL groups first to prevent duplicates
-        for (const key of ['unassigned', ...groupNumsRef.current]) {
-          const before = (prev[key] || []).length
-          next[key] = (prev[key] || []).filter((eid) => eid !== id)
-          if (next[key].length !== before && key !== 'unassigned') affectedGroups.add(key)
-        }
-        // Add to target
-        next[toGroup] = [...(next[toGroup] || []), id]
-        if (toGroup !== 'unassigned') affectedGroups.add(toGroup)
-        return next
-      })
-
-      // Persist all affected numbered groups
-      for (const gNum of affectedGroups) {
-        setGroups((prev) => {
-          saveGroup(gNum, prev[gNum])
-          return prev
-        })
+      // Remove from ALL groups first to prevent duplicates
+      for (const key of ['unassigned', ...groupNumsRef.current]) {
+        const before = (prev[key] || []).length
+        next[key] = (prev[key] || []).filter((eid) => eid !== id)
+        if (next[key].length !== before && key !== 'unassigned') affectedGroups.add(key)
       }
+      // Add to target
+      next[toGroup] = [...(next[toGroup] || []), id]
+      if (toGroup !== 'unassigned') affectedGroups.add(toGroup)
+
+      setGroups(next)
+
+      // Persist each affected group immediately
+      for (const gNum of affectedGroups) {
+        saveGroup(gNum, next[gNum])
+      }
+
+      toast.success('✓ Saved')
     },
     [saveGroup]
   )
@@ -237,5 +241,5 @@ export function useWalkGroups(events, date, sector) {
     [date, sector, user]
   )
 
-  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded }
+  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded, lastSaved }
 }

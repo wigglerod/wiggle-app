@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
 import LoadingDog from './LoadingDog'
 import {
   DndContext,
@@ -75,14 +74,12 @@ function SortableItem({ id, children, canEdit }) {
   )
 }
 
-// ── Shared group header ─────────────────────────────────────────────
+// ── Shared group header (long-press to rename) ─────────────────────
 function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const isUnassigned = groupKey === 'unassigned'
-  const { color, accent } = isUnassigned
-    ? { color: 'bg-gray-100', accent: 'border-gray-300' }
-    : groupColor(Number(groupKey))
+  const lpTimer = useRef(null)
 
   const displayName = isUnassigned ? 'Unassigned' : (groupName || `Group ${groupKey}`)
 
@@ -102,6 +99,14 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
     if (e.key === 'Escape') setEditing(false)
   }
 
+  function handlePointerDown() {
+    if (isUnassigned || !onRename) return
+    lpTimer.current = setTimeout(startEdit, 500)
+  }
+  function handlePointerUp() {
+    if (lpTimer.current) clearTimeout(lpTimer.current)
+  }
+
   return (
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -115,17 +120,14 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
             className="text-sm font-bold text-gray-700 bg-transparent border-b border-[#E8634A] outline-none flex-1 mr-2 min-w-0"
           />
         ) : (
-          <button
-            onClick={isUnassigned ? undefined : startEdit}
-            className={`text-sm font-bold text-gray-700 text-left flex items-center gap-1 truncate ${!isUnassigned ? 'active:opacity-60' : 'cursor-default'}`}
+          <span
+            onPointerDown={!isUnassigned ? handlePointerDown : undefined}
+            onPointerUp={!isUnassigned ? handlePointerUp : undefined}
+            onPointerCancel={!isUnassigned ? handlePointerUp : undefined}
+            className={`text-sm font-bold text-gray-700 text-left truncate ${!isUnassigned ? 'select-none' : ''}`}
           >
             {displayName}
-            {!isUnassigned && (
-              <svg className="w-3 h-3 text-gray-400 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Z"/>
-              </svg>
-            )}
-          </button>
+          </span>
         )}
 
         <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -350,7 +352,7 @@ function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, 
 export default function GroupOrganizer({ events, date, sector, onDogClick }) {
   const { canEdit, isAdmin } = useAuth()
   const isMobile = useIsMobile()
-  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded } =
+  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded, lastSaved } =
     useWalkGroups(events, date, sector)
 
   const eventsMap = useMemo(() => {
@@ -387,7 +389,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     }
     moveEvent(selectedId, fromGroup, targetGroup)
     setSelectedId(null)
-    toast.success('Dog moved!')
   }
 
   function handleLongPress(event, pos) {
@@ -405,7 +406,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     const { dogId, fromGroup } = longPressMenu
     if (fromGroup !== targetGroup) {
       moveEvent(dogId, fromGroup, targetGroup)
-      toast.success('Dog moved!')
     }
     setLongPressMenu(null)
   }
@@ -520,6 +520,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           </button>
         )}
 
+        {lastSaved && (
+          <p className="text-center text-[10px] text-gray-300 pt-1">
+            Last saved {lastSaved.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+        )}
+
         {/* Long-press popup menu */}
         <AnimatePresence>
           {longPressMenu && (
@@ -582,6 +588,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
             <span className="w-6 h-6 rounded-full bg-[#E8634A] text-white flex items-center justify-center text-base leading-none">+</span>
             Add Group
           </button>
+        )}
+
+        {lastSaved && (
+          <p className="text-center text-[10px] text-gray-300 pt-1">
+            Last saved {lastSaved.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
         )}
       </div>
 

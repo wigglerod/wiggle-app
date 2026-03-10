@@ -10,15 +10,14 @@ const SECTOR_COLORS = {
 export default function Header({ date }) {
   const { profile, isAdmin, signOut } = useAuth()
 
-  const displayDate = (() => {
-    const dateStr = date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-    const [y, m, d] = dateStr.split('-').map(Number)
+  const displayDate = date ? (() => {
+    const [y, m, d] = date.split('-').map(Number)
     return new Date(y, m - 1, d).toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
     })
-  })()
+  })() : null
 
   const sector = profile?.sector || 'both'
   const sectorLabel = sector === 'both' ? 'All Sectors' : sector
@@ -55,12 +54,14 @@ export default function Header({ date }) {
         </div>
       </div>
 
-      <div className="px-4 pb-3 flex items-center justify-between max-w-lg mx-auto">
-        <p className="text-sm text-gray-500 font-medium">{displayDate}</p>
-        <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${sectorColor}`}>
-          {sectorLabel}
-        </span>
-      </div>
+      {date && (
+        <div className="px-4 pb-3 flex items-center justify-between max-w-lg mx-auto">
+          <p className="text-sm text-gray-500 font-medium">{displayDate}</p>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${sectorColor}`}>
+            {sectorLabel}
+          </span>
+        </div>
+      )}
     </header>
   )
 }

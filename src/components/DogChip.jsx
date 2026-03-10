@@ -51,9 +51,7 @@ export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongP
           ? 'border-2 border-[#E8634A] shadow-lg ring-2 ring-[#E8634A]/20 bg-white wiggle'
           : isMissing
             ? 'bg-amber-50 text-amber-700 border border-amber-200'
-            : hasAlert
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
+            : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
         }
       `}
     >
@@ -72,7 +70,7 @@ export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongP
         <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-medium">New</span>
       )}
 
-      {hasAlert && <span className="text-xs text-red-500 font-bold">!</span>}
+      {hasAlert && <span className="text-[10px] text-gray-400 font-medium">!</span>}
 
       {/* Info button */}
       <button

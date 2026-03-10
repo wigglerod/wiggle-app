@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense, Component } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
@@ -38,6 +38,8 @@ function formatDayLabel(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+const SECTOR_CYCLE = ['both', 'Plateau', 'Laurier']
+
 export default function Dashboard() {
   const { profile } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -51,13 +53,13 @@ export default function Dashboard() {
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDay, setSelectedDay] = useState('today')
+  const [sectorFilter, setSectorFilter] = useState(null)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
   const PULL_THRESHOLD = 64
   const PULL_MAX = 90
 
-  // Calculate today and tomorrow dates
   const { today, tomorrow } = useMemo(() => {
     const now = new Date()
     const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
@@ -68,11 +70,10 @@ export default function Dashboard() {
   }, [])
 
   const activeDate = selectedDay === 'today' ? today : tomorrow
+  const profileSector = profile?.sector || 'both'
+  const sector = sectorFilter || profileSector
 
-  const sector = profile?.sector || 'both'
-  const effectiveSector = sector === 'both' ? 'Plateau' : sector
-
-  // Fetch dogs + name map — re-runs on pull-to-refresh
+  // Fetch dogs + name map
   useEffect(() => {
     async function fetchDogs() {
       const [dogsRes, mapRes] = await Promise.all([
@@ -86,7 +87,7 @@ export default function Dashboard() {
     fetchDogs()
   }, [refreshKey])
 
-  // Fetch schedule from Acuity — re-runs when date or dogs change
+  // Fetch schedule from Acuity
   useEffect(() => {
     if (!dogsReady) return
 
@@ -100,17 +101,15 @@ export default function Dashboard() {
         if (res.ok) {
           const acuityEvents = await res.json()
           rawEvents = acuityEvents
-            .filter((ev) => sector === 'both' || ev.sector === sector)
+            .filter((ev) => profileSector === 'both' || ev.sector === profileSector)
             .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
         }
       } catch {
         // Acuity unavailable
       }
 
-      // Reset ID counter so IDs are consistent per date
       _idCounter = 0
 
-      // Enrich events with multi-signal dog matching
       const matched = matchEvents(rawEvents, dogs, nameMap)
       const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod }) => ({
         ...event,
@@ -123,29 +122,42 @@ export default function Dashboard() {
         calendarDoorCode: extractDoorCode(event.description),
       }))
 
-      setAllEvents(enriched)
+      // Deduplicate: same dog.id → keep first occurrence only
+      const seen = new Set()
+      const deduped = enriched.filter((ev) => {
+        if (!ev.dog?.id) return true
+        if (seen.has(ev.dog.id)) return false
+        seen.add(ev.dog.id)
+        return true
+      })
+
+      setAllEvents(deduped)
       setLoading(false)
     }
 
     buildSchedule()
-  }, [dogsReady, dogs, nameMap, activeDate, sector])
+  }, [dogsReady, dogs, nameMap, activeDate, profileSector])
 
-  // Group events by time slot for display purposes
-  const timeGroups = useMemo(() => groupEventsByTimeSlot(allEvents), [allEvents])
+  // Filter by local sector selection
+  const filteredEvents = useMemo(() => {
+    if (sector === 'both') return allEvents
+    return allEvents.filter((ev) => (ev.sector || 'Plateau') === sector)
+  }, [allEvents, sector])
 
-  // Split events by sector if user sees 'both'
+  const timeGroups = useMemo(() => groupEventsByTimeSlot(filteredEvents), [filteredEvents])
+
+  // Split events by sector if showing all
   const sectorEvents = useMemo(() => {
-    if (sector !== 'both') return { [sector]: allEvents }
+    if (sector !== 'both') return { [sector]: filteredEvents }
     const map = {}
-    for (const ev of allEvents) {
+    for (const ev of filteredEvents) {
       const s = ev.sector || 'Plateau'
       if (!map[s]) map[s] = []
       map[s].push(ev)
     }
     return map
-  }, [allEvents, sector])
+  }, [filteredEvents, sector])
 
-  // Clear refreshing indicator once loading finishes
   // eslint-disable-next-line react-hooks/set-state-in-effect -- sync derived UI flag
   useEffect(() => { if (!loading) setRefreshing(false) }, [loading])
 
@@ -192,11 +204,22 @@ export default function Dashboard() {
     )
   }
 
-  function handleDaySwitch(day) {
-    if (day === selectedDay) return
-    setSelectedDay(day)
+  function handleDayToggle() {
+    setSelectedDay((prev) => (prev === 'today' ? 'tomorrow' : 'today'))
     setAllEvents([])
   }
+
+  function handleSectorCycle() {
+    if (profileSector !== 'both') return
+    setSectorFilter((prev) => {
+      const current = prev || 'both'
+      const idx = SECTOR_CYCLE.indexOf(current)
+      return SECTOR_CYCLE[(idx + 1) % SECTOR_CYCLE.length]
+    })
+  }
+
+  const sectorEmoji = sector === 'Plateau' ? '🟡' : sector === 'Laurier' ? '🔵' : ''
+  const sectorLabel = sector === 'both' ? 'All Sectors' : sector
 
   return (
     <div
@@ -205,34 +228,55 @@ export default function Dashboard() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <Header date={activeDate} />
+      <Header />
 
-      {/* Today / Tomorrow toggle — directly below header */}
-      <div className="px-4 pt-3 pb-1 max-w-lg mx-auto">
-        <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100 gap-1">
-          {[
-            { key: 'today', label: `📅 Today · ${formatDayLabel(today)}` },
-            { key: 'tomorrow', label: `📅 Tomorrow · ${formatDayLabel(tomorrow)}` },
-          ].map((day) => (
+      {/* Date line: tappable date · sector badge · map icon */}
+      <div className="px-4 pt-2 pb-1 max-w-lg mx-auto flex items-center justify-between">
+        <button
+          onClick={handleDayToggle}
+          className="text-sm font-semibold text-gray-700 active:opacity-60 transition-opacity"
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={selectedDay}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
+              className="inline-flex items-center gap-1"
+            >
+              {selectedDay === 'today' ? 'Today' : 'Tomorrow'} &middot; {formatDayLabel(activeDate)}
+              <svg className="w-3 h-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </motion.span>
+          </AnimatePresence>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={profileSector === 'both' ? handleSectorCycle : undefined}
+            className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-opacity ${
+              sector === 'Plateau' ? 'bg-amber-100 text-amber-700'
+              : sector === 'Laurier' ? 'bg-blue-100 text-blue-700'
+              : 'bg-purple-100 text-purple-700'
+            } ${profileSector === 'both' ? 'active:opacity-60 cursor-pointer' : ''}`}
+          >
+            {sectorEmoji} {sectorLabel}
+          </button>
+
+          {!loading && filteredEvents.length > 0 && (
             <button
-              key={day.key}
-              onClick={() => handleDaySwitch(day.key)}
-              className={`relative flex-1 py-3 rounded-lg text-xs font-semibold transition-all min-h-[48px] ${
-                selectedDay === day.key
-                  ? 'text-white'
-                  : 'text-gray-500 active:bg-gray-50'
+              onClick={() => setActiveTab((t) => (t === 'map' ? 'organizer' : 'map'))}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all ${
+                activeTab === 'map'
+                  ? 'bg-[#E8634A] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-500 active:bg-gray-200'
               }`}
             >
-              {selectedDay === day.key && (
-                <motion.div
-                  layoutId="dayToggle"
-                  className="absolute inset-0 bg-[#E8634A] rounded-lg shadow-sm"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10">{day.label}</span>
+              🗺️
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -246,37 +290,13 @@ export default function Dashboard() {
         )}
       </div>
 
-      <main className="px-4 py-4 max-w-lg mx-auto">
-        {/* Organizer / Map pill toggle */}
-        {!loading && allEvents.length > 0 && (
-          <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100 mb-4">
-            {['organizer', 'map'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all capitalize min-h-[40px] ${
-                  activeTab === tab
-                    ? 'bg-[#E8634A] text-white shadow-sm'
-                    : 'text-gray-500'
-                }`}
-              >
-                {tab === 'organizer' ? '📋 Organizer' : '🗺️ Map'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Progress banner */}
-        {!loading && allEvents.length > 0 && (
-          <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
-            <span className="text-sm text-gray-500">
-              {selectedDay === 'today' ? "Today\u2019s" : "Tomorrow\u2019s"} roster
-            </span>
-            <span className="text-sm font-bold text-[#E8634A]">
-              {allEvents.length} {allEvents.length === 1 ? 'dog' : 'dogs'}
-              {timeGroups.length > 0 && ` · ${timeGroups.length} time slots`}
-            </span>
-          </div>
+      <main className="px-4 py-2 max-w-lg mx-auto">
+        {/* Roster summary */}
+        {!loading && filteredEvents.length > 0 && (
+          <p className="text-xs text-gray-400 font-medium mb-3">
+            {filteredEvents.length} {filteredEvents.length === 1 ? 'dog' : 'dogs'}
+            {timeGroups.length > 0 && ` \u00b7 ${timeGroups.length} time slots`}
+          </p>
         )}
 
         {loading && !refreshing && (
@@ -285,7 +305,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && allEvents.length === 0 && (
+        {!loading && filteredEvents.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <span className="text-5xl">🐾</span>
             <p className="text-lg font-semibold text-gray-600">
@@ -297,8 +317,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Organizer Tab */}
-        {!loading && allEvents.length > 0 && activeTab === 'organizer' && (
+        {/* Organizer */}
+        {!loading && filteredEvents.length > 0 && activeTab === 'organizer' && (
           <div className="flex flex-col gap-4">
             {Object.entries(sectorEvents).map(([sectorName, events]) => (
               <div key={sectorName}>
@@ -319,12 +339,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Map Tab */}
-        {!loading && allEvents.length > 0 && activeTab === 'map' && (
+        {/* Map */}
+        {!loading && filteredEvents.length > 0 && activeTab === 'map' && (
           <MapTabBoundary>
             <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
               <MapView
-                events={allEvents}
+                events={filteredEvents}
                 date={activeDate}
                 sector={sector}
                 onDogClick={setSelectedEvent}
