@@ -286,21 +286,25 @@ create policy "acuity_name_map_write" on acuity_name_map
   using     ((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'))
   with check((select role from profiles where id = auth.uid()) in ('admin', 'senior_walker'));
 
--- Seed known mappings
+-- Seed known mappings (manual overrides)
 INSERT INTO acuity_name_map (acuity_name, dog_name) VALUES
-  ('Enzo', 'Enzo OG'),
   ('Django Dali', 'Django and Dali'),
   ('Halloumi (Pauline)', 'Halloumi'),
   ('Chessy', 'Cheesy'),
+  ('Papi Chulo', 'Papi Chulo'),
   ('Maxime', 'Muji'),
-  ('Mina', 'Paloma')
+  ('Mina', 'Paloma'),
+  ('Loupette et Luna', 'Loupette et Luna'),
+  ('Dante and Enzo', 'Dante and Enzo')
 ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
 
--- Luna disambiguation (email-conditional)
+-- Email-conditional disambiguation
 INSERT INTO acuity_name_map (acuity_name, dog_name, acuity_email) VALUES
+  ('Enzo', 'Enzo OG', 'avm.00@outlook.com'),
   ('Luna', 'Luna GS', 'rgodbout66@gmail.com'),
   ('Luna', 'Luna GS', 'rgodbout@hotmail.com'),
-  ('Luna', 'Luna', 'beaudoin.florence23@gmail.com')
+  ('Luna', 'Luna', 'beaudoin.florence23@gmail.com'),
+  ('Luna/Florence', 'Luna', 'beaudoin.florence23@gmail.com')
 ON CONFLICT (acuity_name, acuity_email) DO NOTHING;
 
 

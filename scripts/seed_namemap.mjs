@@ -43,11 +43,26 @@ try {
   await client.query('DELETE FROM acuity_name_map');
 
   const mappings = [
+    // Manual overrides (misspellings, alternate names)
     ['Halloumi (Pauline)', 'Halloumi', null],
     ['Chessy', 'Cheesy', null],
     ['Django Dali', 'Django and Dali', null],
-    ['Enzo', 'Enzo OG', 'avm.00@outlook.com'],
     ['Papi Chulo', 'Papi Chulo', null],
+    ['Maxime', 'Muji', null],
+    ['Mina', 'Paloma', null],
+
+    // Email-conditional: Enzo disambiguation
+    ['Enzo', 'Enzo OG', 'avm.00@outlook.com'],
+
+    // Email-conditional: Luna disambiguation
+    ['Luna', 'Luna GS', 'rgodbout66@gmail.com'],
+    ['Luna', 'Luna GS', 'rgodbout@hotmail.com'],
+    ['Luna', 'Luna', 'beaudoin.florence23@gmail.com'],
+    ['Luna/Florence', 'Luna', 'beaudoin.florence23@gmail.com'],
+
+    // Multi-dog households that should NOT be split
+    ['Loupette et Luna', 'Loupette et Luna', null],
+    ['Dante and Enzo', 'Dante and Enzo', null],
   ];
 
   for (const [acuity, dog, email] of mappings) {

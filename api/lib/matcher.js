@@ -46,14 +46,23 @@ function lookupNameMap(nameMap, name, eventEmail) {
   return generic ? generic.dogName : null
 }
 
+// Sector overrides — dogs that always belong to a specific sector
+const SECTOR_OVERRIDES = { Paloma: 'Plateau' }
+
 /**
  * Match events against dogs. Returns array of match results.
- * Each result: { event, displayName, dog, matchType, matchMethod }
+ * Each result: { event, displayName, dog, matchType, matchMethod, sectorOverride? }
  */
 export function matchEvents(events, dogs, nameMap = new Map()) {
   const results = []
   for (const ev of events) {
     results.push(...matchSingleEvent(ev, dogs, nameMap))
+  }
+  // Apply sector overrides
+  for (const r of results) {
+    if (r.dog && SECTOR_OVERRIDES[r.dog.dog_name]) {
+      r.sectorOverride = SECTOR_OVERRIDES[r.dog.dog_name]
+    }
   }
   return results
 }

@@ -126,16 +126,20 @@ export default function Schedule() {
         if (res.ok) {
           const acuityEvents = await res.json()
           allEvents = acuityEvents
-            .filter((ev) => sector === 'both' || ev.sector === sector)
             .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
         }
       } catch {
         // Acuity unavailable
       }
 
-      const matched = matchEvents(allEvents, dogs, nameMap)
-      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod }) => ({
+      // Match ALL events first, then filter by effective sector (allows overrides like Paloma → Plateau)
+      const allMatched = matchEvents(allEvents, dogs, nameMap)
+      const matched = sector === 'both'
+        ? allMatched
+        : allMatched.filter((m) => (m.sectorOverride || m.event.sector) === sector)
+      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod, sectorOverride }) => ({
         ...event,
+        ...(sectorOverride ? { sector: sectorOverride } : {}),
         _id: uid(),
         displayName,
         breed,
