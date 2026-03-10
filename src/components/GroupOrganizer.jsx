@@ -185,46 +185,78 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
         selectedDogName={selectedDogName}
       />
 
-      <div className="flex flex-col gap-2">
-        {sortedItems.length === 0 && !isTarget && (
-          <p className="text-xs text-gray-400 italic py-2 w-full text-center">
-            {canEdit ? 'Tap a dog, then tap a group to assign' : 'No dogs assigned'}
-          </p>
-        )}
-        {isTarget && sortedItems.length === 0 && (
-          <button
-            onClick={onTargetTap}
-            className="w-full py-4 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-sm text-[#E8634A] font-medium active:bg-[#E8634A]/5 transition-all min-h-[48px]"
-          >
-            Tap to add {selectedDogName || 'dog'} here
-          </button>
-        )}
-        <AnimatePresence mode="popLayout">
+      {isUnassigned ? (
+        <div className="flex flex-wrap gap-1.5">
+          {sortedItems.length === 0 && (
+            <p className="text-xs text-gray-400 italic py-2 w-full text-center">All dogs assigned</p>
+          )}
           {sortedItems.map((id) => {
             const ev = eventsMap.get(id)
             if (!ev) return null
             return (
-              <motion.div
+              <button
                 key={id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                onClick={() => canEdit ? onDogTap?.(ev) : onDogClick?.(ev)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
+                  ${selectedId === id
+                    ? 'bg-[#E8634A] text-white shadow-md wiggle'
+                    : 'bg-white text-gray-700 border border-gray-200 shadow-sm active:scale-[0.97]'
+                  }
+                `}
               >
-                <DogChip
-                  event={ev}
-                  onInfoClick={onDogClick}
-                  onTap={canEdit ? onDogTap : onDogClick}
-                  onLongPress={canEdit ? onLongPress : undefined}
-                  isSelected={selectedId === id}
-                  isAdmin={isAdmin}
-                />
-              </motion.div>
+                <span className="truncate max-w-[140px]">{ev.displayName}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); onDogClick?.(ev) }}
+                  className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] flex-shrink-0 ${
+                    selectedId === id ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-400'
+                  }`}
+                >i</span>
+              </button>
             )
           })}
-        </AnimatePresence>
-      </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {sortedItems.length === 0 && !isTarget && (
+            <p className="text-xs text-gray-400 italic py-2 w-full text-center">
+              {canEdit ? 'Tap a dog, then tap a group to assign' : 'No dogs assigned'}
+            </p>
+          )}
+          {isTarget && sortedItems.length === 0 && (
+            <button
+              onClick={onTargetTap}
+              className="w-full py-4 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-sm text-[#E8634A] font-medium active:bg-[#E8634A]/5 transition-all min-h-[48px]"
+            >
+              Tap to add {selectedDogName || 'dog'} here
+            </button>
+          )}
+          <AnimatePresence mode="popLayout">
+            {sortedItems.map((id) => {
+              const ev = eventsMap.get(id)
+              if (!ev) return null
+              return (
+                <motion.div
+                  key={id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <DogChip
+                    event={ev}
+                    onInfoClick={onDogClick}
+                    onTap={canEdit ? onDogTap : onDogClick}
+                    onLongPress={canEdit ? onLongPress : undefined}
+                    isSelected={selectedId === id}
+                    isAdmin={isAdmin}
+                  />
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   )
 }
@@ -264,31 +296,61 @@ function DesktopGroup({ groupKey, eventIds, eventsMap, onDogClick, activeId, gro
       />
 
       <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-wrap gap-2">
-          {sortedItems.length === 0 && (
-            <p className="text-xs text-gray-400 italic py-2 w-full text-center">
-              Drag dogs here
-            </p>
-          )}
-          {sortedItems.map((id) => {
-            const ev = eventsMap.get(id)
-            if (!ev) return null
-            return (
-              <SortableItem key={id} id={id} canEdit={canEdit}>
-                {({ isDragging }) => (
-                  <DogChip
-                    event={ev}
-                    onInfoClick={onDogClick}
-                    onTap={onDogClick}
-                    showDragHandle={canEdit}
-                    isDragging={isDragging || activeId === id}
-                    isAdmin={isAdmin}
-                  />
-                )}
-              </SortableItem>
-            )
-          })}
-        </div>
+        {isUnassigned ? (
+          <div className="flex flex-wrap gap-1.5">
+            {sortedItems.length === 0 && (
+              <p className="text-xs text-gray-400 italic py-2 w-full text-center">All dogs assigned</p>
+            )}
+            {sortedItems.map((id) => {
+              const ev = eventsMap.get(id)
+              if (!ev) return null
+              return (
+                <SortableItem key={id} id={id} canEdit={canEdit}>
+                  {({ isDragging }) => (
+                    <div className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium h-9 select-none
+                      ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
+                      ${isDragging || activeId === id ? 'opacity-50' : ''}
+                      bg-white text-gray-700 border border-gray-200 shadow-sm
+                    `}>
+                      <span className="truncate max-w-[140px]">{ev.displayName}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDogClick?.(ev) }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 text-[9px] flex-shrink-0"
+                      >i</button>
+                    </div>
+                  )}
+                </SortableItem>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {sortedItems.length === 0 && (
+              <p className="text-xs text-gray-400 italic py-2 w-full text-center">
+                Drag dogs here
+              </p>
+            )}
+            {sortedItems.map((id) => {
+              const ev = eventsMap.get(id)
+              if (!ev) return null
+              return (
+                <SortableItem key={id} id={id} canEdit={canEdit}>
+                  {({ isDragging }) => (
+                    <DogChip
+                      event={ev}
+                      onInfoClick={onDogClick}
+                      onTap={onDogClick}
+                      showDragHandle={canEdit}
+                      isDragging={isDragging || activeId === id}
+                      isAdmin={isAdmin}
+                    />
+                  )}
+                </SortableItem>
+              )
+            })}
+          </div>
+        )}
       </SortableContext>
     </div>
   )
@@ -489,8 +551,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           isAdmin={isAdmin}
         />
 
-        {/* Numbered groups */}
-        {groupNums.map((num) => (
+        {/* Numbered groups — hide empty unless assigning */}
+        {groupNums.filter(num => (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
           <MobileGroup
             key={num}
             groupKey={String(num)}
@@ -565,7 +627,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           isAdmin={isAdmin}
         />
 
-        {groupNums.map((num) => (
+        {groupNums.filter(num => (groups[num] || []).length > 0 || activeId !== null).map((num) => (
           <DesktopGroup
             key={num}
             groupKey={String(num)}

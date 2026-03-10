@@ -1,10 +1,15 @@
 import { useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 
+const ALERT_KEYWORDS = /reactive|aggressive|bite|careful|alarm|conflict|warning|danger|vet|medication|allergy/i
+
 export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongPress, showDragHandle, isDragging }) {
   const { isAdmin } = useAuth()
   const isMissing = !event.dog
-  const hasAlert = event.dog?.notes
+  const hasAlert = event.dog && (
+    (event.dog.must_know && ALERT_KEYWORDS.test(event.dog.must_know)) ||
+    (event.dog.notes && ALERT_KEYWORDS.test(event.dog.notes))
+  )
   const timerRef = useRef(null)
   const didLongPress = useRef(false)
 

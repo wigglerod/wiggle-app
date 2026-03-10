@@ -162,7 +162,8 @@ export default function Schedule() {
         supabase.from('match_log').upsert(logs, { onConflict: 'acuity_name,walk_date' })
       }
 
-      const grouped = groupEventsByTimeSlot(enriched)
+      const filtered = enriched.filter((ev) => !/TBD/i.test(ev.displayName || ''))
+      const grouped = groupEventsByTimeSlot(filtered)
       setGroups(grouped)
       setLoading(false)
     }

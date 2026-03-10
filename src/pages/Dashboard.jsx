@@ -122,9 +122,10 @@ export default function Dashboard() {
         calendarDoorCode: extractDoorCode(event.description),
       }))
 
-      // Deduplicate: same dog.id → keep first occurrence only
+      // Deduplicate: same dog.id → keep first occurrence only, hide TBD placeholders
       const seen = new Set()
       const deduped = enriched.filter((ev) => {
+        if (ev.displayName && /TBD/i.test(ev.displayName)) return false
         if (!ev.dog?.id) return true
         if (seen.has(ev.dog.id)) return false
         seen.add(ev.dog.id)

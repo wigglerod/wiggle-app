@@ -55,7 +55,7 @@ export function useWalkGroups(events, date, sector) {
       if (data) {
         for (const row of data) {
           // Filter to valid event IDs and deduplicate (dog can only be in ONE group)
-          const ids = (row.dog_ids || []).filter((id) => allEventIds.includes(id) && !assignedSet.has(id))
+          const ids = [...new Set(row.dog_ids || [])].filter((id) => allEventIds.includes(id) && !assignedSet.has(id))
           saved[row.group_num] = ids
           ids.forEach((id) => assignedSet.add(id))
           if (row.group_name) names[row.group_num] = row.group_name
@@ -112,7 +112,7 @@ export function useWalkGroups(events, date, sector) {
           }
 
           setGroups((prev) => {
-            const ids = (row.dog_ids || []).filter((id) => allEventIds.includes(id))
+            const ids = [...new Set(row.dog_ids || [])].filter((id) => allEventIds.includes(id))
             const next = { ...prev, [row.group_num]: ids }
 
             // Rebuild unassigned from all known group nums

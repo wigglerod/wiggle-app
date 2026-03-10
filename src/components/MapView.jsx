@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, Component } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
 
@@ -160,6 +161,7 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
 export default function MapView({ events, date, sector, onDogClick }) {
   const [walkGroups, setWalkGroups] = useState([])
   const [loaded, setLoaded] = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
 
   // Load walk_groups for today
   useEffect(() => {
@@ -209,7 +211,7 @@ export default function MapView({ events, date, sector, onDogClick }) {
         const dogs = []
         const noAddr = []
 
-        for (const id of wg.dog_ids || []) {
+        for (const id of [...new Set(wg.dog_ids || [])]) {
           const ev = eventsMap.get(String(id))
           if (!ev) continue
           assignedIds.add(String(id))
@@ -277,6 +279,29 @@ export default function MapView({ events, date, sector, onDogClick }) {
     return { allMapDogs: dogs, groupLegend: legend }
   }, [sections, unassigned])
 
+  function handleChipTap(ev) {
+    const id = String(ev._id)
+    setSelectedId(prev => prev === id ? null : id)
+  }
+
+  async function assignToGroup(groupNum, sectorName) {
+    if (!selectedId) return
+    const wg = walkGroups.find(w => w.group_num === groupNum && w.sector === sectorName)
+    if (!wg) return
+    const newDogIds = [...(wg.dog_ids || []), selectedId]
+    const { error } = await supabase.from('walk_groups')
+      .update({ dog_ids: newDogIds, updated_at: new Date().toISOString() })
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+      .eq('sector', sectorName)
+    if (error) { toast.error('Failed to assign dog'); return }
+    setWalkGroups(prev => prev.map(w =>
+      w.group_num === groupNum && w.sector === sectorName ? { ...w, dog_ids: newDogIds } : w
+    ))
+    setSelectedId(null)
+    toast.success('✓ Saved')
+  }
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
@@ -328,22 +353,41 @@ export default function MapView({ events, date, sector, onDogClick }) {
             groups={sec.groups}
             showHeader={sector === 'both'}
             onDogClick={onDogClick}
+            selectedId={selectedId}
+            onAssign={(groupNum) => assignToGroup(groupNum, sec.sectorName)}
           />
         ))}
 
-        {/* Unassigned dogs */}
+        {/* Unassigned dogs — compact assignable chips */}
         {unassigned.length > 0 && (
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm">⚠️</span>
-              <h3 className="text-sm font-bold text-gray-500">
-                Not yet grouped ({unassigned.length} {unassigned.length === 1 ? 'dog' : 'dogs'})
-              </h3>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              {unassigned.map((d, i) => (
-                <DogRow key={d.event._id || i} dog={d} index={i + 1} onDogClick={onDogClick} />
-              ))}
+            <h3 className="text-sm font-bold text-gray-500">
+              Not yet grouped ({unassigned.length})
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {unassigned.map((d) => {
+                const id = String(d.event._id)
+                return (
+                  <button
+                    key={id}
+                    onClick={() => handleChipTap(d.event)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
+                      ${selectedId === id
+                        ? 'bg-[#E8634A] text-white shadow-md wiggle'
+                        : 'bg-white text-gray-700 border border-gray-200 shadow-sm active:scale-[0.97]'
+                      }
+                    `}
+                  >
+                    <span className="truncate max-w-[140px]">{d.event.displayName}</span>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onDogClick?.(d.event) }}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] flex-shrink-0 ${
+                        selectedId === id ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >i</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -363,7 +407,7 @@ export default function MapView({ events, date, sector, onDogClick }) {
 }
 
 // ── Sector section ──────────────────────────────────────────────────
-function SectorSection({ sectorName, groups, showHeader, onDogClick }) {
+function SectorSection({ sectorName, groups, showHeader, onDogClick, selectedId, onAssign }) {
   return (
     <div className="flex flex-col gap-3">
       {showHeader && (
@@ -378,14 +422,14 @@ function SectorSection({ sectorName, groups, showHeader, onDogClick }) {
       )}
 
       {groups.map((g) => (
-        <GroupCard key={g.groupNum} group={g} onDogClick={onDogClick} />
+        <GroupCard key={g.groupNum} group={g} onDogClick={onDogClick} selectedId={selectedId} onAssign={() => onAssign?.(g.groupNum)} />
       ))}
     </div>
   )
 }
 
 // ── Group card with route button + dog list ─────────────────────────
-function GroupCard({ group, onDogClick }) {
+function GroupCard({ group, onDogClick, selectedId, onAssign }) {
   const addresses = group.dogs.map((d) => d.address)
   const routeUrl = buildRouteUrl(addresses)
   const color = getGroupColor(group.groupNum)
@@ -401,16 +445,26 @@ function GroupCard({ group, onDogClick }) {
             ({group.dogs.length} {group.dogs.length === 1 ? 'dog' : 'dogs'})
           </span>
         </div>
-        {routeUrl && (
-          <a
-            href={routeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#E8634A] text-white text-xs font-bold active:bg-[#d4552d] transition-all shadow-sm"
-          >
-            🗺️ Start Route
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedId && (
+            <button
+              onClick={onAssign}
+              className="px-3 py-1.5 rounded-lg bg-[#E8634A] text-white text-xs font-bold active:bg-[#d4552d] transition-all shadow-sm animate-pulse"
+            >
+              + Add here
+            </button>
+          )}
+          {routeUrl && !selectedId && (
+            <a
+              href={routeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#E8634A] text-white text-xs font-bold active:bg-[#d4552d] transition-all shadow-sm"
+            >
+              🗺️ Start Route
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Dog list */}
