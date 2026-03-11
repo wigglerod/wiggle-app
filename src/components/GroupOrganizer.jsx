@@ -317,10 +317,6 @@ function MobileGroup({
                           transition={{ duration: 0.2 }}
                         >
                           <div className="flex items-center gap-1.5">
-                            {/* Order number badge */}
-                            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                              {index + 1}
-                            </span>
                             {/* Grip handle */}
                             <span
                               ref={handleRef}
@@ -379,21 +375,14 @@ function MobileGroup({
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                      {index + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <DogChip
-                        event={ev}
-                        onInfoClick={onDogClick}
-                        onTap={onDogClick}
-                        isSelected={selectedId === id}
-                        isAdmin={isAdmin}
-                        hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
-                      />
-                    </div>
-                  </div>
+                  <DogChip
+                    event={ev}
+                    onInfoClick={onDogClick}
+                    onTap={onDogClick}
+                    isSelected={selectedId === id}
+                    isAdmin={isAdmin}
+                    hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                  />
                 </motion.div>
               )
             })}
@@ -489,11 +478,6 @@ function DesktopGroup({
                 <SortableItem key={id} id={id} canEdit={canEdit}>
                   {({ isDragging }) => (
                     <div className="flex items-center gap-1.5">
-                      {/* Order number badge */}
-                      <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                        {index + 1}
-                      </span>
-                      {/* Grip handle */}
                       {canEdit && (
                         <span className="text-gray-300 text-sm cursor-grab active:cursor-grabbing flex-shrink-0 select-none px-0.5">
                           ⠿
@@ -759,24 +743,28 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   if (isMobile) {
     return (
       <div className="flex flex-col gap-3">
-        {/* Unassigned pool */}
-        <MobileGroup
-          groupKey="unassigned"
-          eventIds={groups.unassigned || []}
-          eventsMap={eventsMap}
-          onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
-          selectedId={selectedId}
-          onDogTap={handleDogTap}
-          onLongPress={handleLongPress}
-          groupName={null}
-          onRename={null}
-          isTarget={selectedId !== null && selectedGroup !== 'unassigned'}
-          onTargetTap={() => handleGroupTap('unassigned')}
-          canEdit={canEdit}
-          isAdmin={isAdmin}
-          onReorder={handleReorder}
-          owlDogIdSet={owlDogIdSet}
-        />
+        {/* Unassigned pool — collapse when empty */}
+        {(groups.unassigned || []).length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
+        ) : (
+          <MobileGroup
+            groupKey="unassigned"
+            eventIds={groups.unassigned || []}
+            eventsMap={eventsMap}
+            onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
+            selectedId={selectedId}
+            onDogTap={handleDogTap}
+            onLongPress={handleLongPress}
+            groupName={null}
+            onRename={null}
+            isTarget={selectedId !== null && selectedGroup !== 'unassigned'}
+            onTargetTap={() => handleGroupTap('unassigned')}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+            onReorder={handleReorder}
+            owlDogIdSet={owlDogIdSet}
+          />
+        )}
 
         {/* Numbered groups -- always show 1-3, hide 4+ if empty unless assigning */}
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
@@ -844,19 +832,24 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col gap-3">
-        <DesktopGroup
-          groupKey="unassigned"
-          eventIds={groups.unassigned || []}
-          eventsMap={eventsMap}
-          onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
-          activeId={activeId}
-          groupName={null}
-          onRename={null}
-          canEdit={canEdit}
-          isAdmin={isAdmin}
-          onReorder={handleReorder}
-          owlDogIdSet={owlDogIdSet}
-        />
+        {/* Unassigned pool — collapse when empty */}
+        {(groups.unassigned || []).length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
+        ) : (
+          <DesktopGroup
+            groupKey="unassigned"
+            eventIds={groups.unassigned || []}
+            eventsMap={eventsMap}
+            onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
+            activeId={activeId}
+            groupName={null}
+            onRename={null}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+            onReorder={handleReorder}
+            owlDogIdSet={owlDogIdSet}
+          />
+        )}
 
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || activeId !== null).map((num) => (
           <DesktopGroup
