@@ -241,5 +241,14 @@ export function useWalkGroups(events, date, sector) {
     [date, sector, user]
   )
 
-  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded, lastSaved }
+  // Reorder dogs within a group (preserves pickup order)
+  const reorderGroup = useCallback(
+    (groupNum, newOrderedIds) => {
+      setGroups((prev) => ({ ...prev, [groupNum]: newOrderedIds }))
+      saveGroup(groupNum, newOrderedIds)
+    },
+    [saveGroup]
+  )
+
+  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved }
 }

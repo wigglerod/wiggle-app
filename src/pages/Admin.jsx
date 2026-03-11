@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingDog from '../components/LoadingDog'
+import OwlNotesTab from '../components/OwlNotesTab'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -13,7 +14,10 @@ function DogFormModal({ dog, onClose, onSaved }) {
     owner_last:  dog?.owner_last  || '',
     breed:       dog?.breed       || '',
     address:     dog?.address     || '',
-    door_code:   dog?.door_code   || '',
+    building_access: dog?.building_access || '',
+    unit_number:     dog?.unit_number     || '',
+    unit_access:     dog?.unit_access     || '',
+    access_notes:    dog?.access_notes    || '',
     phone:       dog?.phone       || '',
     email:       dog?.email       || '',
     notes:       dog?.notes       || '',
@@ -53,7 +57,10 @@ function DogFormModal({ dog, onClose, onSaved }) {
     { key: 'owner_first', label: 'Owner First Name' },
     { key: 'owner_last',  label: 'Owner Last Name' },
     { key: 'address',     label: 'Address' },
-    { key: 'door_code',   label: 'Door / Access Code' },
+    { key: 'building_access', label: '🏢 Building Access' },
+    { key: 'unit_number',     label: '🚪 Unit Number' },
+    { key: 'unit_access',     label: '🔑 Unit Access' },
+    { key: 'access_notes',    label: '📝 Access Notes' },
     { key: 'phone',       label: 'Phone' },
     { key: 'email',       label: 'Email', type: 'email' },
     { key: 'notes',       label: 'Notes', multiline: true },
@@ -350,7 +357,7 @@ export default function Admin() {
 
       {/* Tab bar */}
       <div className="flex bg-white border-b border-gray-100 sticky top-[88px] z-20">
-        {['dogs', 'logs', 'database'].map((tab) => (
+        {['dogs', 'logs', 'owl', 'database'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -360,7 +367,7 @@ export default function Admin() {
                 : 'border-transparent text-gray-400'
             }`}
           >
-            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : '🛡️ Database'}
+            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : tab === 'owl' ? '🦉 Owl' : '🛡️ Database'}
           </button>
         ))}
       </div>
@@ -504,6 +511,8 @@ export default function Admin() {
             ))}
           </div>
         )}
+        {/* Owl Notes tab */}
+        {!loading && activeTab === 'owl' && <OwlNotesTab />}
         {/* Database tab */}
         {!loading && activeTab === 'database' && <DatabaseSection />}
       </main>

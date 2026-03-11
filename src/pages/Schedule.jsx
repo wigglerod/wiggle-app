@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
+import { useOwlNotes } from '../lib/useOwlNotes'
 
 let _idCounter = 0
 function uid() { return ++_idCounter }
@@ -61,6 +62,9 @@ export default function Schedule() {
   const [noteEditing, setNoteEditing] = useState(false)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
+
+  const sector = profile?.sector || 'both'
+  const { notes: owlNotes, sectorNotes: getOwlSectorNotes, dogNotes: getOwlDogNotes, acknowledgeNote } = useOwlNotes(sector)
 
   const PULL_THRESHOLD = 64
   const PULL_MAX = 90
@@ -346,6 +350,38 @@ export default function Schedule() {
           </div>
         )}
 
+        {/* Owl note banners */}
+        {(() => {
+          const bannerNotes = sector === 'both'
+            ? owlNotes.filter(n => n.target_type === 'sector' || n.target_type === 'all')
+            : getOwlSectorNotes(sector)
+          return bannerNotes.length > 0 && (
+            <div className="flex flex-col gap-2 mb-4">
+              {bannerNotes.map(note => (
+                <div key={note.id} className="bg-[#E8634A]/10 border border-[#E8634A]/30 rounded-xl px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg flex-shrink-0">🦉</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#E8634A] leading-snug">{note.note_text}</p>
+                      {note.expires_at && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => acknowledgeNote(note.id)}
+                    className="mt-2 w-full py-2 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] min-h-[40px]"
+                  >
+                    Got it ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Progress banner */}
         {!loading && totalWalks > 0 && (
           <div className="mb-4 bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm border border-gray-100">
@@ -401,6 +437,8 @@ export default function Schedule() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onDogUpdated={handleDogUpdated}
+          owlNotes={selectedEvent.dog?.id ? getOwlDogNotes(selectedEvent.dog.id) : []}
+          onAcknowledgeNote={acknowledgeNote}
         />
       )}
 

@@ -41,6 +41,7 @@ export function AuthProvider({ children }) {
     profile,
     user: session?.user ?? null,
     role,
+    isChiefPup: role === 'admin', // Only true admin (Chief Pup)
     isAdmin: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
     isSenior: role === 'senior_walker',
     isJunior: role === 'junior_walker',

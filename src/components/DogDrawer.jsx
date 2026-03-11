@@ -33,17 +33,21 @@ function mapsUrl(address) {
 }
 
 const EDIT_FIELDS = [
-  { key: 'breed',     label: 'Breed' },
-  { key: 'address',   label: 'Address' },
-  { key: 'door_code', label: 'Door / Access Code' },
-  { key: 'notes',     label: 'Notes', multiline: true },
-  { key: 'bff',       label: 'Best Friends (BFF)' },
-  { key: 'goals',     label: 'Goals', multiline: true },
+  { key: 'breed',           label: 'Breed' },
+  { key: 'address',         label: 'Address' },
+  { key: 'building_access', label: '\u{1F3E2} Building Access' },
+  { key: 'unit_number',     label: '\u{1F6AA} Unit Number' },
+  { key: 'unit_access',     label: '\u{1F511} Unit Access' },
+  { key: 'access_notes',    label: '\u{1F4DD} Access Notes' },
+  { key: 'notes',           label: 'Notes', multiline: true },
+  { key: 'bff',             label: 'Best Friends (BFF)' },
+  { key: 'goals',           label: 'Goals', multiline: true },
 ]
 
-export default function DogDrawer({ event, onClose, onDogUpdated }) {
+export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote }) {
   const { canEdit, isAdmin, profile } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
+  const [revealedSteps, setRevealedSteps] = useState({})
   const [imgError, setImgError]         = useState(false)
   const [editing, setEditing]           = useState(false)
   const [creating, setCreating]         = useState(false)
@@ -59,6 +63,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
   /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when event prop changes */
   useEffect(() => {
     setDoorRevealed(false)
+    setRevealedSteps({})
     setImgError(false)
     setEditing(false)
     setCreating(false)
@@ -68,14 +73,17 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
     setLinkSearch('')
     if (event?.dog) {
       setForm({
-        dog_name:  event.dog.dog_name  || '',
-        breed:     event.dog.breed     || '',
-        address:   event.dog.address   || '',
-        door_code: event.dog.door_code || '',
-        notes:     event.dog.notes     || '',
-        bff:       event.dog.bff       || '',
-        goals:     event.dog.goals     || '',
-        sector:    event.dog.sector || event.sector || 'Plateau',
+        dog_name:        event.dog.dog_name        || '',
+        breed:           event.dog.breed           || '',
+        address:         event.dog.address         || '',
+        building_access: event.dog.building_access || '',
+        unit_number:     event.dog.unit_number     || '',
+        unit_access:     event.dog.unit_access     || '',
+        access_notes:    event.dog.access_notes    || '',
+        notes:           event.dog.notes           || '',
+        bff:             event.dog.bff             || '',
+        goals:           event.dog.goals           || '',
+        sector:          event.dog.sector || event.sector || 'Plateau',
       })
     }
   }, [event])
@@ -88,10 +96,13 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   function startCreate() {
     setForm({
-      dog_name:  event.displayName       || '',
-      address:   event.location          || '',
-      door_code: event.calendarDoorCode  || '',
-      notes:     '',
+      dog_name:        event.displayName       || '',
+      address:         event.location          || '',
+      building_access: event.calendarDoorCode  || '',
+      unit_number:     '',
+      unit_access:     '',
+      access_notes:    '',
+      notes:           '',
       sector: event.sector || 'Plateau',
     })
     setCreating(true)
@@ -111,11 +122,13 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
       setEditing(false)
       setCreating(false)
     } else {
-      const { breed, address, door_code, notes, bff, goals } = form
+      const { breed, address, building_access, unit_number, unit_access, access_notes, notes, bff, goals } = form
       const { data, error } = await supabase
         .from('dogs')
         .update({
-          breed: breed || null, address: address || null, door_code: door_code || null,
+          breed: breed || null, address: address || null,
+          building_access: building_access || null, unit_number: unit_number || null,
+          unit_access: unit_access || null, access_notes: access_notes || null,
           notes: notes || null, bff: bff || null, goals: goals || null,
           updated_at: new Date().toISOString(),
           updated_by: profile?.full_name || profile?.email || 'Unknown',
@@ -166,8 +179,18 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
 
   const dog        = creating ? null : event.dog
   const address    = (editing ? form.address : (dog?.address || event.location || '')).trim()
-  const doorCode   = editing ? form.door_code : (dog?.door_code || event.calendarDoorCode || null)
   const dogNotes   = editing ? form.notes : (dog?.notes || null)
+
+  // Build access steps for view mode (only show steps that have values)
+  const accessSteps = []
+  const bAccess = dog?.building_access || event.calendarDoorCode || null
+  const uNumber = dog?.unit_number || null
+  const uAccess = dog?.unit_access || null
+  const aNotes  = dog?.access_notes || null
+  if (bAccess) accessSteps.push({ key: 'building', step: 1, emoji: '\u{1F3E2}', label: 'Building', value: bAccess })
+  if (uNumber) accessSteps.push({ key: 'unit',     step: 2, emoji: '\u{1F6AA}', label: 'Unit',     value: uNumber })
+  if (uAccess) accessSteps.push({ key: 'access',   step: 3, emoji: '\u{1F511}', label: 'Access',   value: uAccess })
+  if (aNotes)  accessSteps.push({ key: 'notes',    step: 4, emoji: '\u{1F4DD}', label: 'Notes',    value: aNotes })
   const photoUrl   = dog?.photo_url && !imgError ? dog.photo_url : null
   const badge      = groupBadge(event._groupKey, event._groupName)
   const directionsUrl = mapsUrl(address)
@@ -346,10 +369,37 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
           {!editing && (
             <div className="flex flex-col gap-3">
 
+              {/* Owl notes */}
+              {owlNotes && owlNotes.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {owlNotes.map((note) => (
+                    <div key={note.id} className="bg-[#E8634A]/10 border border-[#E8634A]/30 rounded-2xl px-4 py-3">
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg flex-shrink-0">{'\u{1F989}'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#E8634A] leading-snug">{note.note_text}</p>
+                          {note.expires_at && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onAcknowledgeNote?.(note.id)}
+                        className="mt-2 w-full py-2 rounded-full bg-[#E8634A] text-white text-sm font-bold"
+                      >
+                        Got it {'\u2713'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Notes alert */}
               {dogNotes && (
                 <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
-                  <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
+                  <span className="text-lg flex-shrink-0 mt-0.5">{'\u26A0\uFE0F'}</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
                     <p className="text-sm font-medium leading-snug break-words">{dogNotes}</p>
@@ -357,38 +407,48 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </div>
               )}
 
-              {/* Door code — tap to reveal with flip */}
-              {doorCode && (
-                <div className="bg-gray-50 rounded-2xl p-4" style={{ perspective: '600px' }}>
-                  <div className="flex items-center gap-2 mb-2">
+              {/* Access steps — tap to reveal with flip */}
+              {accessSteps.length > 0 && (
+                <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0">
                       <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                     </svg>
-                    <span className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide">Door / Access Code</span>
+                    <span className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide">Access Info</span>
                   </div>
-                  <AnimatePresence mode="wait">
-                    {doorRevealed ? (
-                      <motion.div
-                        key="revealed"
-                        initial={{ rotateX: -90, opacity: 0 }}
-                        animate={{ rotateX: 0, opacity: 1 }}
-                        transition={{ duration: 0.3, ease: 'easeOut' }}
-                        className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center"
-                      >
-                        <p className="text-2xl font-mono font-bold text-[#1A1A1A] tracking-widest">{doorCode}</p>
-                      </motion.div>
-                    ) : (
-                      <motion.button
-                        key="hidden"
-                        exit={{ rotateX: 90, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => setDoorRevealed(true)}
-                        className="w-full py-3 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors min-h-[48px]"
-                      >
-                        Tap to reveal 🔑
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
+                  {accessSteps.map((s) => (
+                    <div key={s.key} style={{ perspective: '600px' }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm">{s.emoji}</span>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Step {s.step}: {s.label}
+                        </span>
+                      </div>
+                      <AnimatePresence mode="wait">
+                        {revealedSteps[s.key] ? (
+                          <motion.div
+                            key="revealed"
+                            initial={{ rotateX: -90, opacity: 0 }}
+                            animate={{ rotateX: 0, opacity: 1 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                            className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center"
+                          >
+                            <p className="text-lg font-mono font-bold text-[#1A1A1A] tracking-widest">{s.value}</p>
+                          </motion.div>
+                        ) : (
+                          <motion.button
+                            key="hidden"
+                            exit={{ rotateX: 90, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={() => setRevealedSteps((prev) => ({ ...prev, [s.key]: true }))}
+                            className="w-full py-2.5 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors min-h-[44px]"
+                          >
+                            Tap to reveal {s.emoji}
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -413,8 +473,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </a>
               )}
 
-              {/* Owner info */}
-              {(dog?.owner_first || dog?.owner_last || dog?.phone) && (
+              {/* Owner info — admin only */}
+              {isAdmin && (dog?.owner_first || dog?.owner_last || dog?.phone) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
@@ -465,8 +525,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated }) {
                 </div>
               )}
 
-              {/* Acuity booking info (no profile) */}
-              {!dog && (event.email || event.ownerName) && (
+              {/* Acuity booking info (no profile) — hide email/phone for non-admin */}
+              {!dog && (isAdmin ? (event.email || event.ownerName) : false) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1">Booking Info</p>
                   {event.ownerName && <p className="text-sm text-gray-700">{event.ownerName}</p>}

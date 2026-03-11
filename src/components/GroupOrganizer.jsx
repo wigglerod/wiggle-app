@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import LoadingDog from './LoadingDog'
 import {
@@ -6,6 +6,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -13,12 +14,14 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDroppable } from '@dnd-kit/core'
 import DogChip from './DogChip'
 import { useWalkGroups } from '../lib/useWalkGroups'
 import { useAuth } from '../context/AuthContext'
+import confetti from 'canvas-confetti'
 
 // Color cycle for numbered groups
 const GROUP_COLORS = [
@@ -47,7 +50,7 @@ function useIsMobile() {
   return isMobile
 }
 
-// ── Sortable wrapper for desktop DnD ────────────────────────────────
+// ── Sortable wrapper for desktop DnD (between-group) ─────────────────
 function SortableItem({ id, children, canEdit }) {
   const {
     attributes,
@@ -70,6 +73,36 @@ function SortableItem({ id, children, canEdit }) {
       {...(canEdit ? listeners : {})}
     >
       {typeof children === 'function' ? children({ isDragging }) : children}
+    </div>
+  )
+}
+
+// ── Sortable wrapper for within-group reorder ────────────────────────
+// Uses handle-only drag: only the grip handle triggers drag
+function ReorderableSortableItem({ id, children, canEdit }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: !canEdit })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        touchAction: 'none',
+      }}
+      {...attributes}
+    >
+      {typeof children === 'function'
+        ? children({ isDragging, handleRef: setActivatorNodeRef, handleListeners: canEdit ? listeners : {} })
+        : children}
     </div>
   )
 }
@@ -148,14 +181,23 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
   )
 }
 
-// ── Mobile group with tap-to-assign ─────────────────────────────────
-function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap, onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit, isAdmin }) {
+// ── Mobile group with tap-to-assign + within-group reorder ──────────
+function MobileGroup({
+  groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
+  onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
+  isAdmin, onReorder, owlDogIdSet,
+}) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
     ? { color: 'bg-gray-100', accent: 'border-gray-300' }
     : groupColor(Number(groupKey))
 
+  // For numbered groups, use array order as-is (that IS the pickup order)
+  // For unassigned, sort by start time
   const sortedItems = useMemo(() => {
+    if (!isUnassigned) {
+      return eventIds.map(String)
+    }
     return [...eventIds]
       .sort((a, b) => {
         const evA = eventsMap.get(String(a))
@@ -164,9 +206,32 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
         return new Date(evA.start) - new Date(evB.start)
       })
       .map(String)
-  }, [eventIds, eventsMap])
+  }, [eventIds, eventsMap, isUnassigned])
 
   const selectedDogName = selectedId ? eventsMap.get(selectedId)?.displayName : null
+
+  // Within-group reorder DnD (only for numbered groups)
+  const [reorderActiveId, setReorderActiveId] = useState(null)
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  const reorderSensors = useSensors(touchSensor, pointerSensor)
+
+  function handleReorderDragStart(event) {
+    setReorderActiveId(String(event.active.id))
+  }
+
+  function handleReorderDragEnd(event) {
+    const { active, over } = event
+    setReorderActiveId(null)
+    if (!over || active.id === over.id) return
+    const oldIndex = sortedItems.indexOf(String(active.id))
+    const newIndex = sortedItems.indexOf(String(over.id))
+    if (oldIndex === -1 || newIndex === -1) return
+    const newOrder = arrayMove(sortedItems, oldIndex, newIndex)
+    onReorder?.(Number(groupKey), newOrder)
+  }
+
+  const reorderActiveEvent = reorderActiveId ? eventsMap.get(reorderActiveId) : null
 
   return (
     <div
@@ -215,23 +280,94 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
             )
           })}
         </div>
+      ) : canEdit ? (
+        <DndContext
+          sensors={reorderSensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleReorderDragStart}
+          onDragEnd={handleReorderDragEnd}
+        >
+          <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-2">
+              {sortedItems.length === 0 && !isTarget && (
+                <p className="text-xs text-gray-400 italic py-2 w-full text-center">
+                  Tap a dog, then tap here to assign
+                </p>
+              )}
+              {isTarget && sortedItems.length === 0 && (
+                <button
+                  onClick={onTargetTap}
+                  className="w-full py-4 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-sm text-[#E8634A] font-medium active:bg-[#E8634A]/5 transition-all min-h-[48px]"
+                >
+                  Tap to add {selectedDogName || 'dog'} here
+                </button>
+              )}
+              <AnimatePresence mode="popLayout">
+                {sortedItems.map((id, index) => {
+                  const ev = eventsMap.get(id)
+                  if (!ev) return null
+                  return (
+                    <ReorderableSortableItem key={id} id={id} canEdit={canEdit}>
+                      {({ isDragging, handleRef, handleListeners }) => (
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: isDragging || reorderActiveId === id ? 0.5 : 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            {/* Order number badge */}
+                            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            {/* Grip handle */}
+                            <span
+                              ref={handleRef}
+                              {...handleListeners}
+                              className="text-gray-300 text-sm cursor-grab active:cursor-grabbing flex-shrink-0 select-none px-0.5"
+                              style={{ touchAction: 'none' }}
+                            >
+                              ⠿
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <DogChip
+                                event={ev}
+                                onInfoClick={onDogClick}
+                                onTap={onDogTap}
+                                onLongPress={onLongPress}
+                                isSelected={selectedId === id}
+                                isAdmin={isAdmin}
+                                hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </ReorderableSortableItem>
+                  )
+                })}
+              </AnimatePresence>
+            </div>
+          </SortableContext>
+          <DragOverlay>
+            {reorderActiveEvent ? (
+              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-gray-700 border border-[#E8634A] shadow-xl ring-2 ring-[#E8634A]/20">
+                <span className="text-base">🐕</span>
+                {reorderActiveEvent.displayName}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
         <div className="flex flex-col gap-2">
           {sortedItems.length === 0 && !isTarget && (
             <p className="text-xs text-gray-400 italic py-2 w-full text-center">
-              {canEdit ? 'Tap a dog, then tap here to assign' : 'No dogs assigned'}
+              No dogs assigned
             </p>
           )}
-          {isTarget && sortedItems.length === 0 && (
-            <button
-              onClick={onTargetTap}
-              className="w-full py-4 rounded-xl border-2 border-dashed border-[#E8634A]/30 text-sm text-[#E8634A] font-medium active:bg-[#E8634A]/5 transition-all min-h-[48px]"
-            >
-              Tap to add {selectedDogName || 'dog'} here
-            </button>
-          )}
           <AnimatePresence mode="popLayout">
-            {sortedItems.map((id) => {
+            {sortedItems.map((id, index) => {
               const ev = eventsMap.get(id)
               if (!ev) return null
               return (
@@ -243,14 +379,21 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <DogChip
-                    event={ev}
-                    onInfoClick={onDogClick}
-                    onTap={canEdit ? onDogTap : onDogClick}
-                    onLongPress={canEdit ? onLongPress : undefined}
-                    isSelected={selectedId === id}
-                    isAdmin={isAdmin}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <DogChip
+                        event={ev}
+                        onInfoClick={onDogClick}
+                        onTap={onDogClick}
+                        isSelected={selectedId === id}
+                        isAdmin={isAdmin}
+                        hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               )
             })}
@@ -262,14 +405,22 @@ function MobileGroup({ groupKey, eventIds, eventsMap, onDogClick, selectedId, on
 }
 
 // ── Desktop droppable group (DnD) ───────────────────────────────────
-function DesktopGroup({ groupKey, eventIds, eventsMap, onDogClick, activeId, groupName, onRename, canEdit, isAdmin }) {
+function DesktopGroup({
+  groupKey, eventIds, eventsMap, onDogClick, activeId, groupName,
+  onRename, canEdit, isAdmin, onReorder, owlDogIdSet,
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
     ? { color: 'bg-gray-100', accent: 'border-gray-300' }
     : groupColor(Number(groupKey))
 
+  // For numbered groups, use array order as-is (pickup order)
+  // For unassigned, sort by start time
   const sortedItems = useMemo(() => {
+    if (!isUnassigned) {
+      return eventIds.map(String)
+    }
     return [...eventIds]
       .sort((a, b) => {
         const evA = eventsMap.get(String(a))
@@ -278,7 +429,7 @@ function DesktopGroup({ groupKey, eventIds, eventsMap, onDogClick, activeId, gro
         return new Date(evA.start) - new Date(evB.start)
       })
       .map(String)
-  }, [eventIds, eventsMap])
+  }, [eventIds, eventsMap, isUnassigned])
 
   return (
     <div
@@ -331,20 +482,35 @@ function DesktopGroup({ groupKey, eventIds, eventsMap, onDogClick, activeId, gro
                 Drag dogs here
               </p>
             )}
-            {sortedItems.map((id) => {
+            {sortedItems.map((id, index) => {
               const ev = eventsMap.get(id)
               if (!ev) return null
               return (
                 <SortableItem key={id} id={id} canEdit={canEdit}>
                   {({ isDragging }) => (
-                    <DogChip
-                      event={ev}
-                      onInfoClick={onDogClick}
-                      onTap={onDogClick}
-                      showDragHandle={canEdit}
-                      isDragging={isDragging || activeId === id}
-                      isAdmin={isAdmin}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      {/* Order number badge */}
+                      <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        {index + 1}
+                      </span>
+                      {/* Grip handle */}
+                      {canEdit && (
+                        <span className="text-gray-300 text-sm cursor-grab active:cursor-grabbing flex-shrink-0 select-none px-0.5">
+                          ⠿
+                        </span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <DogChip
+                          event={ev}
+                          onInfoClick={onDogClick}
+                          onTap={onDogClick}
+                          showDragHandle={false}
+                          isDragging={isDragging || activeId === id}
+                          isAdmin={isAdmin}
+                          hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                        />
+                      </div>
+                    </div>
                   )}
                 </SortableItem>
               )
@@ -411,10 +577,10 @@ function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, 
 }
 
 // ── Main export ─────────────────────────────────────────────────────
-export default function GroupOrganizer({ events, date, sector, onDogClick }) {
+export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [] }) {
   const { canEdit, isAdmin } = useAuth()
   const isMobile = useIsMobile()
-  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, loaded, lastSaved } =
+  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved } =
     useWalkGroups(events, date, sector)
 
   const eventsMap = useMemo(() => {
@@ -422,6 +588,43 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     for (const ev of events) m.set(String(ev._id), ev)
     return m
   }, [events])
+
+  // Set of dog IDs that have owl notes
+  const owlDogIdSet = useMemo(() => {
+    const s = new Set()
+    for (const n of owlDogNotes) if (n.target_dog_id) s.add(n.target_dog_id)
+    return s
+  }, [owlDogNotes])
+
+  // ── Confetti tracking ─────────────────────────────────────────────
+  const confettiFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (!loaded) return
+    const totalDogs = events.length
+    const unassignedCount = (groups.unassigned || []).length
+    if (totalDogs > 0 && unassignedCount === 0) {
+      if (!confettiFiredRef.current) {
+        confettiFiredRef.current = true
+        // Fire confetti burst for 2 seconds
+        const end = Date.now() + 2000
+        const frame = () => {
+          confetti({
+            particleCount: 3,
+            angle: 60 + Math.random() * 60,
+            spread: 55,
+            origin: { x: Math.random(), y: Math.random() * 0.6 },
+            colors: ['#E8634A', '#FFD700', '#4CAF50', '#2196F3', '#9C27B0'],
+          })
+          if (Date.now() < end) requestAnimationFrame(frame)
+        }
+        frame()
+      }
+    } else {
+      // Reset so confetti fires again next time all dogs are assigned
+      confettiFiredRef.current = false
+    }
+  }, [loaded, events.length, groups.unassigned])
 
   // ── Mobile tap-to-assign state ──────────────────────────────────
   const [selectedId, setSelectedId] = useState(null)
@@ -472,6 +675,14 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     setLongPressMenu(null)
   }
 
+  // ── Handle within-group reorder ────────────────────────────────
+  const handleReorder = useCallback(
+    (groupNum, newOrderedIds) => {
+      reorderGroup?.(groupNum, newOrderedIds)
+    },
+    [reorderGroup]
+  )
+
   // ── Desktop DnD state ───────────────────────────────────────────
   const [activeId, setActiveId] = useState(null)
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -494,10 +705,24 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
     const { active, over } = event
     setActiveId(null)
     if (!over) return
-    const fromGroup = findGroup(String(active.id))
+    const activeIdStr = String(active.id)
+    const overIdStr = String(over.id)
+    const fromGroup = findGroup(activeIdStr)
     const toGroup = resolveTargetGroup(over.id)
-    if (fromGroup !== null && toGroup !== null && fromGroup !== toGroup) {
-      moveEvent(String(active.id), fromGroup, toGroup)
+
+    if (fromGroup !== null && toGroup !== null) {
+      if (fromGroup === toGroup && fromGroup !== 'unassigned') {
+        // Within-group reorder on desktop
+        const currentItems = (groups[fromGroup] || []).map(String)
+        const oldIndex = currentItems.indexOf(activeIdStr)
+        const newIndex = currentItems.indexOf(overIdStr)
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          const newOrder = arrayMove(currentItems, oldIndex, newIndex)
+          handleReorder(fromGroup, newOrder)
+        }
+      } else if (fromGroup !== toGroup) {
+        moveEvent(activeIdStr, fromGroup, toGroup)
+      }
     }
   }
 
@@ -549,9 +774,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           onTargetTap={() => handleGroupTap('unassigned')}
           canEdit={canEdit}
           isAdmin={isAdmin}
+          onReorder={handleReorder}
+          owlDogIdSet={owlDogIdSet}
         />
 
-        {/* Numbered groups — always show 1-3, hide 4+ if empty unless assigning */}
+        {/* Numbered groups -- always show 1-3, hide 4+ if empty unless assigning */}
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
           <MobileGroup
             key={num}
@@ -568,6 +795,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
             onTargetTap={() => handleGroupTap(num)}
             canEdit={canEdit}
             isAdmin={isAdmin}
+            onReorder={handleReorder}
+            owlDogIdSet={owlDogIdSet}
           />
         ))}
 
@@ -625,6 +854,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
           onRename={null}
           canEdit={canEdit}
           isAdmin={isAdmin}
+          onReorder={handleReorder}
+          owlDogIdSet={owlDogIdSet}
         />
 
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || activeId !== null).map((num) => (
@@ -639,6 +870,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick }) {
             onRename={(name) => renameGroup(num, name)}
             canEdit={canEdit}
             isAdmin={isAdmin}
+            onReorder={handleReorder}
+            owlDogIdSet={owlDogIdSet}
           />
         ))}
 

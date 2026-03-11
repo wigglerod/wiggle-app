@@ -6,6 +6,8 @@ import BottomTabs from '../components/BottomTabs'
 import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
 
+import { useOwlNotes } from '../lib/useOwlNotes'
+
 const MapView = lazy(() => import('../components/MapView'))
 
 class MapTabBoundary extends Component {
@@ -72,6 +74,9 @@ export default function Dashboard() {
   const activeDate = selectedDay === 'today' ? today : tomorrow
   const profileSector = profile?.sector || 'both'
   const sector = sectorFilter || profileSector
+
+  // Owl notes
+  const { notes: owlNotes, dogNotes: getOwlDogNotes, sectorNotes: getOwlSectorNotes, acknowledgeNote } = useOwlNotes(sector)
 
   // Fetch dogs + name map
   useEffect(() => {
@@ -318,6 +323,38 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Owl note banners (sector + all) */}
+        {!loading && (() => {
+          const bannerNotes = sector === 'both'
+            ? owlNotes.filter(n => n.target_type === 'sector' || n.target_type === 'all')
+            : getOwlSectorNotes(sector)
+          return bannerNotes.length > 0 && (
+            <div className="flex flex-col gap-2 mb-3">
+              {bannerNotes.map(note => (
+                <div key={note.id} className="bg-[#E8634A]/10 border border-[#E8634A]/30 rounded-xl px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg flex-shrink-0">🦉</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#E8634A] leading-snug">{note.note_text}</p>
+                      {note.expires_at && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => acknowledgeNote(note.id)}
+                    className="mt-2 w-full py-2 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] min-h-[40px]"
+                  >
+                    Got it ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Organizer */}
         {!loading && filteredEvents.length > 0 && activeTab === 'organizer' && (
           <div className="flex flex-col gap-4">
@@ -334,6 +371,7 @@ export default function Dashboard() {
                   date={activeDate}
                   sector={sectorName}
                   onDogClick={setSelectedEvent}
+                  owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
                 />
               </div>
             ))}
@@ -363,6 +401,8 @@ export default function Dashboard() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onDogUpdated={handleDogUpdated}
+          owlNotes={selectedEvent.dog?.id ? getOwlDogNotes(selectedEvent.dog.id) : []}
+          onAcknowledgeNote={acknowledgeNote}
         />
       )}
     </div>

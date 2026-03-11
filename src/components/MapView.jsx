@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, Component } from 'react'
+import { useState, useEffect, useMemo, useRef, Component } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
@@ -39,6 +40,23 @@ function buildRouteUrl(addresses) {
     .map((a) => encodeURIComponent(a))
     .join('|')
   return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=walking`
+}
+
+// Preserve dog_ids order from walk_groups (pickup order set in organizer)
+function orderedDogs(dogIds, eventsMap) {
+  const dogs = []
+  const noAddr = []
+  for (const id of [...new Set(dogIds || [])]) {
+    const ev = eventsMap.get(String(id))
+    if (!ev) continue
+    const addr = ev.dog?.address || ev.location
+    if (addr && addr.trim()) {
+      dogs.push({ event: ev, address: addr.trim() })
+    } else {
+      noAddr.push(ev.displayName || ev.dog?.dog_name || 'Unknown')
+    }
+  }
+  return { dogs, noAddr }
 }
 
 // ── Error Boundary ──────────────────────────────────────────────────
@@ -162,6 +180,9 @@ export default function MapView({ events, date, sector, onDogClick }) {
   const [walkGroups, setWalkGroups] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
+  const [longPressMenu, setLongPressMenu] = useState(null)
+  const lpTimer = useRef(null)
+  const didLongPress = useRef(false)
 
   // Load walk_groups for today
   useEffect(() => {
@@ -208,19 +229,12 @@ export default function MapView({ events, date, sector, onDogClick }) {
       const groupCards = []
 
       for (const wg of sectorGroups) {
-        const dogs = []
-        const noAddr = []
-
+        // Use dog_ids order (pickup order from organizer)
+        const { dogs, noAddr } = orderedDogs(wg.dog_ids, eventsMap)
+        for (const d of dogs) assignedIds.add(String(d.event._id))
         for (const id of [...new Set(wg.dog_ids || [])]) {
           const ev = eventsMap.get(String(id))
-          if (!ev) continue
-          assignedIds.add(String(id))
-          const addr = ev.dog?.address || ev.location
-          if (addr && addr.trim()) {
-            dogs.push({ event: ev, address: addr.trim() })
-          } else {
-            noAddr.push(ev.displayName || ev.dog?.dog_name || 'Unknown')
-          }
+          if (ev) assignedIds.add(String(id))
         }
 
         // Skip empty groups
@@ -280,8 +294,43 @@ export default function MapView({ events, date, sector, onDogClick }) {
   }, [sections, unassigned])
 
   function handleChipTap(ev) {
+    if (didLongPress.current) { didLongPress.current = false; return }
     const id = String(ev._id)
     setSelectedId(prev => prev === id ? null : id)
+  }
+
+  function handleLPDown(ev, e) {
+    didLongPress.current = false
+    const rect = e.currentTarget.getBoundingClientRect()
+    lpTimer.current = setTimeout(() => {
+      didLongPress.current = true
+      setLongPressMenu({
+        dogId: String(ev._id),
+        event: ev,
+        x: Math.min(rect.left + rect.width / 2, window.innerWidth - 120),
+        y: rect.bottom + 4,
+      })
+    }, 500)
+  }
+  function handleLPUp() { if (lpTimer.current) clearTimeout(lpTimer.current) }
+  function handleLPMove() { if (lpTimer.current) clearTimeout(lpTimer.current) }
+
+  async function handleLPMenuAssign(groupNum, sectorName) {
+    if (!longPressMenu) return
+    const wg = walkGroups.find(w => w.group_num === groupNum && w.sector === sectorName)
+    if (!wg) return
+    const newDogIds = [...(wg.dog_ids || []), longPressMenu.dogId]
+    const { error } = await supabase.from('walk_groups')
+      .update({ dog_ids: newDogIds, updated_at: new Date().toISOString() })
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+      .eq('sector', sectorName)
+    if (error) { toast.error('Failed to assign dog'); return }
+    setWalkGroups(prev => prev.map(w =>
+      w.group_num === groupNum && w.sector === sectorName ? { ...w, dog_ids: newDogIds } : w
+    ))
+    setLongPressMenu(null)
+    toast.success('✓ Saved')
   }
 
   async function assignToGroup(groupNum, sectorName) {
@@ -371,6 +420,10 @@ export default function MapView({ events, date, sector, onDogClick }) {
                   <button
                     key={id}
                     onClick={() => handleChipTap(d.event)}
+                    onPointerDown={(e) => handleLPDown(d.event, e)}
+                    onPointerUp={handleLPUp}
+                    onPointerCancel={handleLPUp}
+                    onPointerMove={handleLPMove}
                     className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
                       ${selectedId === id
                         ? 'bg-[#E8634A] text-white shadow-md wiggle'
@@ -401,6 +454,40 @@ export default function MapView({ events, date, sector, onDogClick }) {
             ))}
           </div>
         )}
+        {/* Long-press popup menu */}
+        <AnimatePresence>
+          {longPressMenu && (
+            <>
+              <div className="fixed inset-0 z-50" onClick={() => setLongPressMenu(null)} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.15 }}
+                style={{
+                  position: 'fixed',
+                  top: Math.min(longPressMenu.y, window.innerHeight - 280),
+                  left: Math.max(8, Math.min(longPressMenu.x - 96, window.innerWidth - 200)),
+                  zIndex: 60,
+                }}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 py-2 w-48 overflow-hidden"
+              >
+                <p className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Move to...</p>
+                {sections.map(sec => sec.groups.map(g => (
+                  <button
+                    key={`${sec.sectorName}-${g.groupNum}`}
+                    onClick={() => handleLPMenuAssign(g.groupNum, sec.sectorName)}
+                    className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 active:bg-[#FFF4F1] min-h-[48px] flex items-center gap-2"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getGroupColor(g.groupNum) }} />
+                    {g.groupName}
+                    {sector === 'both' && <span className="text-xs text-gray-400 ml-auto">{sec.sectorName}</span>}
+                  </button>
+                )))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     </MapErrorBoundary>
   )
