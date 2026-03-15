@@ -29,6 +29,7 @@ export default function OwlQuickDrawer({ open, onClose }) {
   const [targetDogId, setTargetDogId] = useState(null)
   const [targetDogName, setTargetDogName] = useState(null)
   const [targetSector, setTargetSector] = useState(null)
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0])
   const [sending, setSending] = useState(false)
 
   // Autocomplete state
@@ -121,12 +122,13 @@ export default function OwlQuickDrawer({ open, onClose }) {
   async function handleSend() {
     if (!text.trim() || !targetType) return
     setSending(true)
-    await createNote({ noteText: text.trim(), targetType, targetDogId, targetDogName, targetSector })
+    await createNote({ noteText: text.trim(), targetType, targetDogId, targetDogName, targetSector, scheduledDate })
     setText('')
     setTargetType(null)
     setTargetDogId(null)
     setTargetDogName(null)
     setTargetSector(null)
+    setScheduledDate(new Date().toISOString().split('T')[0])
     setSending(false)
     onClose()
   }
@@ -229,6 +231,21 @@ export default function OwlQuickDrawer({ open, onClose }) {
               <p className="mt-1 text-xs text-gray-400">
                 Tip: Add <span className="font-mono text-gray-500">(3 days)</span> for auto-expiry
               </p>
+
+              {/* Schedule date picker */}
+              <div className="mt-2 flex items-center gap-2">
+                <label className="text-xs text-gray-500">Appears on:</label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-300"
+                />
+                {scheduledDate > new Date().toISOString().split('T')[0] && (
+                  <span className="text-xs text-amber-600">📅 Scheduled</span>
+                )}
+              </div>
 
               <button
                 onClick={handleSend}

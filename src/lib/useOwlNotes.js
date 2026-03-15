@@ -103,7 +103,7 @@ export function useOwlNotes(sector) {
 
   // Create a new owl note
   const createNote = useCallback(
-    async ({ noteText, targetType, targetDogId, targetDogName, targetSector, expiresAt }) => {
+    async ({ noteText, targetType, targetDogId, targetDogName, targetSector, expiresAt, scheduledDate }) => {
       if (!user) return
 
       // Parse duration from text if no explicit expiresAt
@@ -117,6 +117,7 @@ export function useOwlNotes(sector) {
         target_dog_name: targetDogName || null,
         target_sector: targetSector || null,
         expires_at: finalExpiry,
+        scheduled_date: scheduledDate || new Date().toISOString().split('T')[0],
         created_by: user.id,
         created_by_name: profile?.full_name || 'Unknown',
       })
@@ -154,34 +155,42 @@ export function useOwlNotes(sector) {
     if (error) {
       toast.error('Failed to delete note')
     } else {
-      toast('Note deleted')
+      toast('🦉 Note removed')
     }
   }, [])
 
-  // Filter helpers
+  // Split notes into active (scheduled_date <= today) and scheduled (future)
+  const today = new Date().toISOString().split('T')[0]
+  const activeNotes = notes.filter(
+    (n) => !n.scheduled_date || n.scheduled_date <= today
+  )
+  const scheduledNotes = notes.filter(
+    (n) => n.scheduled_date && n.scheduled_date > today
+  )
+
+  // Filter helpers — only return active (visible) notes
   const dogNotes = useCallback(
     (dogId) =>
-      notes.filter((n) => n.target_type === 'dog' && n.target_dog_id === dogId),
-    [notes]
+      activeNotes.filter((n) => n.target_type === 'dog' && n.target_dog_id === dogId),
+    [activeNotes]
   )
 
   const sectorNotes = useCallback(
     (sectorName) =>
-      notes.filter(
+      activeNotes.filter(
         (n) =>
           (n.target_type === 'sector' && n.target_sector === sectorName) ||
           n.target_type === 'all'
       ),
-    [notes]
+    [activeNotes]
   )
 
-  const allNotes = notes.filter((n) => n.target_type === 'all')
-
   return {
-    notes,
+    notes: activeNotes,
+    scheduledNotes,
     dogNotes,
     sectorNotes,
-    allNotes,
+    allNotes: activeNotes.filter((n) => n.target_type === 'all'),
     createNote,
     acknowledgeNote,
     deleteNote,

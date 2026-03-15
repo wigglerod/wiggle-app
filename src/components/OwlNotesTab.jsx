@@ -56,7 +56,7 @@ function TargetBadge({ note }) {
 
 export default function OwlNotesTab() {
   const { isAdmin } = useAuth()
-  const { notes, createNote, deleteNote, loading } = useOwlNotes()
+  const { notes, scheduledNotes, createNote, deleteNote, loading } = useOwlNotes()
 
   // Dog list for autocomplete
   const [dogs, setDogs] = useState([])
@@ -77,6 +77,7 @@ export default function OwlNotesTab() {
   const [targetDogId, setTargetDogId] = useState(null)
   const [targetDogName, setTargetDogName] = useState(null)
   const [targetSector, setTargetSector] = useState(null)
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0])
   const [sending, setSending] = useState(false)
 
   // Autocomplete state
@@ -182,6 +183,7 @@ export default function OwlNotesTab() {
       targetDogId,
       targetDogName,
       targetSector,
+      scheduledDate,
     })
 
     setText('')
@@ -189,6 +191,7 @@ export default function OwlNotesTab() {
     setTargetDogId(null)
     setTargetDogName(null)
     setTargetSector(null)
+    setScheduledDate(new Date().toISOString().split('T')[0])
     setSending(false)
   }
 
@@ -272,6 +275,21 @@ export default function OwlNotesTab() {
           Tip: Add <span className="font-mono text-gray-500">(3 days)</span> at end for auto-expiry
         </p>
 
+        {/* Schedule date picker */}
+        <div className="mt-2 flex items-center gap-2">
+          <label className="text-xs text-gray-500">Appears on:</label>
+          <input
+            type="date"
+            value={scheduledDate}
+            min={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setScheduledDate(e.target.value)}
+            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-300"
+          />
+          {scheduledDate > new Date().toISOString().split('T')[0] && (
+            <span className="text-xs text-amber-600">📅 Scheduled</span>
+          )}
+        </div>
+
         {/* Send button */}
         <button
           onClick={handleSend}
@@ -318,20 +336,58 @@ export default function OwlNotesTab() {
                   </div>
                 </div>
 
-                {isAdmin && (
-                  <button
-                    onClick={() => deleteNote(note.id)}
-                    className="shrink-0 rounded-full p-1 text-gray-300 transition-colors hover:bg-gray-100 hover:text-gray-500"
-                    title="Delete note"
-                  >
-                    ✕
-                  </button>
-                )}
+                <button
+                  onClick={() => deleteNote(note.id)}
+                  className="shrink-0 rounded-full p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-100"
+                  title="Delete note"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Scheduled notes (future-dated) */}
+      {scheduledNotes.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-400">
+            📅 Scheduled Notes <span className="text-gray-300">({scheduledNotes.length})</span>
+          </h3>
+          <div className="flex flex-col gap-2">
+            {scheduledNotes.map((note) => (
+              <div
+                key={note.id}
+                className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 opacity-60"
+              >
+                <div className="flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <TargetBadge note={note} />
+                    <span className="text-xs text-gray-400">
+                      Appears {note.scheduled_date}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">{note.note_text}</p>
+                  <div className="mt-1">
+                    {note.created_by_name && (
+                      <span className="text-xs text-gray-400">— {note.created_by_name}</span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => deleteNote(note.id)}
+                  className="shrink-0 rounded-full p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-100"
+                  title="Delete note"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
