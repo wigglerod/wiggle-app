@@ -7,6 +7,7 @@ import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
 
 import { useOwlNotes } from '../lib/useOwlNotes'
+import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
 
 const MapView = lazy(() => import('../components/MapView'))
 
@@ -79,6 +80,15 @@ export default function Dashboard() {
   // Owl notes
   const { notes: owlNotes, dogNotes: getOwlDogNotes, sectorNotes: getOwlSectorNotes, acknowledgeNote } = useOwlNotes(sector)
 
+  // Load cached dogs instantly, then refresh from Supabase
+  useEffect(() => {
+    const cached = getCachedDogs()
+    if (cached && dogs.length === 0) {
+      setDogs(cached)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Fetch dogs + name map
   useEffect(() => {
     async function fetchDogs() {
@@ -86,7 +96,9 @@ export default function Dashboard() {
         supabase.from('dogs').select('*').order('dog_name'),
         supabase.from('acuity_name_map').select('acuity_name, dog_name, acuity_email'),
       ])
-      setDogs(dogsRes.error ? [] : dogsRes.data || [])
+      const fetchedDogs = dogsRes.error ? [] : dogsRes.data || []
+      setDogs(fetchedDogs)
+      if (fetchedDogs.length > 0) setCachedDogs(fetchedDogs)
       setNameMap(buildNameMap(mapRes.data))
       setDogsReady(true)
     }
@@ -247,7 +259,6 @@ export default function Dashboard() {
   }
 
   async function handleUnlock() {
-    setShowUnlockConfirm(false)
     const { error } = await supabase
       .from('walk_groups')
       .update({ locked: false })
@@ -401,51 +412,67 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Organizer */}
-        {!loading && filteredEvents.length > 0 && activeTab === 'organizer' && (
-          <div className="flex flex-col gap-4">
-            {/* Unlock button for Chief Pup and Wiggle Pro */}
-            {scheduleLocked && canEditAuth && (
-              <button
-                onClick={handleUnlock}
-                className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] transition-all"
+        {/* Organizer / Map with slide transition */}
+        {!loading && filteredEvents.length > 0 && (
+          <AnimatePresence mode="wait" initial={false}>
+            {activeTab === 'organizer' ? (
+              <motion.div
+                key="organizer"
+                initial={{ x: -40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -40, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-4"
               >
-                🔓 Unlock Schedule
-              </button>
-            )}
-            {Object.entries(sectorEvents).map(([sectorName, events]) => (
-              <div key={sectorName}>
-                {sector === 'both' && (
-                  <h2 className="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${sectorName === 'Plateau' ? 'bg-amber-400' : 'bg-blue-400'}`} />
-                    {sectorName}
-                  </h2>
+                {/* Unlock button for Chief Pup and Wiggle Pro */}
+                {scheduleLocked && canEditAuth && (
+                  <button
+                    onClick={handleUnlock}
+                    className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] transition-all"
+                  >
+                    🔓 Unlock Schedule
+                  </button>
                 )}
-                <GroupOrganizer
-                  events={events}
-                  date={activeDate}
-                  sector={sectorName}
-                  onDogClick={setSelectedEvent}
-                  owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
-                  onLocked={handleScheduleLocked}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Map */}
-        {!loading && filteredEvents.length > 0 && activeTab === 'map' && (
-          <MapTabBoundary>
-            <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
-              <MapView
-                events={filteredEvents}
-                date={activeDate}
-                sector={sector}
-                onDogClick={setSelectedEvent}
-              />
-            </Suspense>
-          </MapTabBoundary>
+                {Object.entries(sectorEvents).map(([sectorName, events]) => (
+                  <div key={sectorName}>
+                    {sector === 'both' && (
+                      <h2 className="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${sectorName === 'Plateau' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                        {sectorName}
+                      </h2>
+                    )}
+                    <GroupOrganizer
+                      events={events}
+                      date={activeDate}
+                      sector={sectorName}
+                      onDogClick={setSelectedEvent}
+                      owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
+                      onLocked={handleScheduleLocked}
+                    />
+                  </div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="map"
+                initial={{ x: 40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 40, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <MapTabBoundary>
+                  <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
+                    <MapView
+                      events={filteredEvents}
+                      date={activeDate}
+                      sector={sector}
+                      onDogClick={setSelectedEvent}
+                    />
+                  </Suspense>
+                </MapTabBoundary>
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
       </main>
 

@@ -13,6 +13,7 @@ import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
 import { useOwlNotes } from '../lib/useOwlNotes'
+import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
 
 let _idCounter = 0
 function uid() { return ++_idCounter }
@@ -71,13 +72,24 @@ export default function Schedule() {
 
   const selectedDate = useMemo(() => torontoDate(dayOffset), [dayOffset])
 
+  // Load cached dogs instantly
+  useEffect(() => {
+    const cached = getCachedDogs()
+    if (cached && dogs.length === 0) {
+      setDogs(cached)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     async function fetchDogs() {
       const [dogsRes, mapRes] = await Promise.all([
         supabase.from('dogs').select('*').order('dog_name'),
         supabase.from('acuity_name_map').select('acuity_name, dog_name, acuity_email'),
       ])
-      setDogs(dogsRes.error ? [] : dogsRes.data || [])
+      const fetchedDogs = dogsRes.error ? [] : dogsRes.data || []
+      setDogs(fetchedDogs)
+      if (fetchedDogs.length > 0) setCachedDogs(fetchedDogs)
       setNameMap(buildNameMap(mapRes.data))
       setDogsReady(true)
     }

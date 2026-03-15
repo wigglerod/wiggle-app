@@ -1,15 +1,17 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Schedule from './pages/Schedule'
-import SettingsPage from './pages/SettingsPage'
 import LoadingDog from './components/LoadingDog'
+import OfflineBanner from './components/OfflineBanner'
 
 const Admin = lazy(() => import('./pages/Admin'))
 const DogsPage = lazy(() => import('./pages/DogsPage'))
+const Schedule = lazy(() => import('./pages/Schedule'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 function LazyFallback() {
   return (
@@ -41,7 +43,15 @@ function AdminRoute({ children }) {
   return children
 }
 
-function AppRoutes() {
+// Page transition variants — crossfade 200ms
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
   const { session, isLoading } = useAuth()
 
   if (isLoading) {
@@ -53,59 +63,74 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={session ? <Navigate to="/" replace /> : <Login />}
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/schedule"
-        element={
-          <ProtectedRoute>
-            <Schedule />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <AdminRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <Admin />
-              </Suspense>
-            </AdminRoute>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dogs"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LazyFallback />}>
-              <DogsPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.2 }}
+      >
+        <Routes location={location}>
+          <Route
+            path="/login"
+            element={session ? <Navigate to="/" replace /> : <Login />}
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LazyFallback />}>
+                  <Schedule />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <Suspense fallback={<LazyFallback />}>
+                    <Admin />
+                  </Suspense>
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dogs"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LazyFallback />}>
+                  <DogsPage />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LazyFallback />}>
+                  <SettingsPage />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
@@ -113,7 +138,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <OfflineBanner />
+        <AnimatedRoutes />
         <Toaster position="top-center" richColors closeButton />
       </AuthProvider>
     </BrowserRouter>

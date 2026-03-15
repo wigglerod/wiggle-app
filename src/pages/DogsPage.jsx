@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
@@ -6,6 +6,7 @@ import Header from '../components/Header'
 import BottomTabs from '../components/BottomTabs'
 import LoadingDog from '../components/LoadingDog'
 import DogProfileDrawer from '../components/DogProfileDrawer'
+import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
 
 // ── Friend check component for Dogs page ─────────────────────────────
 function FriendCheckSection({ allDogs }) {
@@ -192,6 +193,13 @@ export default function DogsPage() {
   const [search, setSearch] = useState('')
   const [sector, setSector] = useState('All')
   const [selectedDog, setSelectedDog] = useState(null)
+  const [pullY, setPullY] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const isPulling = useRef(false)
+
+  const PULL_THRESHOLD = 64
+  const PULL_MAX = 90
 
   async function fetchDogs() {
     setLoading(true)
@@ -203,23 +211,78 @@ export default function DogsPage() {
       toast.error('Failed to load dogs')
     } else {
       setDogs(data || [])
+      if (data?.length > 0) setCachedDogs(data)
     }
     setLoading(false)
+    setRefreshing(false)
   }
+
+  // Load cached dogs instantly
+  useEffect(() => {
+    const cached = getCachedDogs()
+    if (cached) {
+      setDogs(cached)
+      setLoading(false)
+    }
+  }, [])
 
   /* eslint-disable react-hooks/set-state-in-effect -- fetch from external DB on mount */
   useEffect(() => { fetchDogs() }, [])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const filtered = dogs.filter((d) => {
+  function handleTouchStart(e) {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY
+      isPulling.current = true
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (!isPulling.current) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) {
+      setPullY(Math.min(delta * 0.45, PULL_MAX))
+    } else {
+      isPulling.current = false
+      setPullY(0)
+    }
+  }
+
+  function handleTouchEnd() {
+    if (!isPulling.current) return
+    isPulling.current = false
+    if (pullY >= PULL_THRESHOLD && !refreshing) {
+      setRefreshing(true)
+      fetchDogs()
+    }
+    setPullY(0)
+    touchStartY.current = 0
+  }
+
+  const filtered = useMemo(() => dogs.filter((d) => {
     if (sector !== 'All' && d.sector !== sector) return false
     if (search && !d.dog_name.toLowerCase().includes(search.toLowerCase())) return false
     return true
-  })
+  }), [dogs, sector, search])
 
   return (
-    <div className="min-h-screen bg-[#FFF4F1] pb-20">
+    <div
+      className="min-h-screen bg-[#FFF4F1] pb-20"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Header />
+
+      {/* Pull-to-refresh indicator */}
+      <div
+        className="flex items-center justify-center overflow-hidden transition-[height] duration-150"
+        style={{ height: refreshing ? 88 : pullY }}
+      >
+        {(pullY > 8 || refreshing) && (
+          <LoadingDog text={refreshing ? 'Wiggling...' : pullY >= PULL_THRESHOLD ? 'Release!' : 'Pull to refresh...'} />
+        )}
+      </div>
 
       <main className="px-4 pt-3 pb-4 max-w-lg mx-auto">
         {/* Search bar */}

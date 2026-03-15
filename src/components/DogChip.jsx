@@ -1,9 +1,9 @@
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 const ALERT_KEYWORDS = /reactive|aggressive|bite|careful|alarm|conflict|warning|danger|vet|medication|allergy/i
 
-export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongPress, isDragging, hasOwlNote, hasConflict }) {
+const DogChip = memo(function DogChip({ event, onInfoClick, isSelected, onTap, onLongPress, isDragging, hasOwlNote, hasConflict }) {
   const { isAdmin } = useAuth()
   const isMissing = !event.dog
   const hasAlert = event.dog && (
@@ -93,4 +93,6 @@ export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongP
       </button>
     </div>
   )
-}
+})
+
+export default DogChip
