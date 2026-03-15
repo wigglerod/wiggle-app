@@ -4,14 +4,22 @@ import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
+import SmartTextInput from './SmartTextInput'
+import SmartTextDisplay from './SmartTextDisplay'
 
 const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
   { key: 'address',   label: 'Address' },
   { key: 'door_code', label: 'Door / Access Code' },
-  { key: 'notes',     label: 'Notes', multiline: true },
-  { key: 'bff',       label: 'Best Friends (BFF)' },
-  { key: 'goals',     label: 'Goals', multiline: true },
+  { key: 'notes',     label: 'Notes', multiline: true, smart: true },
+  { key: 'bff',       label: 'Best Friends (BFF)', smart: true },
+  { key: 'goals',     label: 'Goals', multiline: true, smart: true },
+]
+
+const LEVEL_OPTIONS = [
+  { value: 1, label: 'Level 1 — Chill', color: 'bg-green-500' },
+  { value: 2, label: 'Level 2 — Caution', color: 'bg-yellow-400' },
+  { value: 3, label: 'Level 3 — Extra Care', color: 'bg-red-500' },
 ]
 
 function mapsUrl(address) {
@@ -19,7 +27,7 @@ function mapsUrl(address) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
 }
 
-export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
+export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogNameClick }) {
   const { canEdit, profile } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -53,6 +61,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
       notes:     dog.notes     || '',
       bff:       dog.bff       || '',
       goals:     dog.goals     || '',
+      level:     dog.level     || 1,
     })
     setEditing(true)
     setSaveError(null)
@@ -69,6 +78,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
       notes:      form.notes      || null,
       bff:        form.bff        || null,
       goals:      form.goals      || null,
+      level:      form.level      || 1,
       updated_at: new Date().toISOString(),
       updated_by: profile?.full_name || profile?.email || 'Unknown',
     }
@@ -187,21 +197,63 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
               }`}>
                 {dog.sector}
               </span>
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                dog.level === 3 ? 'bg-red-100 text-red-700' : dog.level === 2 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
+                }`} />
+                {dog.level === 3 ? 'Extra Care' : dog.level === 2 ? 'Caution' : 'Chill'}
+              </span>
             </div>
           </div>
 
           {/* Edit mode */}
           {editing && (
             <div className="flex flex-col gap-3 mb-4">
-              {EDIT_FIELDS.map(({ key, label, multiline }) => (
+              {/* Level selector */}
+              <div>
+                <label className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1 block">Level</label>
+                <div className="flex gap-2">
+                  {LEVEL_OPTIONS.map(({ value, label, color }) => (
+                    <button
+                      key={value}
+                      onClick={() => setForm((f) => ({ ...f, level: value }))}
+                      className={`flex-1 py-2.5 rounded-full text-xs font-semibold border transition-all min-h-[40px] flex items-center justify-center gap-1.5 ${
+                        form.level === value
+                          ? 'bg-[#E8634A] text-white border-[#E8634A]'
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${form.level === value ? 'bg-white' : color}`} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {EDIT_FIELDS.map(({ key, label, multiline, smart }) => (
                 <div key={key}>
                   <label className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1 block">{label}</label>
-                  {multiline ? (
+                  {smart && multiline ? (
+                    <SmartTextInput
+                      value={form[key] || ''}
+                      onChange={(val) => setForm((f) => ({ ...f, [key]: val }))}
+                      rows={2}
+                      placeholder={`Type @ to mention a dog...`}
+                    />
+                  ) : multiline ? (
                     <textarea
                       value={form[key] || ''}
                       onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                       rows={2}
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none"
+                    />
+                  ) : smart ? (
+                    <SmartTextInput
+                      value={form[key] || ''}
+                      onChange={(val) => setForm((f) => ({ ...f, [key]: val }))}
+                      rows={1}
+                      placeholder={`Type @ to mention a dog...`}
                     />
                   ) : (
                     <input
@@ -242,7 +294,11 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
                   <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <p className="text-sm font-medium leading-snug break-words">{dog.notes}</p>
+                    <SmartTextDisplay
+                      text={dog.notes}
+                      onDogClick={onDogNameClick}
+                      className="text-sm font-medium leading-snug break-words"
+                    />
                   </div>
                 </div>
               )}
@@ -354,7 +410,11 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
                     <span className="text-base flex-shrink-0">🎯</span>
                     <div>
                       <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-0.5">Goals</p>
-                      <p className="text-sm text-gray-700 leading-snug">{dog.goals}</p>
+                      <SmartTextDisplay
+                        text={dog.goals}
+                        onDogClick={onDogNameClick}
+                        className="text-sm text-gray-700 leading-snug"
+                      />
                     </div>
                   </div>
                 </div>

@@ -68,6 +68,15 @@ export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongP
         <span className="text-base flex-shrink-0">{isMissing && isAdmin ? '⚠️' : '🐕'}</span>
       )}
 
+      {event.dog && (
+        <span
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            event.dog.level === 3 ? 'bg-red-500' : event.dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
+          }`}
+          title={event.dog.level === 3 ? 'Extra Care' : event.dog.level === 2 ? 'Caution' : 'Chill'}
+        />
+      )}
+
       <span className="truncate flex-1">{event.displayName}</span>
 
       {/* "New" badge for unmatched dogs — only non-admin sees this */}

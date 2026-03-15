@@ -7,6 +7,12 @@ import OwlNotesTab from '../components/OwlNotesTab'
 
 const SECTORS = ['Plateau', 'Laurier']
 
+const LEVEL_OPTIONS = [
+  { value: 1, label: 'Chill', color: 'bg-green-500' },
+  { value: 2, label: 'Caution', color: 'bg-yellow-400' },
+  { value: 3, label: 'Extra Care', color: 'bg-red-500' },
+]
+
 function DogFormModal({ dog, onClose, onSaved }) {
   const [form, setForm] = useState({
     dog_name:    dog?.dog_name    || '',
@@ -24,6 +30,7 @@ function DogFormModal({ dog, onClose, onSaved }) {
     bff:         dog?.bff         || '',
     goals:       dog?.goals       || '',
     sector:      dog?.sector      || 'Plateau',
+    level:       dog?.level       || 1,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -119,6 +126,27 @@ function DogFormModal({ dog, onClose, onSaved }) {
                     }`}
                   >
                     {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Level */}
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Level</label>
+              <div className="flex gap-2">
+                {LEVEL_OPTIONS.map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => set('level', value)}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                      form.level === value
+                        ? 'bg-[#E8634A] text-white border-[#E8634A]'
+                        : 'bg-gray-50 text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${form.level === value ? 'bg-white' : color}`} />
+                    {label}
                   </button>
                 ))}
               </div>
@@ -443,6 +471,9 @@ export default function Admin() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
+                      }`} />
                       <h3 className="font-bold text-[#1A1A1A]">{dog.dog_name}</h3>
                       {dog.sector && (
                         <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">

@@ -132,6 +132,13 @@ export default function DogsPage() {
                   )}
                 </div>
 
+                {/* Level dot */}
+                <span
+                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                    dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
+                  }`}
+                />
+
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-bold text-[#1A1A1A] truncate">{dog.dog_name}</p>

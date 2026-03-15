@@ -4,6 +4,14 @@ import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
+import SmartTextInput from './SmartTextInput'
+import SmartTextDisplay from './SmartTextDisplay'
+
+const LEVEL_OPTIONS = [
+  { value: 1, label: 'Level 1 — Chill', color: 'bg-green-500' },
+  { value: 2, label: 'Level 2 — Caution', color: 'bg-yellow-400' },
+  { value: 3, label: 'Level 3 — Extra Care', color: 'bg-red-500' },
+]
 
 const GROUP_COLORS = [
   { bg: 'bg-blue-100',   text: 'text-blue-700'   },
@@ -39,12 +47,12 @@ const EDIT_FIELDS = [
   { key: 'unit_number',     label: '\u{1F6AA} Unit Number' },
   { key: 'unit_access',     label: '\u{1F511} Unit Access' },
   { key: 'access_notes',    label: '\u{1F4DD} Access Notes' },
-  { key: 'notes',           label: 'Notes', multiline: true },
-  { key: 'bff',             label: 'Best Friends (BFF)' },
-  { key: 'goals',           label: 'Goals', multiline: true },
+  { key: 'notes',           label: 'Notes', multiline: true, smart: true },
+  { key: 'bff',             label: 'Best Friends (BFF)', smart: true },
+  { key: 'goals',           label: 'Goals', multiline: true, smart: true },
 ]
 
-export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote }) {
+export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote, onDogNameClick }) {
   const { canEdit, isAdmin, profile } = useAuth()
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [revealedSteps, setRevealedSteps] = useState({})
@@ -84,6 +92,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
         bff:             event.dog.bff             || '',
         goals:           event.dog.goals           || '',
         sector:          event.dog.sector || event.sector || 'Plateau',
+        level:           event.dog.level           || 1,
       })
     }
   }, [event])
@@ -122,7 +131,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
       setEditing(false)
       setCreating(false)
     } else {
-      const { breed, address, building_access, unit_number, unit_access, access_notes, notes, bff, goals } = form
+      const { breed, address, building_access, unit_number, unit_access, access_notes, notes, bff, goals, level } = form
       const { data, error } = await supabase
         .from('dogs')
         .update({
@@ -130,6 +139,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
           building_access: building_access || null, unit_number: unit_number || null,
           unit_access: unit_access || null, access_notes: access_notes || null,
           notes: notes || null, bff: bff || null, goals: goals || null,
+          level: level || 1,
           updated_at: new Date().toISOString(),
           updated_by: profile?.full_name || profile?.email || 'Unknown',
         })
@@ -262,6 +272,16 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
                   {badge.label}
                 </span>
+                {dog && (
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    dog.level === 3 ? 'bg-red-100 text-red-700' : dog.level === 2 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
+                    }`} />
+                    {dog.level === 3 ? 'Extra Care' : dog.level === 2 ? 'Caution' : 'Chill'}
+                  </span>
+                )}
                 {/* Match method badges — admin only */}
                 {!editing && isAdmin && event.matchType === 'none' && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
@@ -326,15 +346,51 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                   </div>
                 </>
               )}
-              {EDIT_FIELDS.map(({ key, label, multiline }) => (
+              {/* Level selector */}
+              {!creating && (
+                <div>
+                  <label className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1 block">Level</label>
+                  <div className="flex gap-2">
+                    {LEVEL_OPTIONS.map(({ value, label, color }) => (
+                      <button
+                        key={value}
+                        onClick={() => setForm((f) => ({ ...f, level: value }))}
+                        className={`flex-1 py-2.5 rounded-full text-xs font-semibold border transition-all min-h-[40px] flex items-center justify-center gap-1.5 ${
+                          form.level === value
+                            ? 'bg-[#E8634A] text-white border-[#E8634A]'
+                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${form.level === value ? 'bg-white' : color}`} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {EDIT_FIELDS.map(({ key, label, multiline, smart }) => (
                 <div key={key}>
                   <label className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1 block">{label}</label>
-                  {multiline ? (
+                  {smart && multiline ? (
+                    <SmartTextInput
+                      value={form[key] || ''}
+                      onChange={(val) => setForm((f) => ({ ...f, [key]: val }))}
+                      rows={2}
+                      placeholder="Type @ to mention a dog..."
+                    />
+                  ) : multiline ? (
                     <textarea
                       value={form[key] || ''}
                       onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                       rows={2}
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none"
+                    />
+                  ) : smart ? (
+                    <SmartTextInput
+                      value={form[key] || ''}
+                      onChange={(val) => setForm((f) => ({ ...f, [key]: val }))}
+                      rows={1}
+                      placeholder="Type @ to mention a dog..."
                     />
                   ) : (
                     <input
@@ -402,7 +458,11 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                   <span className="text-lg flex-shrink-0 mt-0.5">{'\u26A0\uFE0F'}</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <p className="text-sm font-medium leading-snug break-words">{dogNotes}</p>
+                    <SmartTextDisplay
+                      text={dogNotes}
+                      onDogClick={onDogNameClick}
+                      className="text-sm font-medium leading-snug break-words"
+                    />
                   </div>
                 </div>
               )}
@@ -511,7 +571,11 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                     <span className="text-base flex-shrink-0">🎯</span>
                     <div>
                       <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-0.5">Goals</p>
-                      <p className="text-sm text-gray-700 leading-snug">{dog.goals}</p>
+                      <SmartTextDisplay
+                        text={dog.goals}
+                        onDogClick={onDogNameClick}
+                        className="text-sm text-gray-700 leading-snug"
+                      />
                     </div>
                   </div>
                 </div>
