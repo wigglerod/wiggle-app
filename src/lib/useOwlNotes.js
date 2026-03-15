@@ -131,19 +131,44 @@ export function useOwlNotes(sector) {
     [user, profile]
   )
 
-  // Acknowledge a note — deletes it completely
+  // Acknowledge a note — daily ack for notes with duration, delete for notes without
   const acknowledgeNote = useCallback(async (noteId) => {
-    const { error } = await supabase
-      .from('owl_notes')
-      .delete()
-      .eq('id', noteId)
+    // Find the note to check if it has a duration (expires_at)
+    const note = notes.find(n => n.id === noteId)
 
-    if (error) {
-      toast.error('Failed to acknowledge note')
+    if (note && note.expires_at) {
+      // Note WITH duration: mark as acknowledged today, don't delete
+      const today = new Date().toISOString().split('T')[0]
+      const { error } = await supabase
+        .from('owl_notes')
+        .update({
+          last_acknowledged_date: today,
+          acknowledged_by: user?.id || null,
+          acknowledged_by_name: profile?.full_name || 'Unknown',
+        })
+        .eq('id', noteId)
+
+      if (error) {
+        toast.error('Failed to acknowledge note')
+      } else {
+        // Update local state to hide immediately
+        setNotes(prev => prev.map(n => n.id === noteId ? { ...n, last_acknowledged_date: today } : n))
+        toast('🦉 Got it! This note will return tomorrow.')
+      }
     } else {
-      toast('Got it!')
+      // Note WITHOUT duration: delete permanently
+      const { error } = await supabase
+        .from('owl_notes')
+        .delete()
+        .eq('id', noteId)
+
+      if (error) {
+        toast.error('Failed to acknowledge note')
+      } else {
+        toast('Got it!')
+      }
     }
-  }, [])
+  }, [notes, user, profile])
 
   // Admin delete a note
   const deleteNote = useCallback(async (noteId) => {
@@ -160,10 +185,14 @@ export function useOwlNotes(sector) {
   }, [])
 
   // Split notes into active (scheduled_date <= today) and scheduled (future)
+  // For notes with duration: hide if acknowledged today
   const today = new Date().toISOString().split('T')[0]
-  const activeNotes = notes.filter(
-    (n) => !n.scheduled_date || n.scheduled_date <= today
-  )
+  const activeNotes = notes.filter((n) => {
+    if (n.scheduled_date && n.scheduled_date > today) return false
+    // Hide notes with duration that were acknowledged today
+    if (n.expires_at && n.last_acknowledged_date === today) return false
+    return true
+  })
   const scheduledNotes = notes.filter(
     (n) => n.scheduled_date && n.scheduled_date > today
   )

@@ -328,10 +328,21 @@ export default function OwlNotesTab() {
                     )}
                   </div>
                   <p className="text-sm text-gray-700">{note.note_text}</p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-xs text-amber-600">🦉 Waiting...</span>
-                    {note.created_by_name && (
-                      <span className="text-xs text-gray-400">— {note.created_by_name}</span>
+                  <div className="mt-1 flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      {note.expires_at ? (
+                        <span className="text-xs text-amber-600">🔄 Daily · {timeRemaining(note.expires_at)}</span>
+                      ) : (
+                        <span className="text-xs text-amber-600">🦉 Waiting...</span>
+                      )}
+                      {note.created_by_name && (
+                        <span className="text-xs text-gray-400">— {note.created_by_name}</span>
+                      )}
+                    </div>
+                    {note.expires_at && note.last_acknowledged_date && (
+                      <span className="text-xs text-green-600">
+                        ✓ {note.acknowledged_by_name || 'Walker'} {note.last_acknowledged_date === new Date().toISOString().split('T')[0] ? 'today' : note.last_acknowledged_date} — returns tomorrow
+                      </span>
                     )}
                   </div>
                 </div>

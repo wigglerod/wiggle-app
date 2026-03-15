@@ -22,6 +22,16 @@ const LEVEL_OPTIONS = [
   { value: 3, label: 'Level 3 — Extra Care', color: 'bg-red-500' },
 ]
 
+const LEVEL_2_TAGS = [
+  'Resource guarding', 'Eats everything', 'Leash reactive', 'Shy/fearful',
+  'Pulls hard', 'Medication needed', 'Food allergies', 'Selective with dogs',
+]
+const LEVEL_3_TAGS = [
+  ...LEVEL_2_TAGS,
+  'Can be aggressive', 'Bite history', 'Not safe with puppies',
+  'Muzzle required', 'Experienced walker only',
+]
+
 function mapsUrl(address) {
   if (!address) return null
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
@@ -62,9 +72,31 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
       bff:       dog.bff       || '',
       goals:     dog.goals     || '',
       level:     dog.level     || 1,
+      level_tags: dog.level_tags || [],
+      level_tag_other: '',
     })
     setEditing(true)
     setSaveError(null)
+  }
+
+  function toggleTag(tag) {
+    setForm(f => {
+      const tags = f.level_tags || []
+      return {
+        ...f,
+        level_tags: tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag],
+      }
+    })
+  }
+
+  function addCustomTag() {
+    const tag = (form.level_tag_other || '').trim()
+    if (!tag) return
+    setForm(f => ({
+      ...f,
+      level_tags: [...(f.level_tags || []), tag],
+      level_tag_other: '',
+    }))
   }
 
   async function handleSave() {
@@ -79,6 +111,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
       bff:        form.bff        || null,
       goals:      form.goals      || null,
       level:      form.level      || 1,
+      level_tags: (form.level_tags && form.level_tags.length > 0) ? form.level_tags : null,
       updated_at: new Date().toISOString(),
       updated_by: profile?.full_name || profile?.email || 'Unknown',
     }
@@ -208,6 +241,22 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
             </div>
           </div>
 
+          {/* Level tags display (view mode) */}
+          {!editing && dog.level_tags && dog.level_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+              {dog.level_tags.map(tag => (
+                <span
+                  key={tag}
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    dog.level === 3 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Edit mode */}
           {editing && (
             <div className="flex flex-col gap-3 mb-4">
@@ -218,7 +267,11 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                   {LEVEL_OPTIONS.map(({ value, label, color }) => (
                     <button
                       key={value}
-                      onClick={() => setForm((f) => ({ ...f, level: value }))}
+                      onClick={() => setForm((f) => ({
+                        ...f,
+                        level: value,
+                        level_tags: value === 1 ? [] : f.level_tags,
+                      }))}
                       className={`flex-1 py-2.5 rounded-full text-xs font-semibold border transition-all min-h-[40px] flex items-center justify-center gap-1.5 ${
                         form.level === value
                           ? 'bg-[#E8634A] text-white border-[#E8634A]'
@@ -230,6 +283,48 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                     </button>
                   ))}
                 </div>
+
+                {/* Level tags grid */}
+                {(form.level === 2 || form.level === 3) && (() => {
+                  const availableTags = form.level === 3 ? LEVEL_3_TAGS : LEVEL_2_TAGS
+                  return (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Why this level?</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableTags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => toggleTag(tag)}
+                            className={`text-xs px-2.5 py-1.5 rounded-full font-medium border transition-all ${
+                              (form.level_tags || []).includes(tag)
+                                ? 'bg-[#E8634A] text-white border-[#E8634A]'
+                                : 'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={form.level_tag_other || ''}
+                          onChange={(e) => setForm(f => ({ ...f, level_tag_other: e.target.value }))}
+                          placeholder="Other..."
+                          className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#E8634A]"
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }}
+                        />
+                        <button
+                          onClick={addCustomTag}
+                          disabled={!(form.level_tag_other || '').trim()}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold disabled:opacity-40"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
               {EDIT_FIELDS.map(({ key, label, multiline, smart }) => (
                 <div key={key}>

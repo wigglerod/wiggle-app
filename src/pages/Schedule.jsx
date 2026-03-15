@@ -365,7 +365,7 @@ export default function Schedule() {
                       <p className="text-sm font-medium text-[#E8634A] leading-snug">{note.note_text}</p>
                       {note.expires_at && (
                         <p className="text-xs text-gray-400 mt-0.5">
-                          Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          Daily reminder · Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       )}
                     </div>
