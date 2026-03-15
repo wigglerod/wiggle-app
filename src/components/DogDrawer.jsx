@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
@@ -11,6 +11,16 @@ const LEVEL_OPTIONS = [
   { value: 1, label: 'Level 1 — Chill', color: 'bg-green-500' },
   { value: 2, label: 'Level 2 — Caution', color: 'bg-yellow-400' },
   { value: 3, label: 'Level 3 — Extra Care', color: 'bg-red-500' },
+]
+
+const LEVEL_2_TAGS = [
+  'Resource guarding', 'Eats everything', 'Leash reactive', 'Shy/fearful',
+  'Pulls hard', 'Medication needed', 'Food allergies', 'Selective with dogs',
+]
+const LEVEL_3_TAGS = [
+  ...LEVEL_2_TAGS,
+  'Can be aggressive', 'Bite history', 'Not safe with puppies',
+  'Muzzle required', 'Experienced walker only',
 ]
 
 const GROUP_COLORS = [
@@ -51,6 +61,147 @@ const EDIT_FIELDS = [
   { key: 'bff',             label: 'Best Friends (BFF)', smart: true },
   { key: 'goals',           label: 'Goals', multiline: true, smart: true },
 ]
+
+// ── Friend check sub-component ──────────────────────────────────────
+function FriendCheck({ dogName, dogId }) {
+  const [open, setOpen] = useState(false)
+  const [allDogs, setAllDogs] = useState([])
+  const [searchName, setSearchName] = useState('')
+  const [result, setResult] = useState(null)
+  const [searching, setSearching] = useState(false)
+  const [showExtra, setShowExtra] = useState(false)
+
+  const options = useMemo(() => {
+    if (!searchName) return allDogs.slice(0, 8)
+    const q = searchName.toLowerCase()
+    return allDogs
+      .filter(d => d.dog_name.toLowerCase().includes(q) && d.id !== dogId)
+      .sort((a, b) => {
+        const aL = a.dog_name.toLowerCase()
+        const bL = b.dog_name.toLowerCase()
+        return (aL.startsWith(q) ? 0 : 1) - (bL.startsWith(q) ? 0 : 1)
+      })
+      .slice(0, 8)
+  }, [searchName, allDogs, dogId])
+
+  async function handleOpen() {
+    setOpen(true)
+    setResult(null)
+    setSearchName('')
+    setShowExtra(false)
+    const { data } = await supabase.from('dogs').select('id, dog_name').order('dog_name')
+    setAllDogs(data || [])
+  }
+
+  async function handleSearch(friendName, friendId) {
+    if (!friendId) return
+    setSearching(true)
+    setResult(null)
+    setShowExtra(false)
+
+    const [{ data: logs1 }, { data: logs2 }] = await Promise.all([
+      supabase.from('walk_logs').select('walk_date').eq('dog_id', dogId).order('walk_date', { ascending: false }),
+      supabase.from('walk_logs').select('walk_date').eq('dog_id', friendId).order('walk_date', { ascending: false }),
+    ])
+
+    const dates1 = new Set((logs1 || []).map(l => l.walk_date))
+    const dates2 = new Set((logs2 || []).map(l => l.walk_date))
+    const sharedDates = [...dates1].filter(d => dates2.has(d)).sort().reverse()
+
+    setResult({
+      friendName,
+      count: sharedDates.length,
+      dates: sharedDates,
+      first: sharedDates.length > 0 ? sharedDates[sharedDates.length - 1] : null,
+      last: sharedDates.length > 0 ? sharedDates[0] : null,
+    })
+    setSearching(false)
+    setSearchName('')
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={handleOpen}
+        className="w-full py-3 rounded-full border-2 border-[#E8634A] text-[#E8634A] text-sm font-semibold active:bg-[#FFF4F1] transition-all min-h-[48px]"
+      >
+        🐾 Check for friends
+      </button>
+    )
+  }
+
+  return (
+    <div className="bg-gray-50 rounded-2xl p-4">
+      <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-2">Check for Friends</p>
+      <div className="relative mb-2">
+        <input
+          type="text"
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+          placeholder="Which dog?"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A]"
+          autoFocus
+        />
+        {searchName && options.length > 0 && (
+          <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+            {options.map(d => (
+              <button
+                key={d.id}
+                onClick={() => handleSearch(d.dog_name, d.id)}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-[#FFF4F1] transition-colors"
+              >
+                <span className="text-gray-400">🐕</span>
+                <span className="text-gray-700 font-medium">{d.dog_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {searching && <p className="text-xs text-gray-400 text-center py-2">Searching...</p>}
+
+      {result && (
+        <div className="bg-white rounded-xl p-3 mt-2">
+          <p className="text-sm font-semibold text-gray-800">
+            {dogName} and {result.friendName} walked together{' '}
+            <span className="text-[#E8634A]">{result.count} time{result.count !== 1 ? 's' : ''}</span>
+          </p>
+          {result.count > 0 && (
+            <>
+              <button
+                onClick={() => setShowExtra(!showExtra)}
+                className="text-xs text-gray-400 mt-1 active:text-gray-600"
+              >
+                Extra info {showExtra ? '▴' : '▾'}
+              </button>
+              {showExtra && (
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>First: {new Date(result.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p>Last: {new Date(result.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {result.dates.slice(0, 10).map(d => (
+                      <span key={d} className="bg-gray-100 px-2 py-0.5 rounded-full">
+                        {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    ))}
+                    {result.dates.length > 10 && <span className="text-gray-400">+{result.dates.length - 10} more</span>}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={() => setOpen(false)}
+        className="w-full mt-2 py-2 text-sm text-gray-400 active:text-gray-600"
+      >
+        Close
+      </button>
+    </div>
+  )
+}
 
 export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote, onDogNameClick }) {
   const { canEdit, isAdmin, profile } = useAuth()
@@ -93,6 +244,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
         goals:           event.dog.goals           || '',
         sector:          event.dog.sector || event.sector || 'Plateau',
         level:           event.dog.level           || 1,
+        level_tags:      event.dog.level_tags      || [],
+        level_tag_other: '',
       })
     }
   }, [event])
@@ -118,6 +271,27 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
     setEditing(true)
   }
 
+  // Tag toggle helper
+  function toggleTag(tag) {
+    setForm(f => {
+      const tags = f.level_tags || []
+      return {
+        ...f,
+        level_tags: tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag],
+      }
+    })
+  }
+
+  function addCustomTag() {
+    const tag = (form.level_tag_other || '').trim()
+    if (!tag) return
+    setForm(f => ({
+      ...f,
+      level_tags: [...(f.level_tags || []), tag],
+      level_tag_other: '',
+    }))
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveError(null)
@@ -131,7 +305,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
       setEditing(false)
       setCreating(false)
     } else {
-      const { breed, address, building_access, unit_number, unit_access, access_notes, notes, bff, goals, level } = form
+      const { breed, address, building_access, unit_number, unit_access, access_notes, notes, bff, goals, level, level_tags } = form
       const { data, error } = await supabase
         .from('dogs')
         .update({
@@ -140,6 +314,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
           unit_access: unit_access || null, access_notes: access_notes || null,
           notes: notes || null, bff: bff || null, goals: goals || null,
           level: level || 1,
+          level_tags: (level_tags && level_tags.length > 0) ? level_tags : null,
           updated_at: new Date().toISOString(),
           updated_by: profile?.full_name || profile?.email || 'Unknown',
         })
@@ -191,7 +366,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   const address    = (editing ? form.address : (dog?.address || event.location || '')).trim()
   const dogNotes   = editing ? form.notes : (dog?.notes || null)
 
-  // Build access steps for view mode (only show steps that have values)
   const accessSteps = []
   const bAccess = dog?.building_access || event.calendarDoorCode || null
   const uNumber = dog?.unit_number || null
@@ -204,6 +378,9 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   const photoUrl   = dog?.photo_url && !imgError ? dog.photo_url : null
   const badge      = groupBadge(event._groupKey, event._groupName)
   const directionsUrl = mapsUrl(address)
+
+  // Available tags based on level
+  const availableTags = form.level === 3 ? LEVEL_3_TAGS : form.level === 2 ? LEVEL_2_TAGS : []
 
   return (
     <>
@@ -227,7 +404,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
         }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col"
       >
-        {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing">
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
@@ -282,7 +458,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                     {dog.level === 3 ? 'Extra Care' : dog.level === 2 ? 'Caution' : 'Chill'}
                   </span>
                 )}
-                {/* Match method badges — admin only */}
                 {!editing && isAdmin && event.matchType === 'none' && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                     Unknown Explorer
@@ -309,6 +484,22 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
               </div>
             </div>
           </div>
+
+          {/* Level tags display (view mode) */}
+          {!editing && dog && dog.level_tags && dog.level_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {dog.level_tags.map(tag => (
+                <span
+                  key={tag}
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    dog.level === 3 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Edit mode */}
           {editing && (
@@ -354,7 +545,12 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                     {LEVEL_OPTIONS.map(({ value, label, color }) => (
                       <button
                         key={value}
-                        onClick={() => setForm((f) => ({ ...f, level: value }))}
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          level: value,
+                          // Clear tags if switching to level 1
+                          level_tags: value === 1 ? [] : f.level_tags,
+                        }))}
                         className={`flex-1 py-2.5 rounded-full text-xs font-semibold border transition-all min-h-[40px] flex items-center justify-center gap-1.5 ${
                           form.level === value
                             ? 'bg-[#E8634A] text-white border-[#E8634A]'
@@ -366,6 +562,46 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                       </button>
                     ))}
                   </div>
+
+                  {/* Level tags grid */}
+                  {(form.level === 2 || form.level === 3) && (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Why this level?</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableTags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => toggleTag(tag)}
+                            className={`text-xs px-2.5 py-1.5 rounded-full font-medium border transition-all ${
+                              (form.level_tags || []).includes(tag)
+                                ? 'bg-[#E8634A] text-white border-[#E8634A]'
+                                : 'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Custom tag input */}
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={form.level_tag_other || ''}
+                          onChange={(e) => setForm(f => ({ ...f, level_tag_other: e.target.value }))}
+                          placeholder="Other..."
+                          className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#E8634A]"
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }}
+                        />
+                        <button
+                          onClick={addCustomTag}
+                          disabled={!(form.level_tag_other || '').trim()}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold disabled:opacity-40"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {EDIT_FIELDS.map(({ key, label, multiline, smart }) => (
@@ -467,7 +703,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* Access info — compact one-line, tap to reveal */}
+              {/* Access info */}
               {accessSteps.length > 0 && (
                 <div className="bg-gray-50 rounded-2xl p-4" style={{ perspective: '600px' }}>
                   <div className="flex items-center gap-2 mb-2">
@@ -581,7 +817,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* Acuity booking info (no profile) — hide email/phone for non-admin */}
+              {/* Acuity booking info (no profile) */}
               {!dog && (isAdmin ? (event.email || event.ownerName) : false) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1">Booking Info</p>
@@ -599,6 +835,11 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
+              {/* Check for Friends */}
+              {dog?.id && (
+                <FriendCheck dogName={dog.dog_name || event.displayName} dogId={dog.id} />
+              )}
+
               {/* Last updated footer */}
               {dog?.updated_by && dog?.updated_at && (
                 <p className="text-xs text-gray-300 text-center mt-2">
@@ -606,7 +847,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </p>
               )}
 
-              {/* Actions — edit for canEdit users, link/create for admin only */}
+              {/* Actions */}
               {canEdit && (
                 <div className="mt-1 flex flex-col gap-2">
                   {dog ? (

@@ -79,13 +79,12 @@ function SortableItem({ id, children, canEdit }) {
 }
 
 // ── Sortable wrapper for within-group reorder ────────────────────────
-// Uses handle-only drag: only the grip handle triggers drag
+// Hold anywhere on chip to drag (no separate handle)
 function ReorderableSortableItem({ id, children, canEdit }) {
   const {
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -100,9 +99,10 @@ function ReorderableSortableItem({ id, children, canEdit }) {
         touchAction: 'none',
       }}
       {...attributes}
+      {...(canEdit ? listeners : {})}
     >
       {typeof children === 'function'
-        ? children({ isDragging, handleRef: setActivatorNodeRef, handleListeners: canEdit ? listeners : {} })
+        ? children({ isDragging })
         : children}
     </div>
   )
@@ -171,7 +171,6 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
         </span>
       </div>
 
-      {/* Tap target when dog is selected */}
       {isTarget && (
         <button
           onClick={onTargetTap}
@@ -184,7 +183,6 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
   )
 }
 
-// ── Mobile group with tap-to-assign + within-group reorder ──────────
 // ── Unassigned chip with tap + long-press support ────────────────────
 function UnassignedChip({ ev, id, selectedId, canEdit, onDogTap, onDogClick, onLongPress, owlDogIdSet }) {
   const timerRef = useRef(null)
@@ -235,18 +233,17 @@ function UnassignedChip({ ev, id, selectedId, canEdit, onDogTap, onDogClick, onL
   )
 }
 
+// ── Mobile group with tap-to-assign + within-group reorder ──────────
 function MobileGroup({
   groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
-  isAdmin, onReorder, owlDogIdSet, isLocked,
+  isAdmin, onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
     ? { color: 'bg-gray-100', accent: 'border-gray-300' }
     : groupColor(Number(groupKey))
 
-  // For numbered groups, use array order as-is (that IS the pickup order)
-  // For unassigned, sort by start time
   const sortedItems = useMemo(() => {
     if (!isUnassigned) {
       return eventIds.map(String)
@@ -265,7 +262,7 @@ function MobileGroup({
 
   // Within-group reorder DnD (only for numbered groups)
   const [reorderActiveId, setReorderActiveId] = useState(null)
-  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } })
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   const reorderSensors = useSensors(touchSensor, pointerSensor)
 
@@ -289,7 +286,7 @@ function MobileGroup({
   return (
     <div
       className={`rounded-2xl border-2 border-dashed p-3 transition-all min-h-[80px]
-        ${accent} ${color}
+        ${hasConflict ? 'sos-flash' : `${accent} ${color}`}
         ${isTarget ? 'ring-2 ring-[#E8634A]/40 border-[#E8634A] scale-[1.01]' : ''}
       `}
     >
@@ -350,41 +347,33 @@ function MobileGroup({
                 </button>
               )}
               <AnimatePresence mode="popLayout">
-                {sortedItems.map((id, index) => {
+                {sortedItems.map((id) => {
                   const ev = eventsMap.get(id)
                   if (!ev) return null
                   return (
                     <ReorderableSortableItem key={id} id={id} canEdit={canEdit}>
-                      {({ isDragging, handleRef, handleListeners }) => (
+                      {({ isDragging }) => (
                         <motion.div
                           layout
                           initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: isDragging || reorderActiveId === id ? 0.5 : 1, scale: 1 }}
+                          animate={{
+                            opacity: isDragging ? 0.5 : 1,
+                            scale: isDragging ? 1.03 : 1,
+                            boxShadow: isDragging ? '0 8px 25px rgba(0,0,0,0.15)' : '0 0 0 rgba(0,0,0,0)',
+                          }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <div className="flex items-center gap-1.5">
-                            {/* Grip handle */}
-                            <span
-                              ref={handleRef}
-                              {...handleListeners}
-                              className="text-gray-300 text-sm cursor-grab active:cursor-grabbing flex-shrink-0 select-none px-0.5"
-                              style={{ touchAction: 'none' }}
-                            >
-                              ⠿
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <DogChip
-                                event={ev}
-                                onInfoClick={onDogClick}
-                                onTap={onDogTap}
-                                onLongPress={onLongPress}
-                                isSelected={selectedId === id}
-                                isAdmin={isAdmin}
-                                hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
-                              />
-                            </div>
-                          </div>
+                          <DogChip
+                            event={ev}
+                            onInfoClick={onDogClick}
+                            onTap={onDogTap}
+                            onLongPress={onLongPress}
+                            isSelected={selectedId === id}
+                            isAdmin={isAdmin}
+                            hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                            hasConflict={conflictDogIds?.has(id)}
+                          />
                         </motion.div>
                       )}
                     </ReorderableSortableItem>
@@ -395,7 +384,7 @@ function MobileGroup({
           </SortableContext>
           <DragOverlay>
             {reorderActiveEvent ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-gray-700 border border-[#E8634A] shadow-xl ring-2 ring-[#E8634A]/20">
+              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-gray-700 border border-[#E8634A] shadow-xl ring-2 ring-[#E8634A]/20 scale-105">
                 <span className="text-base">🐕</span>
                 {reorderActiveEvent.displayName}
               </div>
@@ -410,7 +399,7 @@ function MobileGroup({
             </p>
           )}
           <AnimatePresence mode="popLayout">
-            {sortedItems.map((id, index) => {
+            {sortedItems.map((id) => {
               const ev = eventsMap.get(id)
               if (!ev) return null
               return (
@@ -429,6 +418,7 @@ function MobileGroup({
                     isSelected={selectedId === id}
                     isAdmin={isAdmin}
                     hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                    hasConflict={conflictDogIds?.has(id)}
                   />
                 </motion.div>
               )
@@ -444,6 +434,7 @@ function MobileGroup({
 function DesktopGroup({
   groupKey, eventIds, eventsMap, onDogClick, activeId, groupName,
   onRename, canEdit, isAdmin, onReorder, owlDogIdSet, isLocked,
+  conflictDogIds, hasConflict,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
   const isUnassigned = groupKey === 'unassigned'
@@ -451,8 +442,6 @@ function DesktopGroup({
     ? { color: 'bg-gray-100', accent: 'border-gray-300' }
     : groupColor(Number(groupKey))
 
-  // For numbered groups, use array order as-is (pickup order)
-  // For unassigned, sort by start time
   const sortedItems = useMemo(() => {
     if (!isUnassigned) {
       return eventIds.map(String)
@@ -471,7 +460,7 @@ function DesktopGroup({
     <div
       ref={setNodeRef}
       className={`rounded-2xl border-2 border-dashed p-3 transition-all min-h-[80px]
-        ${accent} ${color}
+        ${hasConflict ? 'sos-flash' : `${accent} ${color}`}
         ${isOver ? 'ring-2 ring-[#E8634A]/40 border-[#E8634A] scale-[1.01]' : ''}
       `}
     >
@@ -519,29 +508,29 @@ function DesktopGroup({
                 Drag dogs here
               </p>
             )}
-            {sortedItems.map((id, index) => {
+            {sortedItems.map((id) => {
               const ev = eventsMap.get(id)
               if (!ev) return null
               return (
                 <SortableItem key={id} id={id} canEdit={canEdit}>
                   {({ isDragging }) => (
-                    <div className="flex items-center gap-1.5">
-                      {canEdit && (
-                        <span className="text-gray-300 text-sm cursor-grab active:cursor-grabbing flex-shrink-0 select-none px-0.5">
-                          ⠿
-                        </span>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <DogChip
-                          event={ev}
-                          onInfoClick={onDogClick}
-                          onTap={onDogClick}
-                          showDragHandle={false}
-                          isDragging={isDragging || activeId === id}
-                          isAdmin={isAdmin}
-                          hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
-                        />
-                      </div>
+                    <div
+                      className="flex-1 min-w-0"
+                      style={{
+                        transform: isDragging ? 'scale(1.03)' : 'scale(1)',
+                        boxShadow: isDragging ? '0 8px 25px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'transform 0.15s, box-shadow 0.15s',
+                      }}
+                    >
+                      <DogChip
+                        event={ev}
+                        onInfoClick={onDogClick}
+                        onTap={onDogClick}
+                        isDragging={isDragging || activeId === id}
+                        isAdmin={isAdmin}
+                        hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+                        hasConflict={conflictDogIds?.has(id)}
+                      />
                     </div>
                   )}
                 </SortableItem>
@@ -556,7 +545,6 @@ function DesktopGroup({
 
 // ── Long-press popup menu ───────────────────────────────────────────
 function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, onClose }) {
-  // Adjust position to stay on screen
   const menuStyle = {
     position: 'fixed',
     top: Math.min(position.y, window.innerHeight - 280),
@@ -617,7 +605,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   // Conflict detection state
   const [conflicts, setConflicts] = useState([])
-  const [conflictWarning, setConflictWarning] = useState(null)
+  const [dismissedConflictKeys, setDismissedConflictKeys] = useState(new Set())
 
   // Load dog conflicts
   useEffect(() => {
@@ -645,6 +633,46 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     return s
   }, [owlDogNotes])
 
+  // ── Compute active conflicts from current group state ──────────────
+  const activeConflicts = useMemo(() => {
+    if (conflicts.length === 0) return []
+    const result = []
+    for (const num of groupNums) {
+      const dogIds = (groups[num] || []).map(String)
+      for (let i = 0; i < dogIds.length; i++) {
+        for (let j = i + 1; j < dogIds.length; j++) {
+          const ev1 = eventsMap.get(dogIds[i])
+          const ev2 = eventsMap.get(dogIds[j])
+          if (!ev1 || !ev2) continue
+          const name1 = (ev1.dog?.dog_name || ev1.displayName).toLowerCase()
+          const name2 = (ev2.dog?.dog_name || ev2.displayName).toLowerCase()
+          for (const c of conflicts) {
+            const pair = [c.dog_1_name.toLowerCase(), c.dog_2_name.toLowerCase()]
+            if (pair.includes(name1) && pair.includes(name2)) {
+              result.push({
+                dog1Name: ev1.dog?.dog_name || ev1.displayName,
+                dog2Name: ev2.dog?.dog_name || ev2.displayName,
+                dog1Id: dogIds[i],
+                dog2Id: dogIds[j],
+                reason: c.reason,
+                groupNum: num,
+              })
+            }
+          }
+        }
+      }
+    }
+    return result
+  }, [conflicts, groupNums, groups, eventsMap])
+
+  const visibleConflicts = activeConflicts.filter(c => {
+    const key = [c.dog1Id, c.dog2Id].sort().join('-')
+    return !dismissedConflictKeys.has(key)
+  })
+
+  const conflictGroupNums = new Set(visibleConflicts.map(c => c.groupNum))
+  const conflictDogIds = new Set(visibleConflicts.flatMap(c => [c.dog1Id, c.dog2Id]))
+
   // ── Confetti tracking ─────────────────────────────────────────────
   const confettiFiredRef = useRef(false)
 
@@ -655,7 +683,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     if (totalDogs > 0 && unassignedCount === 0) {
       if (!confettiFiredRef.current) {
         confettiFiredRef.current = true
-        // Fire confetti burst for 2 seconds
         const end = Date.now() + 2000
         const frame = () => {
           confetti({
@@ -669,14 +696,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         }
         frame()
 
-        // After confetti, prompt to lock (only if not already locked)
         if (!isLocked && !lockModalShownRef.current && canEdit) {
           lockModalShownRef.current = true
           setTimeout(() => setShowLockModal(true), 2200)
         }
       }
     } else {
-      // Reset so confetti fires again next time all dogs are assigned
       confettiFiredRef.current = false
       lockModalShownRef.current = false
     }
@@ -736,13 +761,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       return
     }
 
-    // Check conflicts
-    const conflict = checkConflicts(selectedId, targetGroup)
-    if (conflict) {
-      setConflictWarning(conflict)
-      // Still allow the move but warn
-    }
-
     moveEvent(selectedId, fromGroup, targetGroup)
     setSelectedId(null)
   }
@@ -762,8 +780,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     if (!longPressMenu) return
     const { dogId, fromGroup } = longPressMenu
     if (fromGroup !== targetGroup) {
-      const conflict = checkConflicts(dogId, targetGroup)
-      if (conflict) setConflictWarning(conflict)
       moveEvent(dogId, fromGroup, targetGroup)
     }
     setLongPressMenu(null)
@@ -806,7 +822,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
     if (fromGroup !== null && toGroup !== null) {
       if (fromGroup === toGroup && fromGroup !== 'unassigned') {
-        // Within-group reorder on desktop
         const currentItems = (groups[fromGroup] || []).map(String)
         const oldIndex = currentItems.indexOf(activeIdStr)
         const newIndex = currentItems.indexOf(overIdStr)
@@ -815,8 +830,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           handleReorder(fromGroup, newOrder)
         }
       } else if (fromGroup !== toGroup) {
-        const conflict = checkConflicts(activeIdStr, toGroup)
-        if (conflict) setConflictWarning(conflict)
         moveEvent(activeIdStr, fromGroup, toGroup)
       }
     }
@@ -828,8 +841,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const fromGroup = findGroup(String(active.id))
     const toGroup = resolveTargetGroup(over.id)
     if (fromGroup !== null && toGroup !== null && fromGroup !== toGroup) {
-      const conflict = checkConflicts(String(active.id), toGroup)
-      if (conflict) setConflictWarning(conflict)
       moveEvent(String(active.id), fromGroup, toGroup)
     }
   }
@@ -844,16 +855,14 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   const activeEvent = activeId ? eventsMap.get(activeId) : null
 
-  // Check if we have a selected dog (for tap mode targets)
   const selectedGroup = selectedId ? findGroup(selectedId) : null
 
-  // Helper to enrich dog click events with group info
   function enrichDogClick(ev, groupKey) {
     const gName = groupKey === 'unassigned' ? 'Unassigned' : (groupNames[groupKey] || `Group ${groupKey}`)
     onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName })
   }
 
-  // Lock modal + conflict warning shared UI
+  // Lock modal
   const lockModal = showLockModal && (
     <>
       <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowLockModal(false)} />
@@ -888,37 +897,56 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     </>
   )
 
-  const conflictBanner = conflictWarning && (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 mb-3"
-    >
-      <div className="flex items-start gap-2">
-        <span className="text-lg flex-shrink-0">⚠️</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-amber-800">
-            {conflictWarning.dog1} and {conflictWarning.dog2} should not be in the same group
-          </p>
-          {conflictWarning.reason && (
-            <p className="text-xs text-amber-600 mt-0.5">{conflictWarning.reason}</p>
-          )}
-        </div>
-        <button
-          onClick={() => setConflictWarning(null)}
-          className="text-amber-400 text-lg leading-none flex-shrink-0"
-        >
-          ×
-        </button>
-      </div>
-    </motion.div>
+  // SOS conflict banner
+  const sosBanner = visibleConflicts.length > 0 && (
+    <div className="fixed top-0 left-0 right-0 z-[100]">
+      <motion.div
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="bg-red-600 text-white px-4 py-3 shadow-2xl sos-banner-pulse"
+      >
+        {visibleConflicts.map((c) => {
+          const key = [c.dog1Id, c.dog2Id].sort().join('-')
+          return (
+            <div key={key} className="flex flex-col gap-1 mb-2 last:mb-0">
+              <p className="text-sm font-bold">
+                🚨 CONFLICT: {c.dog1Name} and {c.dog2Name} cannot be in the same group!
+              </p>
+              {c.reason && <p className="text-xs opacity-80">{c.reason}</p>}
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => {
+                    const groupDogs = (groups[c.groupNum] || []).map(String)
+                    const idx1 = groupDogs.indexOf(c.dog1Id)
+                    const idx2 = groupDogs.indexOf(c.dog2Id)
+                    const dogToMove = idx2 > idx1 ? c.dog2Id : c.dog1Id
+                    moveEvent(dogToMove, c.groupNum, 'unassigned')
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-white text-red-600 text-xs font-bold active:bg-red-50"
+                >
+                  Fix it
+                </button>
+                <button
+                  onClick={() => {
+                    setDismissedConflictKeys(prev => new Set([...prev, key]))
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-red-700 text-white text-xs font-bold active:bg-red-800"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </motion.div>
+    </div>
   )
 
   // ── Render ────────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <div className="flex flex-col gap-3">
-        {conflictBanner}
+        {sosBanner}
 
         {/* Unassigned pool — collapse when empty */}
         {(groups.unassigned || []).length === 0 ? (
@@ -941,10 +969,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
             isLocked={isLocked}
+            conflictDogIds={conflictDogIds}
+            hasConflict={false}
           />
         )}
 
-        {/* Numbered groups -- always show 1-3, hide 4+ if empty unless assigning */}
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
           <MobileGroup
             key={num}
@@ -964,10 +993,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
             isLocked={isLocked}
+            conflictDogIds={conflictDogIds}
+            hasConflict={conflictGroupNums.has(num)}
           />
         ))}
 
-        {/* Add group button */}
         {canEdit && !isLocked && (
           <button
             onClick={addGroup}
@@ -1013,9 +1043,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col gap-3">
-        {conflictBanner}
+        {sosBanner}
 
-        {/* Unassigned pool — collapse when empty */}
         {(groups.unassigned || []).length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
         ) : (
@@ -1032,6 +1061,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
             isLocked={isLocked}
+            conflictDogIds={conflictDogIds}
+            hasConflict={false}
           />
         )}
 
@@ -1050,6 +1081,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
             isLocked={isLocked}
+            conflictDogIds={conflictDogIds}
+            hasConflict={conflictGroupNums.has(num)}
           />
         ))}
 

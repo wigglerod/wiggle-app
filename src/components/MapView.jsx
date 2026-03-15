@@ -3,6 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const MONTREAL_CENTER = { lat: 45.5231, lng: -73.5828 }
@@ -12,7 +28,6 @@ function getGroupColor(groupNum) {
   return GROUP_COLORS[(groupNum - 1) % GROUP_COLORS.length]
 }
 
-// Geocode cache — persists across re-renders, avoids repeat API calls
 const geocodeCache = new Map()
 
 function markerSvg(color) {
@@ -42,7 +57,6 @@ function buildRouteUrl(addresses) {
   return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=walking`
 }
 
-// Preserve dog_ids order from walk_groups (pickup order set in organizer)
 function orderedDogs(dogIds, eventsMap) {
   const dogs = []
   const noAddr = []
@@ -76,7 +90,6 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  // Stable key so we only re-geocode when addresses actually change
   const addressKey = useMemo(
     () => allDogs.map((d) => d.address).sort().join('|'),
     [allDogs]
@@ -109,7 +122,7 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
               return { ...dog, ...coords }
             }
           } catch {
-            // Individual geocode failure — skip this dog
+            // skip
           }
           return null
         })
@@ -150,14 +163,12 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
         ))}
       </GoogleMap>
 
-      {/* Loading indicator */}
       {loading && allDogs.length > 0 && (
         <div className="bg-gray-50 px-3 py-1.5 text-xs text-gray-400 text-center">
           Placing pins on map...
         </div>
       )}
 
-      {/* Group color legend */}
       {!loading && markers.length > 0 && groupLegend.length > 0 && (
         <div className="bg-gray-50 px-3 py-2 flex flex-wrap gap-x-3 gap-y-1 justify-center">
           {groupLegend.map((g) => (
@@ -175,6 +186,54 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
   )
 }
 
+// ── Sortable dog row for within-group reorder ────────────────────────
+function SortableDogRow({ dog, index, onDogClick, color, id }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: isDragging
+          ? `${CSS.Transform.toString(transform)} scale(1.02)`
+          : CSS.Transform.toString(transform),
+        transition,
+        touchAction: 'none',
+        opacity: isDragging ? 0.5 : 1,
+        boxShadow: isDragging ? '0 8px 25px rgba(0,0,0,0.15)' : 'none',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <button
+        onClick={() => onDogClick?.(dog.event)}
+        className={`flex items-center gap-3 px-4 py-2.5 text-left active:bg-gray-50 transition-all w-full ${
+          index > 1 ? 'border-t border-gray-50' : ''
+        }`}
+      >
+        <span
+          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+          style={{ backgroundColor: color || '#9CA3AF' }}
+        >
+          {index}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate">{dog.event.displayName}</p>
+          <p className="text-xs text-gray-400 truncate">{dog.address}</p>
+        </div>
+        <span className="text-gray-300 text-sm flex-shrink-0">›</span>
+      </button>
+    </div>
+  )
+}
+
 // ── Main export ─────────────────────────────────────────────────────
 export default function MapView({ events, date, sector, onDogClick }) {
   const [walkGroups, setWalkGroups] = useState([])
@@ -184,7 +243,9 @@ export default function MapView({ events, date, sector, onDogClick }) {
   const lpTimer = useRef(null)
   const didLongPress = useRef(false)
 
-  // Load walk_groups for today
+  // Check if schedule is locked
+  const isLocked = useMemo(() => walkGroups.some(w => w.locked), [walkGroups])
+
   useEffect(() => {
     if (!date) return
     async function load() {
@@ -202,7 +263,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
     load()
   }, [date, sector])
 
-  // Build event lookup
   const eventsMap = useMemo(() => {
     const m = new Map()
     for (const ev of events || []) {
@@ -211,7 +271,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
     return m
   }, [events])
 
-  // Build the sector → group → dogs hierarchy
   const { sections, unassigned, dogsWithoutAddress } = useMemo(() => {
     if (!events || events.length === 0 || !loaded) {
       return { sections: [], unassigned: [], dogsWithoutAddress: [] }
@@ -229,7 +288,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
       const groupCards = []
 
       for (const wg of sectorGroups) {
-        // Use dog_ids order (pickup order from organizer)
         const { dogs, noAddr } = orderedDogs(wg.dog_ids, eventsMap)
         for (const d of dogs) assignedIds.add(String(d.event._id))
         for (const id of [...new Set(wg.dog_ids || [])]) {
@@ -237,7 +295,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
           if (ev) assignedIds.add(String(id))
         }
 
-        // Skip empty groups
         if (dogs.length === 0 && noAddr.length === 0) continue
 
         groupCards.push({
@@ -245,6 +302,8 @@ export default function MapView({ events, date, sector, onDogClick }) {
           groupName: wg.group_name || `Group ${wg.group_num}`,
           dogs,
           noAddr,
+          dogIds: wg.dog_ids || [],
+          sectorName: wg.sector,
         })
       }
 
@@ -253,7 +312,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
       }
     }
 
-    // Unassigned events
     const unassignedOut = []
     const noAddrOut = []
 
@@ -272,7 +330,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
     return { sections: sectionsOut, unassigned: unassignedOut, dogsWithoutAddress: noAddrOut }
   }, [events, walkGroups, eventsMap, loaded, sector])
 
-  // Collect all dogs with group colors for the interactive map
   const { allMapDogs, groupLegend } = useMemo(() => {
     const dogs = []
     const legend = []
@@ -295,11 +352,13 @@ export default function MapView({ events, date, sector, onDogClick }) {
 
   function handleChipTap(ev) {
     if (didLongPress.current) { didLongPress.current = false; return }
+    if (isLocked) return // No tap-to-assign when locked
     const id = String(ev._id)
     setSelectedId(prev => prev === id ? null : id)
   }
 
   function handleLPDown(ev, e) {
+    if (isLocked) return // No long-press menu when locked
     didLongPress.current = false
     const rect = e.currentTarget.getBoundingClientRect()
     lpTimer.current = setTimeout(() => {
@@ -351,6 +410,20 @@ export default function MapView({ events, date, sector, onDogClick }) {
     toast.success('✓ Saved')
   }
 
+  // Within-group reorder handler
+  async function handleGroupReorder(groupNum, sectorName, newDogIds) {
+    const { error } = await supabase.from('walk_groups')
+      .update({ dog_ids: newDogIds, updated_at: new Date().toISOString() })
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+      .eq('sector', sectorName)
+    if (error) { toast.error('Failed to reorder'); return }
+    setWalkGroups(prev => prev.map(w =>
+      w.group_num === groupNum && w.sector === sectorName ? { ...w, dog_ids: newDogIds } : w
+    ))
+    toast.success('✓ Order saved')
+  }
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
@@ -381,7 +454,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
       }
     >
       <div className="flex flex-col gap-4">
-        {/* Interactive Google Map */}
         {GOOGLE_MAPS_KEY && allMapDogs.length > 0 && (
           <MapErrorBoundary fallback={null}>
             <APIProvider apiKey={GOOGLE_MAPS_KEY}>
@@ -394,7 +466,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
           </MapErrorBoundary>
         )}
 
-        {/* Sector sections */}
         {sections.map((sec) => (
           <SectorSection
             key={sec.sectorName}
@@ -402,13 +473,15 @@ export default function MapView({ events, date, sector, onDogClick }) {
             groups={sec.groups}
             showHeader={sector === 'both'}
             onDogClick={onDogClick}
-            selectedId={selectedId}
+            selectedId={isLocked ? null : selectedId}
             onAssign={(groupNum) => assignToGroup(groupNum, sec.sectorName)}
+            onReorder={handleGroupReorder}
+            isLocked={isLocked}
           />
         ))}
 
-        {/* Unassigned dogs — compact assignable chips */}
-        {unassigned.length > 0 && (
+        {/* Unassigned dogs */}
+        {unassigned.length > 0 && !isLocked && (
           <div className="flex flex-col gap-2">
             <h3 className="text-sm font-bold text-gray-500">
               Not yet grouped ({unassigned.length})
@@ -445,7 +518,6 @@ export default function MapView({ events, date, sector, onDogClick }) {
           </div>
         )}
 
-        {/* Dogs without addresses */}
         {dogsWithoutAddress.length > 0 && (
           <div className="bg-amber-50 rounded-xl border border-amber-200 px-4 py-3">
             <p className="text-xs font-semibold text-amber-700 mb-1">Missing addresses:</p>
@@ -454,6 +526,7 @@ export default function MapView({ events, date, sector, onDogClick }) {
             ))}
           </div>
         )}
+
         {/* Long-press popup menu */}
         <AnimatePresence>
           {longPressMenu && (
@@ -494,7 +567,7 @@ export default function MapView({ events, date, sector, onDogClick }) {
 }
 
 // ── Sector section ──────────────────────────────────────────────────
-function SectorSection({ sectorName, groups, showHeader, onDogClick, selectedId, onAssign }) {
+function SectorSection({ sectorName, groups, showHeader, onDogClick, selectedId, onAssign, onReorder, isLocked }) {
   return (
     <div className="flex flex-col gap-3">
       {showHeader && (
@@ -509,21 +582,55 @@ function SectorSection({ sectorName, groups, showHeader, onDogClick, selectedId,
       )}
 
       {groups.map((g) => (
-        <GroupCard key={g.groupNum} group={g} onDogClick={onDogClick} selectedId={selectedId} onAssign={() => onAssign?.(g.groupNum)} />
+        <GroupCard
+          key={g.groupNum}
+          group={g}
+          onDogClick={onDogClick}
+          selectedId={selectedId}
+          onAssign={() => onAssign?.(g.groupNum)}
+          onReorder={onReorder}
+          isLocked={isLocked}
+        />
       ))}
     </div>
   )
 }
 
-// ── Group card with route button + dog list ─────────────────────────
-function GroupCard({ group, onDogClick, selectedId, onAssign }) {
+// ── Group card with route button + reorderable dog list ─────────────
+function GroupCard({ group, onDogClick, selectedId, onAssign, onReorder, isLocked }) {
   const addresses = group.dogs.map((d) => d.address)
   const routeUrl = buildRouteUrl(addresses)
   const color = getGroupColor(group.groupNum)
 
+  const [reorderActiveId, setReorderActiveId] = useState(null)
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } })
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  const sensors = useSensors(touchSensor, pointerSensor)
+
+  // Build sortable IDs from dogIds
+  const sortableIds = useMemo(() => (group.dogIds || []).map(String), [group.dogIds])
+
+  function handleDragStart(event) {
+    setReorderActiveId(String(event.active.id))
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    setReorderActiveId(null)
+    if (!over || active.id === over.id) return
+    const oldIndex = sortableIds.indexOf(String(active.id))
+    const newIndex = sortableIds.indexOf(String(over.id))
+    if (oldIndex === -1 || newIndex === -1) return
+    const newOrder = arrayMove(sortableIds, oldIndex, newIndex)
+    onReorder?.(group.groupNum, group.sectorName, newOrder)
+  }
+
+  const reorderActiveEvent = reorderActiveId
+    ? group.dogs.find(d => String(d.event._id) === reorderActiveId)
+    : null
+
   return (
     <div className="flex flex-col gap-0">
-      {/* Group header + Start Route */}
       <div className="flex items-center justify-between bg-white rounded-t-2xl border border-gray-200 border-b-0 px-4 py-2.5 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -554,11 +661,39 @@ function GroupCard({ group, onDogClick, selectedId, onAssign }) {
         </div>
       </div>
 
-      {/* Dog list */}
       <div className="bg-white rounded-b-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {group.dogs.map((d, i) => (
-          <DogRow key={d.event._id || i} dog={d} index={i + 1} onDogClick={onDogClick} color={color} />
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            {group.dogs.map((d, i) => (
+              <SortableDogRow
+                key={d.event._id || i}
+                id={String(d.event._id)}
+                dog={d}
+                index={i + 1}
+                onDogClick={onDogClick}
+                color={color}
+              />
+            ))}
+          </SortableContext>
+          <DragOverlay>
+            {reorderActiveEvent ? (
+              <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-[#E8634A] shadow-xl rounded-lg">
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                >
+                  ↕
+                </span>
+                <span className="text-sm font-semibold text-gray-800">{reorderActiveEvent.event.displayName}</span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
         {group.noAddr.map((name, i) => (
           <div key={`noaddr-${i}`} className="flex items-center gap-3 px-4 py-2.5 border-t border-gray-50">
             <span className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold flex-shrink-0">
@@ -572,7 +707,7 @@ function GroupCard({ group, onDogClick, selectedId, onAssign }) {
   )
 }
 
-// ── Single dog row ──────────────────────────────────────────────────
+// ── Single dog row (non-sortable fallback) ──────────────────────────
 function DogRow({ dog, index, onDogClick, color }) {
   return (
     <button

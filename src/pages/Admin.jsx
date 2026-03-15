@@ -161,33 +161,35 @@ function WalkHistorySearch({ dogs }) {
 
       {result && (
         <div className="mt-4 bg-[#FFF4F1] rounded-xl p-4">
-          {result.count > 0 ? (
+          <p className="text-sm font-semibold text-gray-800">
+            {result.dog1} and {result.dog2} walked together{' '}
+            <span className="text-[#E8634A]">{result.count} time{result.count !== 1 ? 's' : ''}</span>
+          </p>
+          {result.count > 0 && (
             <>
-              <p className="text-sm font-semibold text-gray-800">
-                {result.dog1} and {result.dog2} walked together <span className="text-[#E8634A]">{result.count} time{result.count !== 1 ? 's' : ''}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Last: {new Date(result.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                {' | '}
-                First: {new Date(result.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
-              {result.dates.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {result.dates.slice(0, 10).map((d) => (
-                    <span key={d} className="text-xs bg-white px-2 py-0.5 rounded-full text-gray-500">
-                      {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  ))}
-                  {result.dates.length > 10 && (
-                    <span className="text-xs text-gray-400">+{result.dates.length - 10} more</span>
-                  )}
+              <button
+                onClick={() => setResult(r => ({ ...r, showExtra: !r.showExtra }))}
+                className="text-xs text-gray-400 mt-1 active:text-gray-600"
+              >
+                Extra info {result.showExtra ? '▴' : '▾'}
+              </button>
+              {result.showExtra && (
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>First: {new Date(result.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <p>Last: {new Date(result.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {result.dates.slice(0, 10).map((d) => (
+                      <span key={d} className="bg-white px-2 py-0.5 rounded-full">
+                        {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    ))}
+                    {result.dates.length > 10 && (
+                      <span className="text-gray-400">+{result.dates.length - 10} more</span>
+                    )}
+                  </div>
                 </div>
               )}
             </>
-          ) : (
-            <p className="text-sm text-gray-500">
-              {result.dog1} and {result.dog2} have never walked together (no shared walk dates found).
-            </p>
           )}
         </div>
       )}

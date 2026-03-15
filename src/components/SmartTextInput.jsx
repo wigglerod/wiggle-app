@@ -19,8 +19,18 @@ export default function SmartTextInput({ value, onChange, placeholder, rows = 2,
   const options = useMemo(() => {
     const q = atQuery.toLowerCase()
     const list = dogs.map((d) => ({ label: d.dog_name, id: d.id }))
-    if (!q) return list.slice(0, 8)
-    return list.filter((o) => o.label.toLowerCase().includes(q)).slice(0, 8)
+    if (!q) return list.slice(0, 10)
+    return list
+      .filter((o) => o.label.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aL = a.label.toLowerCase()
+        const bL = b.label.toLowerCase()
+        const aStarts = aL.startsWith(q) ? 0 : 1
+        const bStarts = bL.startsWith(q) ? 0 : 1
+        if (aStarts !== bStarts) return aStarts - bStarts
+        return aL.indexOf(q) - bL.indexOf(q)
+      })
+      .slice(0, 10)
   }, [atQuery, dogs])
 
   function handleChange(e) {
@@ -80,6 +90,7 @@ export default function SmartTextInput({ value, onChange, placeholder, rows = 2,
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
         placeholder={placeholder}
         rows={rows}
         className={className || 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none'}
