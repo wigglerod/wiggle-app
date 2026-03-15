@@ -182,6 +182,56 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
 }
 
 // ── Mobile group with tap-to-assign + within-group reorder ──────────
+// ── Unassigned chip with tap + long-press support ────────────────────
+function UnassignedChip({ ev, id, selectedId, canEdit, onDogTap, onDogClick, onLongPress, owlDogIdSet }) {
+  const timerRef = useRef(null)
+  const didLongPress = useRef(false)
+
+  function handlePointerDown(e) {
+    if (!onLongPress || !canEdit) return
+    didLongPress.current = false
+    const rect = e.currentTarget.getBoundingClientRect()
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true
+      onLongPress(ev, { x: Math.min(rect.left + rect.width / 2, window.innerWidth - 120), y: rect.bottom + 4 })
+    }, 500)
+  }
+  function handlePointerUp() { if (timerRef.current) clearTimeout(timerRef.current) }
+  function handlePointerMove() { if (timerRef.current) clearTimeout(timerRef.current) }
+  function handleClick() {
+    if (didLongPress.current) { didLongPress.current = false; return }
+    canEdit ? onDogTap?.(ev) : onDogClick?.(ev)
+  }
+
+  const hasOwl = ev.dog?.id && owlDogIdSet?.has(ev.dog.id)
+
+  return (
+    <button
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onPointerMove={handlePointerMove}
+      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
+        ${selectedId === id
+          ? 'bg-[#E8634A] text-white shadow-md wiggle'
+          : 'bg-white text-gray-700 border border-gray-200 shadow-sm active:scale-[0.97]'
+        }
+      `}
+    >
+      {hasOwl && <span className="owl-bounce text-xs">🦉</span>}
+      <span className="truncate max-w-[140px]">{ev.displayName}</span>
+      <span
+        onClick={(e) => { e.stopPropagation(); onDogClick?.(ev) }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] flex-shrink-0 ${
+          selectedId === id ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-400'
+        }`}
+      >i</span>
+    </button>
+  )
+}
+
 function MobileGroup({
   groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
@@ -259,24 +309,17 @@ function MobileGroup({
             const ev = eventsMap.get(id)
             if (!ev) return null
             return (
-              <button
+              <UnassignedChip
                 key={id}
-                onClick={() => canEdit ? onDogTap?.(ev) : onDogClick?.(ev)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
-                  ${selectedId === id
-                    ? 'bg-[#E8634A] text-white shadow-md wiggle'
-                    : 'bg-white text-gray-700 border border-gray-200 shadow-sm active:scale-[0.97]'
-                  }
-                `}
-              >
-                <span className="truncate max-w-[140px]">{ev.displayName}</span>
-                <span
-                  onClick={(e) => { e.stopPropagation(); onDogClick?.(ev) }}
-                  className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] flex-shrink-0 ${
-                    selectedId === id ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-400'
-                  }`}
-                >i</span>
-              </button>
+                ev={ev}
+                id={id}
+                selectedId={selectedId}
+                canEdit={canEdit}
+                onDogTap={onDogTap}
+                onDogClick={onDogClick}
+                onLongPress={onLongPress}
+                owlDogIdSet={owlDogIdSet}
+              />
             )
           })}
         </div>

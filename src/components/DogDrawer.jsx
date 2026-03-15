@@ -224,7 +224,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
 
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200 z-10 min-h-[36px]"
+          className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200 z-10"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -407,48 +407,40 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* Access steps — tap to reveal with flip */}
+              {/* Access info — compact one-line, tap to reveal */}
               {accessSteps.length > 0 && (
-                <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="bg-gray-50 rounded-2xl p-4" style={{ perspective: '600px' }}>
+                  <div className="flex items-center gap-2 mb-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0">
                       <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                     </svg>
                     <span className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide">Access Info</span>
                   </div>
-                  {accessSteps.map((s) => (
-                    <div key={s.key} style={{ perspective: '600px' }}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm">{s.emoji}</span>
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          Step {s.step}: {s.label}
-                        </span>
-                      </div>
-                      <AnimatePresence mode="wait">
-                        {revealedSteps[s.key] ? (
-                          <motion.div
-                            key="revealed"
-                            initial={{ rotateX: -90, opacity: 0 }}
-                            animate={{ rotateX: 0, opacity: 1 }}
-                            transition={{ duration: 0.3, ease: 'easeOut' }}
-                            className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center"
-                          >
-                            <p className="text-lg font-mono font-bold text-[#1A1A1A] tracking-widest">{s.value}</p>
-                          </motion.div>
-                        ) : (
-                          <motion.button
-                            key="hidden"
-                            exit={{ rotateX: 90, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            onClick={() => setRevealedSteps((prev) => ({ ...prev, [s.key]: true }))}
-                            className="w-full py-2.5 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors min-h-[44px]"
-                          >
-                            Tap to reveal {s.emoji}
-                          </motion.button>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ))}
+                  <AnimatePresence mode="wait">
+                    {doorRevealed ? (
+                      <motion.div
+                        key="revealed"
+                        initial={{ rotateX: -90, opacity: 0 }}
+                        animate={{ rotateX: 0, opacity: 1 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        className="bg-white rounded-xl border border-gray-200 px-4 py-3"
+                      >
+                        <p className="text-base font-mono font-bold text-[#1A1A1A] tracking-wide">
+                          🔑 {accessSteps.map((s) => s.value).join(' → ')}
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="hidden"
+                        exit={{ rotateX: 90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => setDoorRevealed(true)}
+                        className="w-full py-2.5 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors min-h-[44px]"
+                      >
+                        Tap to reveal 🔑
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 

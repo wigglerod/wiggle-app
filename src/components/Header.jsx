@@ -47,7 +47,7 @@ export default function Header({ date }) {
                 onClick={() => setOwlOpen(true)}
                 className="relative text-base px-2 py-1 rounded-full bg-gray-100 active:bg-gray-200 min-h-[32px] flex items-center"
               >
-                🦉
+                <span className={owlCount > 0 ? 'owl-bounce' : ''}>🦉</span>
                 {owlCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#E8634A] text-white text-[10px] font-bold flex items-center justify-center px-1">
                     {owlCount}

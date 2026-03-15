@@ -75,7 +75,7 @@ export default function DogChip({ event, onInfoClick, isSelected, onTap, onLongP
         <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-medium">New</span>
       )}
 
-      {hasOwlNote && <span className="text-sm flex-shrink-0" title="Owl note">🦉</span>}
+      {hasOwlNote && <span className="text-sm flex-shrink-0 owl-bounce" title="Owl note">🦉</span>}
       {hasAlert && <span className="text-[10px] text-gray-400 font-medium">!</span>}
 
       {/* Info button */}

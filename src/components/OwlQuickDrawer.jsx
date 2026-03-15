@@ -162,8 +162,10 @@ export default function OwlQuickDrawer({ open, onClose }) {
                 <h3 className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
                   <span className="text-base">🦉</span> Quick Owl Note
                 </h3>
-                <button onClick={onClose} className="text-xs text-gray-400 active:text-gray-600 p-1">
-                  Close
+                <button onClick={onClose} className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
 

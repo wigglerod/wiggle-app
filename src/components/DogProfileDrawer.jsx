@@ -135,7 +135,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
           {canEdit && !editing && (
             <button
               onClick={startEdit}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200 min-h-[36px]"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
@@ -145,7 +145,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated }) {
           )}
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200 min-h-[36px]"
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:bg-gray-200"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
               <path d="M18 6L6 18M6 6l12 12" />
