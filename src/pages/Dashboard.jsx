@@ -43,7 +43,7 @@ function formatDayLabel(dateStr) {
 const SECTOR_CYCLE = ['both', 'Plateau', 'Laurier']
 
 export default function Dashboard() {
-  const { profile } = useAuth()
+  const { profile, isChiefPup } = useAuth()
   const [dogs, setDogs] = useState([])
   const [nameMap, setNameMap] = useState(new Map())
   const [dogsReady, setDogsReady] = useState(false)
@@ -56,6 +56,9 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDay, setSelectedDay] = useState('today')
   const [sectorFilter, setSectorFilter] = useState(null)
+  const [scheduleLocked, setScheduleLocked] = useState(false)
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false)
+  const lockLongPressTimer = useRef(null)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
@@ -224,6 +227,39 @@ export default function Dashboard() {
     })
   }
 
+  // Check lock state for the current date/sector
+  useEffect(() => {
+    if (!activeDate) return
+    async function checkLock() {
+      const { data } = await supabase
+        .from('walk_groups')
+        .select('locked')
+        .eq('walk_date', activeDate)
+        .eq('locked', true)
+        .limit(1)
+      setScheduleLocked(data && data.length > 0)
+    }
+    checkLock()
+  }, [activeDate, sector, refreshKey])
+
+  function handleScheduleLocked() {
+    setScheduleLocked(true)
+    // Auto-switch to map view
+    setTimeout(() => setActiveTab('map'), 300)
+  }
+
+  async function handleUnlock() {
+    setShowUnlockConfirm(false)
+    const { error } = await supabase
+      .from('walk_groups')
+      .update({ locked: false })
+      .eq('walk_date', activeDate)
+    if (!error) {
+      setScheduleLocked(false)
+      setActiveTab('organizer')
+    }
+  }
+
   const sectorEmoji = sector === 'Plateau' ? '🟡' : sector === 'Laurier' ? '🔵' : ''
   const sectorLabel = sector === 'both' ? 'All Sectors' : sector
 
@@ -355,6 +391,55 @@ export default function Dashboard() {
           )
         })()}
 
+        {/* Lock banner */}
+        {!loading && scheduleLocked && (
+          <div className="mb-3">
+            <button
+              onPointerDown={() => {
+                if (!isChiefPup) return
+                lockLongPressTimer.current = setTimeout(() => setShowUnlockConfirm(true), 800)
+              }}
+              onPointerUp={() => { if (lockLongPressTimer.current) clearTimeout(lockLongPressTimer.current) }}
+              onPointerCancel={() => { if (lockLongPressTimer.current) clearTimeout(lockLongPressTimer.current) }}
+              className={`w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm font-semibold text-center select-none ${isChiefPup ? 'active:bg-gray-700' : ''}`}
+            >
+              🔒 Schedule locked for today
+            </button>
+          </div>
+        )}
+
+        {/* Unlock confirmation modal */}
+        <AnimatePresence>
+          {showUnlockConfirm && (
+            <>
+              <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowUnlockConfirm(false)} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="fixed inset-x-4 top-1/3 z-50 bg-white rounded-3xl shadow-2xl p-6 max-w-sm mx-auto"
+              >
+                <p className="text-center text-lg font-bold text-gray-800 mb-2">Unlock schedule?</p>
+                <p className="text-center text-sm text-gray-500 mb-5">Dogs will become draggable again.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowUnlockConfirm(false)}
+                    className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUnlock}
+                    className="flex-1 py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm"
+                  >
+                    🔓 Unlock
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         {/* Organizer */}
         {!loading && filteredEvents.length > 0 && activeTab === 'organizer' && (
           <div className="flex flex-col gap-4">
@@ -372,6 +457,7 @@ export default function Dashboard() {
                   sector={sectorName}
                   onDogClick={setSelectedEvent}
                   owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
+                  onLocked={handleScheduleLocked}
                 />
               </div>
             ))}

@@ -21,6 +21,7 @@ export function useWalkGroups(events, date, sector) {
   const [groupNames, setGroupNames] = useState({})
   const [loaded, setLoaded] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
+  const [isLocked, setIsLocked] = useState(false)
 
   // Refs to avoid stale closures in callbacks
   const groupsRef = useRef(groups)
@@ -71,9 +72,13 @@ export function useWalkGroups(events, date, sector) {
       const sortedNums = Array.from(nums).sort((a, b) => a - b)
       const unassigned = allEventIds.filter((id) => !assignedSet.has(id))
 
+      // Check if any group is locked
+      const locked = data?.some((row) => row.locked) || false
+
       setGroupNums(sortedNums)
       setGroupNames(names)
       setGroups({ unassigned, ...saved })
+      setIsLocked(locked)
       setLoaded(true)
     }
 
@@ -109,6 +114,11 @@ export function useWalkGroups(events, date, sector) {
 
           if (row.group_name) {
             setGroupNames((prev) => ({ ...prev, [row.group_num]: row.group_name }))
+          }
+
+          // Sync locked state from realtime
+          if (row.locked !== undefined) {
+            setIsLocked((prev) => row.locked || prev)
           }
 
           setGroups((prev) => {
@@ -250,5 +260,43 @@ export function useWalkGroups(events, date, sector) {
     [saveGroup]
   )
 
-  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved }
+  // Lock all groups for this date/sector
+  const lockSchedule = useCallback(async () => {
+    if (!date || !sector || !user) return
+    setIsLocked(true)
+
+    const { error } = await supabase
+      .from('walk_groups')
+      .update({ locked: true, updated_by: user.id, updated_at: new Date().toISOString() })
+      .eq('walk_date', date)
+      .eq('sector', sector)
+
+    if (error) {
+      toast.error('Failed to lock schedule')
+      setIsLocked(false)
+    } else {
+      toast.success('Schedule locked!')
+    }
+  }, [date, sector, user])
+
+  // Unlock all groups for this date/sector (Chief Pup only)
+  const unlockSchedule = useCallback(async () => {
+    if (!date || !sector || !user) return
+    setIsLocked(false)
+
+    const { error } = await supabase
+      .from('walk_groups')
+      .update({ locked: false, updated_by: user.id, updated_at: new Date().toISOString() })
+      .eq('walk_date', date)
+      .eq('sector', sector)
+
+    if (error) {
+      toast.error('Failed to unlock schedule')
+      setIsLocked(true)
+    } else {
+      toast.success('Schedule unlocked')
+    }
+  }, [date, sector, user])
+
+  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule }
 }

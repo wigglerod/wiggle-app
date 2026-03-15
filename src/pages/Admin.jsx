@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -6,6 +6,285 @@ import LoadingDog from '../components/LoadingDog'
 import OwlNotesTab from '../components/OwlNotesTab'
 
 const SECTORS = ['Plateau', 'Laurier']
+
+// ── Dog autocomplete input ──────────────────────────────────────────
+function DogAutocompleteInput({ value, onChange, dogs, placeholder }) {
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [query, setQuery] = useState('')
+  const [dropdownIndex, setDropdownIndex] = useState(0)
+  const inputRef = useRef(null)
+
+  const options = useMemo(() => {
+    const q = query.toLowerCase()
+    const list = dogs.map((d) => d.dog_name)
+    if (!q) return list.slice(0, 8)
+    return list.filter((name) => name.toLowerCase().includes(q)).slice(0, 8)
+  }, [query, dogs])
+
+  function handleChange(e) {
+    const val = e.target.value
+    // Strip @ prefix for display but keep it
+    const clean = val.startsWith('@') ? val.slice(1) : val
+    setQuery(clean)
+    onChange(clean)
+    setShowDropdown(true)
+    setDropdownIndex(0)
+  }
+
+  function selectOption(name) {
+    onChange(name)
+    setQuery(name)
+    setShowDropdown(false)
+    inputRef.current?.blur()
+  }
+
+  function handleKeyDown(e) {
+    if (!showDropdown || options.length === 0) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setDropdownIndex((i) => Math.min(i + 1, options.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setDropdownIndex((i) => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter') { e.preventDefault(); selectOption(options[dropdownIndex]) }
+    else if (e.key === 'Escape') setShowDropdown(false)
+  }
+
+  return (
+    <div className="relative flex-1">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value ? `@${value}` : ''}
+        onChange={handleChange}
+        onFocus={() => { setShowDropdown(true); setQuery(value || '') }}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A]"
+      />
+      {showDropdown && options.length > 0 && (
+        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+          {options.map((name, i) => (
+            <button
+              key={name}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => selectOption(name)}
+              className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors ${
+                i === dropdownIndex ? 'bg-[#FFF4F1]' : ''
+              }`}
+            >
+              <span className="text-gray-400">🐕</span>
+              <span className="text-gray-700 font-medium">{name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Walk History Search Section ──────────────────────────────────────
+function WalkHistorySearch({ dogs }) {
+  const [dog1, setDog1] = useState('')
+  const [dog2, setDog2] = useState('')
+  const [result, setResult] = useState(null)
+  const [searching, setSearching] = useState(false)
+
+  async function handleSearch() {
+    if (!dog1 || !dog2) { toast.error('Select two dogs'); return }
+    if (dog1 === dog2) { toast.error('Select two different dogs'); return }
+    setSearching(true)
+    setResult(null)
+
+    // Query all walk_groups that contain either dog
+    const dog1Obj = dogs.find((d) => d.dog_name === dog1)
+    const dog2Obj = dogs.find((d) => d.dog_name === dog2)
+    if (!dog1Obj || !dog2Obj) { toast.error('Dog not found in database'); setSearching(false); return }
+
+    const { data, error } = await supabase
+      .from('walk_groups')
+      .select('walk_date, group_num, group_name, dog_ids, sector')
+      .order('walk_date', { ascending: false })
+
+    if (error) { toast.error('Search failed'); setSearching(false); return }
+
+    // Find groups where both dogs' event IDs overlap
+    // Since dog_ids stores event IDs (not dog UUIDs), we need to look for patterns
+    // For history, we match by checking if both dog names appear in the same group
+    // We'll need to match via dog_ids — but dog_ids are session-specific _id counters
+    // Better approach: query walk_groups and cross-reference with walk date events
+    // For now, use a simpler heuristic: look for groups that contain IDs for both dogs
+
+    // Actually, we should store dog names or IDs in a history table. Since we don't have that,
+    // let's query walk_groups and check dog_ids arrays for co-occurrence
+    // The _id values are sequential per session, so we need a different approach.
+
+    // Let's check the walk_logs table for co-occurrence on same walk_date
+    const { data: logs1 } = await supabase
+      .from('walk_logs')
+      .select('walk_date, notes, status')
+      .eq('dog_id', dog1Obj.id)
+      .order('walk_date', { ascending: false })
+
+    const { data: logs2 } = await supabase
+      .from('walk_logs')
+      .select('walk_date, notes, status')
+      .eq('dog_id', dog2Obj.id)
+      .order('walk_date', { ascending: false })
+
+    const dates1 = new Set((logs1 || []).map((l) => l.walk_date))
+    const dates2 = new Set((logs2 || []).map((l) => l.walk_date))
+    const sharedDates = [...dates1].filter((d) => dates2.has(d)).sort().reverse()
+
+    setResult({
+      dog1,
+      dog2,
+      count: sharedDates.length,
+      dates: sharedDates,
+      first: sharedDates.length > 0 ? sharedDates[sharedDates.length - 1] : null,
+      last: sharedDates.length > 0 ? sharedDates[0] : null,
+    })
+    setSearching(false)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+      <h3 className="text-sm font-bold text-gray-700 mb-3">Have two dogs walked together?</h3>
+      <div className="flex gap-2 mb-3">
+        <DogAutocompleteInput value={dog1} onChange={setDog1} dogs={dogs} placeholder="@dog1" />
+        <DogAutocompleteInput value={dog2} onChange={setDog2} dogs={dogs} placeholder="@dog2" />
+      </div>
+      <button
+        onClick={handleSearch}
+        disabled={searching || !dog1 || !dog2}
+        className="w-full py-2.5 rounded-xl bg-[#E8634A] text-white text-sm font-bold disabled:opacity-50 active:bg-[#d4552d]"
+      >
+        {searching ? 'Searching...' : 'Search'}
+      </button>
+
+      {result && (
+        <div className="mt-4 bg-[#FFF4F1] rounded-xl p-4">
+          {result.count > 0 ? (
+            <>
+              <p className="text-sm font-semibold text-gray-800">
+                {result.dog1} and {result.dog2} walked together <span className="text-[#E8634A]">{result.count} time{result.count !== 1 ? 's' : ''}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Last: {new Date(result.last).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {' | '}
+                First: {new Date(result.first).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+              {result.dates.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {result.dates.slice(0, 10).map((d) => (
+                    <span key={d} className="text-xs bg-white px-2 py-0.5 rounded-full text-gray-500">
+                      {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  ))}
+                  {result.dates.length > 10 && (
+                    <span className="text-xs text-gray-400">+{result.dates.length - 10} more</span>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              {result.dog1} and {result.dog2} have never walked together (no shared walk dates found).
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Dog Conflicts Section ──────────────────────────────────────────
+function DogConflictsSection({ dogs }) {
+  const [conflicts, setConflicts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [dog1, setDog1] = useState('')
+  const [dog2, setDog2] = useState('')
+  const [reason, setReason] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  async function loadConflicts() {
+    setLoading(true)
+    const { data } = await supabase.from('dog_conflicts').select('*').order('created_at', { ascending: false })
+    setConflicts(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { loadConflicts() }, [])
+
+  async function handleAdd() {
+    if (!dog1 || !dog2) { toast.error('Select two dogs'); return }
+    if (dog1 === dog2) { toast.error('Select two different dogs'); return }
+    setAdding(true)
+    const { error } = await supabase.from('dog_conflicts').insert({
+      dog_1_name: dog1,
+      dog_2_name: dog2,
+      reason: reason || null,
+    })
+    if (error) toast.error('Failed to add conflict')
+    else {
+      toast.success('Conflict rule added')
+      setDog1(''); setDog2(''); setReason('')
+      loadConflicts()
+    }
+    setAdding(false)
+  }
+
+  async function handleDelete(id) {
+    const { error } = await supabase.from('dog_conflicts').delete().eq('id', id)
+    if (error) toast.error('Failed to remove')
+    else { toast('Conflict removed'); loadConflicts() }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+      <h3 className="text-sm font-bold text-gray-700 mb-3">Not Allowed Together</h3>
+
+      {/* Add conflict form */}
+      <div className="flex gap-2 mb-2">
+        <DogAutocompleteInput value={dog1} onChange={setDog1} dogs={dogs} placeholder="@dog1" />
+        <DogAutocompleteInput value={dog2} onChange={setDog2} dogs={dogs} placeholder="@dog2" />
+      </div>
+      <input
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Reason (optional)"
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A] mb-2"
+      />
+      <button
+        onClick={handleAdd}
+        disabled={adding || !dog1 || !dog2}
+        className="w-full py-2 rounded-xl bg-amber-500 text-white text-sm font-bold disabled:opacity-50 active:bg-amber-600"
+      >
+        {adding ? 'Adding...' : '+ Add Conflict Rule'}
+      </button>
+
+      {/* Conflict list */}
+      {loading && <p className="text-xs text-gray-400 py-4 text-center">Loading...</p>}
+      {!loading && conflicts.length === 0 && (
+        <p className="text-xs text-gray-400 py-4 text-center">No conflict rules yet.</p>
+      )}
+      {!loading && conflicts.map((c) => (
+        <div key={c.id} className="flex items-center justify-between py-2 border-t border-gray-50 mt-2">
+          <div>
+            <p className="text-sm font-medium text-gray-700">
+              ⚠️ {c.dog_1_name} & {c.dog_2_name}
+            </p>
+            {c.reason && <p className="text-xs text-gray-400">{c.reason}</p>}
+          </div>
+          <button
+            onClick={() => handleDelete(c.id)}
+            className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-400 font-medium active:bg-red-100"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const LEVEL_OPTIONS = [
   { value: 1, label: 'Chill', color: 'bg-green-500' },
@@ -517,6 +796,10 @@ export default function Admin() {
         {/* Logs tab */}
         {!loading && activeTab === 'logs' && (
           <div className="flex flex-col gap-2">
+            <WalkHistorySearch dogs={dogs} />
+            <DogConflictsSection dogs={dogs} />
+
+            <h3 className="text-sm font-bold text-gray-700 mt-2 mb-1">Recent Walk Logs</h3>
             {logs.length === 0 && (
               <p className="text-center text-gray-400 py-8 text-sm">No walk logs yet.</p>
             )}

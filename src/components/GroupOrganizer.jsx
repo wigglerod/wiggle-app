@@ -21,6 +21,7 @@ import { useDroppable } from '@dnd-kit/core'
 import DogChip from './DogChip'
 import { useWalkGroups } from '../lib/useWalkGroups'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import confetti from 'canvas-confetti'
 
 // Color cycle for numbered groups
@@ -108,7 +109,7 @@ function ReorderableSortableItem({ id, children, canEdit }) {
 }
 
 // ── Shared group header (long-press to rename) ─────────────────────
-function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName }) {
+function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const isUnassigned = groupKey === 'unassigned'
@@ -162,6 +163,8 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
             {displayName}
           </span>
         )}
+
+        {isLocked && !isUnassigned && <span className="text-xs flex-shrink-0">🔒</span>}
 
         <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full flex-shrink-0">
           {count} {count === 1 ? 'dog' : 'dogs'}
@@ -235,7 +238,7 @@ function UnassignedChip({ ev, id, selectedId, canEdit, onDogTap, onDogClick, onL
 function MobileGroup({
   groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
-  isAdmin, onReorder, owlDogIdSet,
+  isAdmin, onReorder, owlDogIdSet, isLocked,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -294,10 +297,11 @@ function MobileGroup({
         groupKey={groupKey}
         groupName={groupName}
         count={sortedItems.length}
-        onRename={onRename}
+        onRename={isLocked ? null : onRename}
         isTarget={isTarget}
         onTargetTap={onTargetTap}
         selectedDogName={selectedDogName}
+        isLocked={isLocked}
       />
 
       {isUnassigned ? (
@@ -439,7 +443,7 @@ function MobileGroup({
 // ── Desktop droppable group (DnD) ───────────────────────────────────
 function DesktopGroup({
   groupKey, eventIds, eventsMap, onDogClick, activeId, groupName,
-  onRename, canEdit, isAdmin, onReorder, owlDogIdSet,
+  onRename, canEdit, isAdmin, onReorder, owlDogIdSet, isLocked,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
   const isUnassigned = groupKey === 'unassigned'
@@ -475,7 +479,8 @@ function DesktopGroup({
         groupKey={groupKey}
         groupName={groupName}
         count={sortedItems.length}
-        onRename={onRename}
+        onRename={isLocked ? null : onRename}
+        isLocked={isLocked}
       />
 
       <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
@@ -604,11 +609,28 @@ function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, 
 }
 
 // ── Main export ─────────────────────────────────────────────────────
-export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [] }) {
+export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [], onLocked }) {
   const { canEdit, isAdmin } = useAuth()
   const isMobile = useIsMobile()
-  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved } =
+  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule } =
     useWalkGroups(events, date, sector)
+
+  // Conflict detection state
+  const [conflicts, setConflicts] = useState([])
+  const [conflictWarning, setConflictWarning] = useState(null)
+
+  // Load dog conflicts
+  useEffect(() => {
+    async function loadConflicts() {
+      const { data } = await supabase.from('dog_conflicts').select('*')
+      if (data) setConflicts(data)
+    }
+    loadConflicts()
+  }, [])
+
+  // Lock modal state
+  const [showLockModal, setShowLockModal] = useState(false)
+  const lockModalShownRef = useRef(false)
 
   const eventsMap = useMemo(() => {
     const m = new Map()
@@ -646,12 +668,19 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           if (Date.now() < end) requestAnimationFrame(frame)
         }
         frame()
+
+        // After confetti, prompt to lock (only if not already locked)
+        if (!isLocked && !lockModalShownRef.current && canEdit) {
+          lockModalShownRef.current = true
+          setTimeout(() => setShowLockModal(true), 2200)
+        }
       }
     } else {
       // Reset so confetti fires again next time all dogs are assigned
       confettiFiredRef.current = false
+      lockModalShownRef.current = false
     }
-  }, [loaded, events.length, groups.unassigned])
+  }, [loaded, events.length, groups.unassigned, isLocked, canEdit])
 
   // ── Mobile tap-to-assign state ──────────────────────────────────
   const [selectedId, setSelectedId] = useState(null)
@@ -666,24 +695,60 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     return null
   }
 
+  // Check for conflicts when moving a dog to a group
+  function checkConflicts(dogId, targetGroup) {
+    if (targetGroup === 'unassigned' || conflicts.length === 0) return null
+    const movingDog = eventsMap.get(dogId)
+    if (!movingDog) return null
+    const movingName = movingDog.dog?.dog_name || movingDog.displayName
+    const targetDogIds = groups[targetGroup] || []
+
+    for (const tid of targetDogIds) {
+      const targetDog = eventsMap.get(String(tid))
+      if (!targetDog) continue
+      const targetName = targetDog.dog?.dog_name || targetDog.displayName
+
+      for (const c of conflicts) {
+        const pair = [c.dog_1_name.toLowerCase(), c.dog_2_name.toLowerCase()]
+        if (
+          (pair.includes(movingName.toLowerCase()) && pair.includes(targetName.toLowerCase()))
+        ) {
+          return { dog1: movingName, dog2: targetName, reason: c.reason }
+        }
+      }
+    }
+    return null
+  }
+
   function handleDogTap(event) {
+    if (isLocked) return
     const id = String(event._id)
     setSelectedId((prev) => (prev === id ? null : id))
     setLongPressMenu(null)
   }
 
   function handleGroupTap(targetGroup) {
+    if (isLocked) return
     if (!selectedId) return
     const fromGroup = findGroup(selectedId)
     if (fromGroup === null || fromGroup === targetGroup) {
       setSelectedId(null)
       return
     }
+
+    // Check conflicts
+    const conflict = checkConflicts(selectedId, targetGroup)
+    if (conflict) {
+      setConflictWarning(conflict)
+      // Still allow the move but warn
+    }
+
     moveEvent(selectedId, fromGroup, targetGroup)
     setSelectedId(null)
   }
 
   function handleLongPress(event, pos) {
+    if (isLocked) return
     setSelectedId(null)
     setLongPressMenu({
       dogId: String(event._id),
@@ -697,6 +762,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     if (!longPressMenu) return
     const { dogId, fromGroup } = longPressMenu
     if (fromGroup !== targetGroup) {
+      const conflict = checkConflicts(dogId, targetGroup)
+      if (conflict) setConflictWarning(conflict)
       moveEvent(dogId, fromGroup, targetGroup)
     }
     setLongPressMenu(null)
@@ -713,7 +780,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   // ── Desktop DnD state ───────────────────────────────────────────
   const [activeId, setActiveId] = useState(null)
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  const sensors = useSensors(...(canEdit && !isMobile ? [pointerSensor] : []))
+  const sensors = useSensors(...(canEdit && !isMobile && !isLocked ? [pointerSensor] : []))
 
   const groupKeySet = useMemo(
     () => new Set(['unassigned', ...groupNums.map(String)]),
@@ -748,6 +815,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           handleReorder(fromGroup, newOrder)
         }
       } else if (fromGroup !== toGroup) {
+        const conflict = checkConflicts(activeIdStr, toGroup)
+        if (conflict) setConflictWarning(conflict)
         moveEvent(activeIdStr, fromGroup, toGroup)
       }
     }
@@ -759,6 +828,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const fromGroup = findGroup(String(active.id))
     const toGroup = resolveTargetGroup(over.id)
     if (fromGroup !== null && toGroup !== null && fromGroup !== toGroup) {
+      const conflict = checkConflicts(String(active.id), toGroup)
+      if (conflict) setConflictWarning(conflict)
       moveEvent(String(active.id), fromGroup, toGroup)
     }
   }
@@ -782,10 +853,73 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName })
   }
 
+  // Lock modal + conflict warning shared UI
+  const lockModal = showLockModal && (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowLockModal(false)} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="fixed inset-x-4 top-1/3 z-50 bg-white rounded-3xl shadow-2xl p-6 max-w-sm mx-auto"
+      >
+        <p className="text-center text-2xl mb-2">🎉</p>
+        <p className="text-center text-lg font-bold text-gray-800 mb-1">All dogs assigned!</p>
+        <p className="text-center text-sm text-gray-500 mb-5">Lock this schedule?</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowLockModal(false)}
+            className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold"
+          >
+            Not yet
+          </button>
+          <button
+            onClick={async () => {
+              setShowLockModal(false)
+              await lockSchedule()
+              onLocked?.()
+            }}
+            className="flex-1 py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm"
+          >
+            🔒 Lock it!
+          </button>
+        </div>
+      </motion.div>
+    </>
+  )
+
+  const conflictBanner = conflictWarning && (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 mb-3"
+    >
+      <div className="flex items-start gap-2">
+        <span className="text-lg flex-shrink-0">⚠️</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-amber-800">
+            {conflictWarning.dog1} and {conflictWarning.dog2} should not be in the same group
+          </p>
+          {conflictWarning.reason && (
+            <p className="text-xs text-amber-600 mt-0.5">{conflictWarning.reason}</p>
+          )}
+        </div>
+        <button
+          onClick={() => setConflictWarning(null)}
+          className="text-amber-400 text-lg leading-none flex-shrink-0"
+        >
+          ×
+        </button>
+      </div>
+    </motion.div>
+  )
+
   // ── Render ────────────────────────────────────────────────────────
   if (isMobile) {
     return (
       <div className="flex flex-col gap-3">
+        {conflictBanner}
+
         {/* Unassigned pool — collapse when empty */}
         {(groups.unassigned || []).length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
@@ -795,17 +929,18 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             eventIds={groups.unassigned || []}
             eventsMap={eventsMap}
             onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
-            selectedId={selectedId}
+            selectedId={isLocked ? null : selectedId}
             onDogTap={handleDogTap}
             onLongPress={handleLongPress}
             groupName={null}
             onRename={null}
-            isTarget={selectedId !== null && selectedGroup !== 'unassigned'}
+            isTarget={!isLocked && selectedId !== null && selectedGroup !== 'unassigned'}
             onTargetTap={() => handleGroupTap('unassigned')}
-            canEdit={canEdit}
+            canEdit={canEdit && !isLocked}
             isAdmin={isAdmin}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
+            isLocked={isLocked}
           />
         )}
 
@@ -817,22 +952,23 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             eventIds={groups[num] || []}
             eventsMap={eventsMap}
             onDogClick={(ev) => enrichDogClick(ev, num)}
-            selectedId={selectedId}
+            selectedId={isLocked ? null : selectedId}
             onDogTap={handleDogTap}
             onLongPress={handleLongPress}
             groupName={groupNames[num] || null}
             onRename={(name) => renameGroup(num, name)}
-            isTarget={selectedId !== null && selectedGroup !== num}
+            isTarget={!isLocked && selectedId !== null && selectedGroup !== num}
             onTargetTap={() => handleGroupTap(num)}
-            canEdit={canEdit}
+            canEdit={canEdit && !isLocked}
             isAdmin={isAdmin}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
+            isLocked={isLocked}
           />
         ))}
 
         {/* Add group button */}
-        {canEdit && (
+        {canEdit && !isLocked && (
           <button
             onClick={addGroup}
             className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#E8634A]/40 py-3 text-sm font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors min-h-[48px]"
@@ -861,6 +997,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             />
           )}
         </AnimatePresence>
+
+        <AnimatePresence>{lockModal}</AnimatePresence>
       </div>
     )
   }
@@ -875,6 +1013,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col gap-3">
+        {conflictBanner}
+
         {/* Unassigned pool — collapse when empty */}
         {(groups.unassigned || []).length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
@@ -887,10 +1027,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             activeId={activeId}
             groupName={null}
             onRename={null}
-            canEdit={canEdit}
+            canEdit={canEdit && !isLocked}
             isAdmin={isAdmin}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
+            isLocked={isLocked}
           />
         )}
 
@@ -904,14 +1045,15 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             activeId={activeId}
             groupName={groupNames[num] || null}
             onRename={(name) => renameGroup(num, name)}
-            canEdit={canEdit}
+            canEdit={canEdit && !isLocked}
             isAdmin={isAdmin}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
+            isLocked={isLocked}
           />
         ))}
 
-        {canEdit && (
+        {canEdit && !isLocked && (
           <button
             onClick={addGroup}
             className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#E8634A]/40 py-3 text-sm font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors"
@@ -927,6 +1069,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           </p>
         )}
       </div>
+
+      <AnimatePresence>{lockModal}</AnimatePresence>
 
       <DragOverlay>
         {activeEvent ? (
