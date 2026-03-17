@@ -89,8 +89,24 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-gray-300 pt-2">Wiggle Dog Walks · Montréal, QC</p>
-        <p className="text-center text-[10px] text-gray-300">{__APP_VERSION__}</p>
+        <div className="text-center pt-2 space-y-2">
+          <p className="text-xs text-gray-300">Wiggle Dog Walks · Montréal, QC</p>
+          <p className="text-[10px] text-gray-300">{__APP_VERSION__}</p>
+          <button
+            onClick={async () => {
+              const reg = window.__swRegistration
+              if (reg) {
+                await reg.update()
+                window.location.reload()
+              } else {
+                window.location.reload()
+              }
+            }}
+            className="text-[11px] text-gray-400 underline active:text-[#E8634A]"
+          >
+            Check for updates
+          </button>
+        </div>
       </main>
 
       <BottomTabs />

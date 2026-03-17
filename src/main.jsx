@@ -9,6 +9,7 @@ import App from './App.jsx'
 const updateSW = registerSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
+      window.__swRegistration = registration
       setInterval(() => {
         registration.update()
       }, 60 * 1000)
