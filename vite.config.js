@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const APP_VERSION = new Date().toISOString().slice(0, 16).replace('T', '-')
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   build: {
     rollupOptions: {
       output: {
@@ -21,6 +26,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Use virtual:pwa-register in main.jsx for periodic update checks
+      injectRegister: false,
       includeAssets: ['favicon-32x32.png', 'apple-touch-icon.png', 'WiggleLogo.png', 'play.jpg'],
       manifest: {
         name: 'Wiggle Dog Walks',
@@ -56,14 +63,14 @@ export default defineConfig({
               expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
-          // Supabase REST API — network-first with cache fallback
+          // Supabase REST API — network-first, short cache for fresh dog data
           {
             urlPattern: /^https:\/\/[^/]+\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
@@ -87,14 +94,14 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // Acuity API — network-first
+          // Acuity API — network-first, short cache
           {
             urlPattern: /\/api\/acuity.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'acuity-api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 5 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
