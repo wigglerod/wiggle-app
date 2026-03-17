@@ -121,8 +121,8 @@ function MapWithMarkers({ allDogs, groupLegend, onDogClick }) {
               geocodeCache.set(addr, coords)
               return { ...dog, ...coords }
             }
-          } catch {
-            // skip
+          } catch (err) {
+            console.warn('[geocode] failed for', addr, err.message)
           }
           return null
         })

@@ -176,6 +176,7 @@ export default function Schedule() {
         }))
       if (logs.length > 0) {
         supabase.from('match_log').upsert(logs, { onConflict: 'acuity_name,walk_date' })
+          .then(({ error }) => { if (error) console.error('[match_log] upsert failed:', error) })
       }
 
       const filtered = enriched.filter((ev) => !/TBD/i.test(ev.displayName || ''))

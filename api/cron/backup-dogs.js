@@ -43,7 +43,12 @@ export default async function handler(req, res) {
     const dogCount = backup.dogs.length
 
     // Ensure bucket exists (idempotent)
-    await supabase.storage.createBucket('backups', { public: false }).catch(() => {})
+    await supabase.storage.createBucket('backups', { public: false }).catch((err) => {
+      // "already exists" is expected and fine; anything else should be logged
+      if (!err.message?.includes('already exists')) {
+        console.error('[backup-dogs] createBucket failed:', err.message)
+      }
+    })
 
     // Upload backup
     const { error: uploadError } = await supabase.storage
@@ -85,13 +90,17 @@ export default async function handler(req, res) {
       timestamp: now.toISOString(),
     })
   } catch (err) {
-    // Log failure
+    console.error('[backup-dogs] FAILED:', err.message, err)
+
+    // Attempt to log failure to Supabase (may also fail if Supabase is down)
     await supabase.from('backups_log').insert({
       file_path: `backups/${fileName}`,
       dog_count: 0,
       status: 'failed',
       details: err.message,
-    }).catch(() => {})
+    }).catch((logErr) => {
+      console.error('[backup-dogs] Failed to write failure log to Supabase:', logErr.message)
+    })
 
     return res.status(500).json({ error: 'Backup failed', message: err.message })
   }

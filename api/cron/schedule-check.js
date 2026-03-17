@@ -165,8 +165,10 @@ export default async function handler(req, res) {
 }
 
 async function writeResults(supabase, date, checkTime, status, issuesFound, details, noteText, res) {
+  const errors = []
+
   // Write to schedule_checks
-  await supabase.from('schedule_checks').upsert(
+  const { error: checkErr } = await supabase.from('schedule_checks').upsert(
     {
       check_date: date,
       check_time: checkTime,
@@ -176,9 +178,13 @@ async function writeResults(supabase, date, checkTime, status, issuesFound, deta
     },
     { onConflict: 'check_date,check_time' }
   )
+  if (checkErr) {
+    console.error('[schedule-check] failed to write schedule_checks:', checkErr)
+    errors.push('schedule_checks: ' + checkErr.message)
+  }
 
   // Write daily note
-  await supabase.from('daily_notes').upsert(
+  const { error: noteErr } = await supabase.from('daily_notes').upsert(
     {
       note_date: date,
       note_text: noteText,
@@ -186,8 +192,12 @@ async function writeResults(supabase, date, checkTime, status, issuesFound, deta
     },
     { onConflict: 'note_date' }
   )
+  if (noteErr) {
+    console.error('[schedule-check] failed to write daily_notes:', noteErr)
+    errors.push('daily_notes: ' + noteErr.message)
+  }
 
-  return res.json({ status, issues_found: issuesFound, details })
+  return res.json({ status, issues_found: issuesFound, details, ...(errors.length > 0 && { write_errors: errors }) })
 }
 
 function toDateStr(d) {

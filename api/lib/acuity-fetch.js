@@ -58,7 +58,10 @@ export async function fetchAcuityDate(date) {
     `https://acuityscheduling.com/api/v1/appointments?minDate=${date}&maxDate=${date}&canceled=false`,
     { headers: { Authorization: `Basic ${auth}` } }
   )
-  if (!res.ok) return []
+  if (!res.ok) {
+    console.error('[acuity-fetch] API returned', res.status, res.statusText, 'for date', date)
+    return []
+  }
 
   const appointments = await res.json()
   return appointments.map(parseAppointment)
@@ -76,7 +79,10 @@ export async function fetchAcuityRange(startDate, endDate) {
     `https://acuityscheduling.com/api/v1/appointments?minDate=${startDate}&maxDate=${endDate}&canceled=false`,
     { headers: { Authorization: `Basic ${auth}` } }
   )
-  if (!res.ok) return []
+  if (!res.ok) {
+    console.error('[acuity-fetch] API returned', res.status, res.statusText, 'for range', startDate, '-', endDate)
+    return []
+  }
 
   const appointments = await res.json()
   return appointments.map(parseAppointment)

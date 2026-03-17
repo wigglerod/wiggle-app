@@ -39,8 +39,8 @@ export function enqueueOfflineAction(action) {
     const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
     queue.push({ ...action, timestamp: Date.now() })
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
-  } catch {
-    // localStorage full or unavailable
+  } catch (err) {
+    console.warn('[offline] failed to queue action:', err.message)
   }
 }
 
@@ -50,6 +50,7 @@ async function replayOfflineQueue() {
     if (queue.length === 0) return
 
     let synced = 0
+    let failed = 0
 
     for (const action of queue) {
       try {
@@ -64,8 +65,9 @@ async function replayOfflineQueue() {
           await q
           synced++
         }
-      } catch {
-        // Individual operation failed, skip
+      } catch (err) {
+        failed++
+        console.error('[offline-replay] failed action:', action.type, action.table, err.message)
       }
     }
 
@@ -73,8 +75,12 @@ async function replayOfflineQueue() {
     if (synced > 0) {
       toast.success(`Synced ${synced} change${synced > 1 ? 's' : ''}`)
     }
-  } catch {
-    // Queue replay failed
+    if (failed > 0) {
+      toast.error(`${failed} offline change${failed > 1 ? 's' : ''} failed to sync`)
+    }
+  } catch (err) {
+    console.error('[offline-replay] queue read failed:', err.message)
+    toast.error('Failed to sync offline changes')
   }
 }
 

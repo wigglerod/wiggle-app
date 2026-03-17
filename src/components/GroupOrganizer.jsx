@@ -620,7 +620,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   // Load dog conflicts
   useEffect(() => {
     async function loadConflicts() {
-      const { data } = await supabase.from('dog_conflicts').select('*')
+      const { data, error } = await supabase.from('dog_conflicts').select('*')
+      if (error) console.error('[conflicts] load failed:', error)
       if (data) setConflicts(data)
     }
     loadConflicts()

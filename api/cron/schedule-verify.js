@@ -128,7 +128,9 @@ export default async function handler(req, res) {
       },
     }
 
-    await supabase.from('schedule_checks').upsert(
+    const writeErrors = []
+
+    const { error: checkErr } = await supabase.from('schedule_checks').upsert(
       {
         check_date: todayStr,
         check_time: '10am',
@@ -138,6 +140,10 @@ export default async function handler(req, res) {
       },
       { onConflict: 'check_date,check_time' }
     )
+    if (checkErr) {
+      console.error('[schedule-verify] failed to write schedule_checks:', checkErr)
+      writeErrors.push('schedule_checks: ' + checkErr.message)
+    }
 
     // ── 5. Update daily note ──────────────────────────────────────────
     let noteText
@@ -149,7 +155,7 @@ export default async function handler(req, res) {
       if (resolved > 0) noteText += ` (${resolved} resolved since 9 AM)`
     }
 
-    await supabase.from('daily_notes').upsert(
+    const { error: noteErr } = await supabase.from('daily_notes').upsert(
       {
         note_date: todayStr,
         note_text: noteText,
@@ -157,8 +163,12 @@ export default async function handler(req, res) {
       },
       { onConflict: 'note_date' }
     )
+    if (noteErr) {
+      console.error('[schedule-verify] failed to write daily_notes:', noteErr)
+      writeErrors.push('daily_notes: ' + noteErr.message)
+    }
 
-    return res.json({ status, issues_found: issues.length, details })
+    return res.json({ status, issues_found: issues.length, details, ...(writeErrors.length > 0 && { write_errors: writeErrors }) })
   } catch (err) {
     return res.status(500).json({ error: 'Schedule verification failed', message: err.message })
   }
