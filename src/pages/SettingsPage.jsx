@@ -90,6 +90,7 @@ export default function SettingsPage() {
         </div>
 
         <p className="text-center text-xs text-gray-300 pt-2">Wiggle Dog Walks · Montréal, QC</p>
+        <p className="text-center text-[10px] text-gray-300">{__APP_VERSION__}</p>
       </main>
 
       <BottomTabs />
