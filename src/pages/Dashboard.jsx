@@ -251,7 +251,9 @@ export default function Dashboard() {
         .eq('walk_date', activeDate)
         .eq('locked', true)
         .limit(1)
-      setScheduleLocked(data && data.length > 0)
+      const locked = data && data.length > 0
+      setScheduleLocked(locked)
+      if (locked) setActiveTab('map')
     }
     checkLock()
   }, [activeDate, sector, refreshKey])
@@ -320,7 +322,7 @@ export default function Dashboard() {
             {sectorEmoji} {sectorLabel}
           </button>
 
-          {!loading && filteredEvents.length > 0 && (
+          {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
             <button
               onClick={() => setActiveTab((t) => (t === 'map' ? 'organizer' : 'map'))}
               className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all ${
@@ -404,20 +406,20 @@ export default function Dashboard() {
           )
         })()}
 
-        {/* Lock banner — tap to switch to organizer */}
+        {/* Lock banner — tap to toggle between organizer/map */}
         {!loading && scheduleLocked && (
           <div className="mb-3">
             <button
-              onClick={() => setActiveTab('organizer')}
+              onClick={() => setActiveTab(activeTab === 'map' ? 'organizer' : 'map')}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm font-semibold text-center select-none active:bg-gray-700"
             >
-              🔒 Schedule locked — tap to view organizer
+              🔒 Schedule locked — tap to view {activeTab === 'map' ? 'organizer' : 'map'}
             </button>
           </div>
         )}
 
         {/* Organizer / Map with slide transition */}
-        {!loading && filteredEvents.length > 0 && (
+        {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'organizer' ? (
               <motion.div
@@ -467,10 +469,11 @@ export default function Dashboard() {
                 <MapTabBoundary>
                   <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
                     <MapView
-                      events={filteredEvents}
+                      events={scheduleLocked ? allEvents : filteredEvents}
                       date={activeDate}
-                      sector={sector}
+                      sector={scheduleLocked ? 'both' : sector}
                       onDogClick={setSelectedEvent}
+                      lockedView={scheduleLocked}
                     />
                   </Suspense>
                 </MapTabBoundary>

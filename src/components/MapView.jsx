@@ -235,7 +235,7 @@ function SortableDogRow({ dog, index, onDogClick, color, id }) {
 }
 
 // ── Main export ─────────────────────────────────────────────────────
-export default function MapView({ events, date, sector, onDogClick }) {
+export default function MapView({ events, date, sector, onDogClick, lockedView }) {
   const [walkGroups, setWalkGroups] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
@@ -441,6 +441,92 @@ export default function MapView({ events, date, sector, onDogClick }) {
         <p className="text-sm font-semibold text-gray-600">No dogs assigned to groups yet</p>
         <p className="text-xs text-gray-400">Use the Organizer tab to assign dogs to groups.</p>
       </div>
+    )
+  }
+
+  // Locked sector-separated view: separate map per sector
+  if (lockedView) {
+    // Filter out done groups per sector (reads same localStorage as GroupOrganizer)
+    const activeSections = sections.map(sec => {
+      let doneNums = new Set()
+      try {
+        const raw = localStorage.getItem(`doneGroups_${date}_${sec.sectorName}`)
+        if (raw) doneNums = new Set(JSON.parse(raw))
+      } catch { /* ignore */ }
+      return {
+        ...sec,
+        groups: sec.groups.filter(g => !doneNums.has(g.groupNum))
+      }
+    }).filter(sec => sec.groups.length > 0)
+
+    if (activeSections.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <span className="text-4xl">🗺️</span>
+          <p className="text-sm font-semibold text-gray-600">No groups assigned yet</p>
+          <p className="text-xs text-gray-400">Dogs need to be organized into groups first.</p>
+        </div>
+      )
+    }
+
+    return (
+      <MapErrorBoundary
+        fallback={
+          <div className="flex flex-col items-center justify-center py-10 gap-3 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <span className="text-4xl">🗺️</span>
+            <p className="text-sm font-semibold text-gray-600">Map couldn&apos;t load</p>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-6">
+          {GOOGLE_MAPS_KEY ? (
+            <MapErrorBoundary fallback={null}>
+              <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+                {activeSections.map((sec) => {
+                  const sectorDogs = []
+                  const sectorLegend = []
+                  for (const group of sec.groups) {
+                    const color = getGroupColor(group.groupNum)
+                    sectorLegend.push({ name: group.groupName, color })
+                    for (const dog of group.dogs) {
+                      sectorDogs.push({ ...dog, color, groupName: group.groupName })
+                    }
+                  }
+                  return (
+                    <div key={sec.sectorName} className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${sec.sectorName === 'Plateau' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                        <h2 className="text-base font-bold text-gray-700">{sec.sectorName}</h2>
+                        <span className="text-xs text-gray-400">
+                          {sec.groups.reduce((sum, g) => sum + g.dogs.length + g.noAddr.length, 0)} dogs
+                        </span>
+                      </div>
+                      {sectorDogs.length > 0 && (
+                        <MapWithMarkers allDogs={sectorDogs} groupLegend={sectorLegend} onDogClick={onDogClick} />
+                      )}
+                      {sec.groups.map((g) => (
+                        <GroupCard key={g.groupNum} group={g} onDogClick={onDogClick} isLocked />
+                      ))}
+                    </div>
+                  )
+                })}
+              </APIProvider>
+            </MapErrorBoundary>
+          ) : (
+            activeSections.map((sec) => (
+              <div key={sec.sectorName} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${sec.sectorName === 'Plateau' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                  <h2 className="text-base font-bold text-gray-700">{sec.sectorName}</h2>
+                </div>
+                {sec.groups.map((g) => (
+                  <GroupCard key={g.groupNum} group={g} onDogClick={onDogClick} isLocked />
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </MapErrorBoundary>
     )
   }
 

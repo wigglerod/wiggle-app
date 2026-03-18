@@ -118,7 +118,7 @@ export function useWalkGroups(events, date, sector) {
 
           // Sync locked state from realtime
           if (row.locked !== undefined) {
-            setIsLocked((prev) => row.locked || prev)
+            setIsLocked(row.locked)
           }
 
           setGroups((prev) => {
