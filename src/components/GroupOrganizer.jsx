@@ -24,6 +24,103 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import confetti from 'canvas-confetti'
 
+// ── Done groups persistence (localStorage) ──────────────────────────
+function getDoneKey(date, sector) { return `doneGroups_${date}_${sector}` }
+
+function getDoneGroups(date, sector) {
+  try {
+    const raw = localStorage.getItem(getDoneKey(date, sector))
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch { return new Set() }
+}
+
+function setDoneGroups(date, sector, doneSet) {
+  localStorage.setItem(getDoneKey(date, sector), JSON.stringify([...doneSet]))
+}
+
+// ── Swipeable wrapper (CSS transitions only) ─────────────────────────
+function SwipeableGroup({ groupNum, onDone, children }) {
+  const startX = useRef(null)
+  const currentX = useRef(0)
+  const containerRef = useRef(null)
+  const [offset, setOffset] = useState(0)
+  const [revealed, setRevealed] = useState(false)
+
+  function handleTouchStart(e) {
+    startX.current = e.touches[0].clientX
+    currentX.current = offset
+  }
+
+  function handleTouchMove(e) {
+    if (startX.current === null) return
+    const dx = e.touches[0].clientX - startX.current
+    const next = Math.min(0, Math.max(-120, currentX.current + dx))
+    setOffset(next)
+  }
+
+  function handleTouchEnd() {
+    startX.current = null
+    if (offset < -60) {
+      setRevealed(true)
+      setOffset(-100)
+    } else {
+      setRevealed(false)
+      setOffset(0)
+    }
+  }
+
+  function handleDone() {
+    // Slide the whole thing out
+    setOffset(-window.innerWidth)
+    setTimeout(() => onDone(groupNum), 300)
+  }
+
+  function handleCancel() {
+    setRevealed(false)
+    setOffset(0)
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Green "Done" backdrop */}
+      <div className="absolute inset-0 flex items-center justify-end bg-emerald-500 rounded-2xl">
+        {revealed ? (
+          <div className="flex items-center gap-2 pr-3">
+            <button
+              onClick={handleDone}
+              className="px-4 py-2 rounded-xl bg-white text-emerald-700 text-sm font-bold active:bg-emerald-50"
+            >
+              ✓ Done
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-3 py-2 rounded-xl text-white/80 text-xs font-medium active:text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <span className="pr-6 text-white text-sm font-semibold">✓ Done</span>
+        )}
+      </div>
+      {/* Sliding content */}
+      <div
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: startX.current !== null ? 'none' : 'transform 0.3s ease',
+        }}
+        className="relative z-10"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // Color cycle for numbered groups
 const GROUP_COLORS = [
   { color: 'bg-blue-50',   accent: 'border-blue-400'   },
@@ -613,6 +710,30 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule } =
     useWalkGroups(events, date, sector)
 
+  // Done groups state (localStorage-backed)
+  const [doneGroupNums, setDoneGroupNums] = useState(new Set())
+
+  useEffect(() => {
+    if (date && sector) setDoneGroupNums(getDoneGroups(date, sector))
+  }, [date, sector])
+
+  const markGroupDone = useCallback((num) => {
+    setDoneGroupNums(prev => {
+      const next = new Set([...prev, num])
+      setDoneGroups(date, sector, next)
+      return next
+    })
+  }, [date, sector])
+
+  const undoGroupDone = useCallback((num) => {
+    setDoneGroupNums(prev => {
+      const next = new Set([...prev])
+      next.delete(num)
+      setDoneGroups(date, sector, next)
+      return next
+    })
+  }, [date, sector])
+
   // Conflict detection state
   const [conflicts, setConflicts] = useState([])
   const [dismissedConflictKeys, setDismissedConflictKeys] = useState(new Set())
@@ -1003,29 +1124,87 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           />
         )}
 
-        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => (
-          <MobileGroup
-            key={num}
-            groupKey={String(num)}
-            eventIds={groups[num] || []}
-            eventsMap={eventsMap}
-            onDogClick={(ev) => enrichDogClick(ev, num)}
-            selectedId={isLocked ? null : selectedId}
-            onDogTap={handleDogTap}
-            onLongPress={handleLongPress}
-            groupName={groupNames[num] || null}
-            onRename={(name) => renameGroup(num, name)}
-            isTarget={!isLocked && selectedId !== null && selectedGroup !== num}
-            onTargetTap={() => handleGroupTap(num)}
-            canEdit={canEdit && !isLocked}
-            isAdmin={isAdmin}
-            onReorder={handleReorder}
-            owlDogIdSet={owlDogIdSet}
-            isLocked={isLocked}
-            conflictDogIds={conflictDogIds}
-            hasConflict={conflictGroupNums.has(num)}
-          />
-        ))}
+        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
+          const isDone = doneGroupNums.has(num)
+
+          // Locked view: hide done groups, wrap remaining in swipeable
+          if (isLocked) {
+            if (isDone) return null
+            return (
+              <SwipeableGroup key={num} groupNum={num} onDone={markGroupDone}>
+                <MobileGroup
+                  groupKey={String(num)}
+                  eventIds={groups[num] || []}
+                  eventsMap={eventsMap}
+                  onDogClick={(ev) => enrichDogClick(ev, num)}
+                  selectedId={null}
+                  onDogTap={handleDogTap}
+                  onLongPress={handleLongPress}
+                  groupName={groupNames[num] || null}
+                  onRename={null}
+                  isTarget={false}
+                  onTargetTap={() => {}}
+                  canEdit={false}
+                  isAdmin={isAdmin}
+                  onReorder={handleReorder}
+                  owlDogIdSet={owlDogIdSet}
+                  isLocked={isLocked}
+                  conflictDogIds={conflictDogIds}
+                  hasConflict={conflictGroupNums.has(num)}
+                />
+              </SwipeableGroup>
+            )
+          }
+
+          // Unlocked/organizer view: show done groups greyed out with undo
+          return (
+            <div key={num} className="relative">
+              {isDone && (
+                <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
+                  <span className="text-emerald-600 font-bold text-sm">✓ Done</span>
+                  <button
+                    onClick={() => undoGroupDone(num)}
+                    className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm"
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              <div className={isDone ? 'opacity-40 pointer-events-none' : ''}>
+                <MobileGroup
+                  groupKey={String(num)}
+                  eventIds={groups[num] || []}
+                  eventsMap={eventsMap}
+                  onDogClick={(ev) => enrichDogClick(ev, num)}
+                  selectedId={isLocked ? null : selectedId}
+                  onDogTap={handleDogTap}
+                  onLongPress={handleLongPress}
+                  groupName={groupNames[num] || null}
+                  onRename={(name) => renameGroup(num, name)}
+                  isTarget={!isLocked && selectedId !== null && selectedGroup !== num}
+                  onTargetTap={() => handleGroupTap(num)}
+                  canEdit={canEdit && !isLocked}
+                  isAdmin={isAdmin}
+                  onReorder={handleReorder}
+                  owlDogIdSet={owlDogIdSet}
+                  isLocked={isLocked}
+                  conflictDogIds={conflictDogIds}
+                  hasConflict={conflictGroupNums.has(num)}
+                />
+              </div>
+            </div>
+          )
+        })}
+
+        {isLocked && doneGroupNums.size > 0 && (
+          <p className="text-center text-xs text-emerald-600 font-medium py-1">
+            ✓ {doneGroupNums.size} group{doneGroupNums.size > 1 ? 's' : ''} done
+          </p>
+        )}
+
+        {isLocked && isMobile && doneGroupNums.size === 0 && groupNums.length > 0 && (
+          <p className="text-center text-[10px] text-gray-300 pt-1">← Swipe a group left to mark done</p>
+        )}
 
         {canEdit && !isLocked && (
           <button
@@ -1095,25 +1274,54 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           />
         )}
 
-        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || activeId !== null).map((num) => (
-          <DesktopGroup
-            key={num}
-            groupKey={String(num)}
-            eventIds={groups[num] || []}
-            eventsMap={eventsMap}
-            onDogClick={(ev) => enrichDogClick(ev, num)}
-            activeId={activeId}
-            groupName={groupNames[num] || null}
-            onRename={(name) => renameGroup(num, name)}
-            canEdit={canEdit && !isLocked}
-            isAdmin={isAdmin}
-            onReorder={handleReorder}
-            owlDogIdSet={owlDogIdSet}
-            isLocked={isLocked}
-            conflictDogIds={conflictDogIds}
-            hasConflict={conflictGroupNums.has(num)}
-          />
-        ))}
+        {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || activeId !== null).map((num) => {
+          const isDone = doneGroupNums.has(num)
+
+          // Locked view: hide done groups (desktop has no swipe — use click button instead)
+          if (isLocked && isDone) return null
+
+          return (
+            <div key={num} className="relative">
+              {!isLocked && isDone && (
+                <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
+                  <span className="text-emerald-600 font-bold text-sm">✓ Done</span>
+                  <button
+                    onClick={() => undoGroupDone(num)}
+                    className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm"
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              <div className={!isLocked && isDone ? 'opacity-40 pointer-events-none' : ''}>
+                <DesktopGroup
+                  groupKey={String(num)}
+                  eventIds={groups[num] || []}
+                  eventsMap={eventsMap}
+                  onDogClick={(ev) => enrichDogClick(ev, num)}
+                  activeId={activeId}
+                  groupName={groupNames[num] || null}
+                  onRename={(name) => renameGroup(num, name)}
+                  canEdit={canEdit && !isLocked}
+                  isAdmin={isAdmin}
+                  onReorder={handleReorder}
+                  owlDogIdSet={owlDogIdSet}
+                  isLocked={isLocked}
+                  conflictDogIds={conflictDogIds}
+                  hasConflict={conflictGroupNums.has(num)}
+                />
+              </div>
+              {isLocked && !isDone && (
+                <button
+                  onClick={() => markGroupDone(num)}
+                  className="mt-1 w-full py-2 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-semibold active:bg-emerald-100 transition-colors"
+                >
+                  ✓ Mark as done
+                </button>
+              )}
+            </div>
+          )
+        })}
 
         {canEdit && !isLocked && (
           <button
