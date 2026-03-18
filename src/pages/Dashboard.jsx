@@ -119,7 +119,6 @@ export default function Dashboard() {
         if (res.ok) {
           const acuityEvents = await res.json()
           rawEvents = acuityEvents
-            .filter((ev) => profileSector === 'both' || ev.sector === profileSector)
             .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
         }
       } catch {
@@ -128,9 +127,14 @@ export default function Dashboard() {
 
       _idCounter = 0
 
-      const matched = matchEvents(rawEvents, dogs, nameMap)
-      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod }) => ({
+      // Match ALL events first, then filter by effective sector (dogs.sector overrides Acuity calendar)
+      const allMatched = matchEvents(rawEvents, dogs, nameMap)
+      const matched = profileSector === 'both'
+        ? allMatched
+        : allMatched.filter((m) => (m.sectorOverride || m.event.sector) === profileSector)
+      const enriched = matched.map(({ event, displayName, breed, dog, matchType, matchMethod, sectorOverride }) => ({
         ...event,
+        ...(sectorOverride ? { sector: sectorOverride } : {}),
         _id: uid(),
         displayName,
         breed,
