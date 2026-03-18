@@ -10,7 +10,7 @@ const SECTOR_COLORS = {
 }
 
 export default function Header({ date }) {
-  const { profile, isAdmin, signOut } = useAuth()
+  const { profile, isAdmin, isChiefPup, signOut } = useAuth()
   const [owlOpen, setOwlOpen] = useState(false)
   const owlCount = useOwlNoteCount()
 
@@ -55,7 +55,7 @@ export default function Header({ date }) {
                 )}
               </button>
             )}
-            {isAdmin && (
+            {isChiefPup && (
               <a
                 href="/admin"
                 className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-medium min-h-[32px] flex items-center"

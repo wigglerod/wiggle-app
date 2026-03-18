@@ -685,15 +685,24 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const conflictDogIds = new Set(visibleConflicts.flatMap(c => [c.dog1Id, c.dog2Id]))
 
   // ── Confetti tracking ─────────────────────────────────────────────
+  // Confetti fires ONCE when all dogs assigned AND schedule is locked.
+  // localStorage flag prevents repeat on same day.
   const confettiFiredRef = useRef(false)
 
   useEffect(() => {
     if (!loaded) return
     const totalDogs = events.length
     const unassignedCount = (groups.unassigned || []).length
-    if (totalDogs > 0 && unassignedCount === 0) {
-      if (!confettiFiredRef.current) {
+    const allAssigned = totalDogs > 0 && unassignedCount === 0
+
+    if (allAssigned && isLocked) {
+      const today = new Date().toISOString().slice(0, 10)
+      const storageKey = `confetti_shown_${today}`
+      const alreadyShown = localStorage.getItem(storageKey)
+
+      if (!confettiFiredRef.current && !alreadyShown) {
         confettiFiredRef.current = true
+        localStorage.setItem(storageKey, '1')
         const end = Date.now() + 2000
         const frame = () => {
           confetti({
@@ -706,15 +715,16 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           if (Date.now() < end) requestAnimationFrame(frame)
         }
         frame()
-
-        if (!isLocked && !lockModalShownRef.current && canEdit) {
-          lockModalShownRef.current = true
-          setTimeout(() => setShowLockModal(true), 2200)
-        }
       }
-    } else {
+    } else if (!allAssigned) {
       confettiFiredRef.current = false
       lockModalShownRef.current = false
+    }
+
+    // Show lock modal when all assigned but NOT yet locked
+    if (allAssigned && !isLocked && !lockModalShownRef.current && canEdit) {
+      lockModalShownRef.current = true
+      setTimeout(() => setShowLockModal(true), 500)
     }
   }, [loaded, events.length, groups.unassigned, isLocked, canEdit])
 

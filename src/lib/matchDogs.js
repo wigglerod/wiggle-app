@@ -43,9 +43,6 @@ export function matchDog(calendarName, dogs) {
 // Multi-signal matching system
 // ---------------------------------------------------------------------------
 
-// Sector overrides — dogs that always belong to a specific sector
-const SECTOR_OVERRIDES = { Paloma: 'Plateau' }
-
 /**
  * Build a name map from Supabase rows.
  * Supports optional acuity_email for email-conditional disambiguation.
@@ -98,10 +95,10 @@ export function matchEvents(events, dogs, nameMap = new Map()) {
   for (const ev of events) {
     results.push(...matchSingleEvent(ev, dogs, nameMap))
   }
-  // Apply sector overrides
+  // dogs.sector is the source of truth — override Acuity calendar sector
   for (const r of results) {
-    if (r.dog && SECTOR_OVERRIDES[r.dog.dog_name]) {
-      r.sectorOverride = SECTOR_OVERRIDES[r.dog.dog_name]
+    if (r.dog && r.dog.sector && r.dog.sector !== r.event.sector) {
+      r.sectorOverride = r.dog.sector
     }
   }
   return results
