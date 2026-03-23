@@ -36,11 +36,15 @@ export function AuthProvider({ children }) {
   }, [])
 
   const role = profile?.role || null
+  const sector = profile?.sector || null
+  const schedule = profile?.schedule || null
   const value = {
     session,
     profile,
     user: session?.user ?? null,
     role,
+    sector,
+    schedule,
     isChiefPup: role === 'admin', // Only true admin (Chief Pup)
     isAdmin: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
     isSenior: role === 'senior_walker',
