@@ -1,6 +1,6 @@
 export function getPermissions(role) {
   return {
-    canEditGroups: role === 'admin',
+    canEditGroups: role === 'admin' || role === 'senior_walker' || role === 'junior_walker',
     canLogWalks: role === 'admin' || role === 'senior_walker',
     canAccessAdmin: role === 'admin',
     canAccessSettings: role === 'admin',

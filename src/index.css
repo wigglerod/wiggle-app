@@ -82,6 +82,68 @@ input, textarea, select {
   border-width: 3px !important;
 }
 
+/* Lock wiggle — pronounced shake for lock icon */
+@keyframes lock-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(6deg); }
+}
+.animate-wiggle {
+  animation: lock-wiggle 0.5s ease-in-out;
+}
+
+/* Lock hold fill — left-to-right coral fill */
+@keyframes lock-fill {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+.animate-lock-fill {
+  animation: lock-fill 1s linear forwards;
+}
+
+/* 3D chip — raised card with bottom shadow border */
+.chip-3d {
+  border-bottom-width: 3px;
+  border-bottom-color: #d1d5db;
+}
+.chip-3d:active {
+  transform: translateY(1px);
+  border-bottom-width: 2px;
+}
+.chip-3d-amber {
+  border-bottom-width: 3px;
+  border-bottom-color: #d97706;
+}
+.chip-3d-amber:active {
+  transform: translateY(1px);
+  border-bottom-width: 2px;
+}
+.chip-3d-red {
+  border-bottom-width: 3px;
+  border-bottom-color: #dc2626;
+}
+.chip-selected {
+  animation: chip-bounce 0.5s ease-in-out;
+}
+@keyframes chip-bounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.03); }
+  60% { transform: scale(0.98); }
+}
+
+/* Group target pulse — coral dashed border when dog is selected */
+.group-target-pulse {
+  border-color: #E8634A !important;
+  background-color: #FFF4F1 !important;
+  animation: target-pulse 1.2s ease-in-out infinite;
+}
+@keyframes target-pulse {
+  0%, 100% { border-color: #E8634A; }
+  50% { border-color: #E8634A80; }
+}
+
 /* SOS banner pulse — initial 3s pulse then solid */
 @keyframes sos-banner-pulse {
   0%, 100% { opacity: 1; }

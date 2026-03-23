@@ -47,11 +47,17 @@ export function useOwlNotes(sector) {
         .delete()
         .lt('expires_at', new Date().toISOString())
 
-      // Fetch remaining notes
-      const { data, error } = await supabase
+      // Fetch remaining notes — walkers only see their sector + global notes
+      let query = supabase
         .from('owl_notes')
         .select('*')
         .order('created_at', { ascending: false })
+
+      if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
+        query = query.or(`target_sector.eq.${userSector},and(target_sector.is.null,target_dog_id.is.null)`)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         toast.error('Failed to load owl notes')
@@ -70,12 +76,13 @@ export function useOwlNotes(sector) {
     }
 
     load()
-  }, [])
+  }, [permissions?.canSeeAllSectors, userSector])
 
   // Realtime subscription
   useEffect(() => {
+    const channelName = `owl-notes-realtime-${userSector || 'all'}`
     const channel = supabase
-      .channel('owl-notes-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -85,7 +92,13 @@ export function useOwlNotes(sector) {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setNotes((prev) => [payload.new, ...prev])
+            const note = payload.new
+            // Sector filter for walkers on realtime events
+            if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
+              if (note.target_sector && note.target_sector !== userSector) return
+              if (!note.target_sector && note.target_dog_id) return
+            }
+            setNotes((prev) => [note, ...prev])
           } else if (payload.eventType === 'UPDATE') {
             setNotes((prev) =>
               prev.map((n) => (n.id === payload.new.id ? payload.new : n))
@@ -100,7 +113,7 @@ export function useOwlNotes(sector) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [permissions?.canSeeAllSectors, userSector])
 
   // Create a new owl note
   const createNote = useCallback(
@@ -194,8 +207,13 @@ export function useOwlNotes(sector) {
     if (n.expires_at && n.last_acknowledged_date === today) return false
     // Sector filter for walkers
     if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
-      if (n.target_type === 'dog' && n.target_sector && n.target_sector !== userSector) return false
-      if (n.target_type === 'sector' && n.target_sector && n.target_sector !== userSector) return false
+      if (n.target_sector) {
+        if (n.target_sector !== userSector) return false
+      } else if (n.target_dog_id) {
+        // null target_sector but targets a specific dog — hide (likely other sector)
+        return false
+      }
+      // null target_sector + null target_dog_id = global note, show to everyone
     }
     return true
   })

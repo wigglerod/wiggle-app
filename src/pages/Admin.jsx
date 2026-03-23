@@ -458,23 +458,30 @@ function DogFormModal({ dog, onClose, onSaved }) {
   )
 }
 
-function DatabaseSection() {
+function SystemSection({ dogs }) {
+  const [profiles, setProfiles] = useState([])
+  const [notesToday, setNotesToday] = useState(0)
   const [backups, setBackups] = useState([])
   const [loading, setLoading] = useState(true)
   const [backing, setBacking] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
-  async function loadBackups() {
-    setLoading(true)
-    const { data } = await supabase
-      .from('backups_log')
-      .select('*')
-      .order('backup_date', { ascending: false })
-      .limit(7)
-    setBackups(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => { loadBackups() }, [])
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const today = new Date().toISOString().split('T')[0]
+      const [profilesRes, notesRes, backupsRes] = await Promise.all([
+        supabase.from('profiles').select('id, email, full_name, role, sector, schedule').order('full_name'),
+        supabase.from('owl_notes').select('id', { count: 'exact', head: true }).gte('created_at', today + 'T00:00:00'),
+        supabase.from('backups_log').select('*').order('backup_date', { ascending: false }).limit(7),
+      ])
+      setProfiles(profilesRes.data || [])
+      setNotesToday(notesRes.count || 0)
+      setBackups(backupsRes.data || [])
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   async function runBackup() {
     setBacking(true)
@@ -483,7 +490,8 @@ function DatabaseSection() {
       const result = await res.json()
       if (res.ok) {
         toast.success(`Backup saved! ${result.dogCount} dogs protected.`)
-        loadBackups()
+        const { data } = await supabase.from('backups_log').select('*').order('backup_date', { ascending: false }).limit(7)
+        setBackups(data || [])
       } else {
         toast.error(`Backup failed: ${result.message || result.error}`)
       }
@@ -493,72 +501,124 @@ function DatabaseSection() {
     setBacking(false)
   }
 
+  const walkerCount = profiles.filter(p => ['admin', 'senior_walker', 'junior_walker'].includes(p.role)).length
   const last = backups[0]
+
+  const ROLE_LABELS = { admin: 'Admin', senior_walker: 'Senior', junior_walker: 'Junior' }
+  const ROLE_COLORS = { admin: 'bg-purple-100 text-purple-700', senior_walker: 'bg-blue-100 text-blue-700', junior_walker: 'bg-green-100 text-green-700' }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Backup Now */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-1">Database Protection</h3>
-        <p className="text-xs text-gray-400 mb-4">93 dogs, audit logging, nightly backups at 2 AM ET</p>
-
-        <button
-          onClick={runBackup}
-          disabled={backing}
-          className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] disabled:opacity-50 transition-all"
-        >
-          {backing ? 'Backing up...' : '📦 Backup Now'}
-        </button>
-
-        {last && (
-          <p className="text-xs text-gray-400 mt-3 text-center">
-            Last backup: {new Date(last.backup_date).toLocaleString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium', timeStyle: 'short' })}
-            {' '}({last.dog_count} dogs) — {last.status === 'success' ? '✅' : '❌'}
-          </p>
-        )}
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+          <p className="text-2xl font-bold text-[#E8634A]">{dogs.length}</p>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">Dogs</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+          <p className="text-2xl font-bold text-[#E8634A]">{walkerCount}</p>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">Walkers</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
+          <p className="text-2xl font-bold text-[#E8634A]">{notesToday}</p>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">Notes today</p>
+        </div>
       </div>
 
-      {/* Backup History */}
+      {/* Profiles list */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <h3 className="text-sm font-bold text-gray-700 mb-3">Backup History (last 7)</h3>
-
+        <h3 className="text-sm font-bold text-gray-700 mb-3">Team</h3>
         {loading && <p className="text-xs text-gray-400 py-4 text-center">Loading...</p>}
-
-        {!loading && backups.length === 0 && (
-          <p className="text-xs text-gray-400 py-4 text-center">No backups yet. Hit the button above!</p>
-        )}
-
-        {!loading && backups.map((b) => (
-          <div key={b.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                {new Date(b.backup_date).toLocaleDateString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium' })}
-              </p>
-              <p className="text-xs text-gray-400">
-                {new Date(b.backup_date).toLocaleTimeString('en-CA', { timeZone: 'America/Toronto', timeStyle: 'short' })}
-                {' · '}{b.dog_count} dogs
-              </p>
+        {!loading && profiles.map((p) => (
+          <div key={p.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-700 truncate">{p.full_name || p.email}</p>
+              {p.full_name && <p className="text-xs text-gray-400 truncate">{p.email}</p>}
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-              b.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}>
-              {b.status === 'success' ? '✅ OK' : '❌ Failed'}
-            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {p.sector && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                  {p.sector}
+                </span>
+              )}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${ROLE_COLORS[p.role] || 'bg-gray-100 text-gray-500'}`}>
+                {ROLE_LABELS[p.role] || p.role}
+              </span>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Protection Status */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <h3 className="text-sm font-bold text-gray-700 mb-3">Protection Status</h3>
-        <div className="flex flex-col gap-1.5 text-xs">
-          <p className="text-gray-600">✅ DROP TABLE blocked (event trigger)</p>
-          <p className="text-gray-600">✅ TRUNCATE blocked (statement trigger)</p>
-          <p className="text-gray-600">✅ Audit log on every INSERT/UPDATE/DELETE</p>
-          <p className="text-gray-600">✅ Nightly backup at 2:00 AM ET</p>
-          <p className="text-gray-600">✅ Seed script requires --force if table has data</p>
+      {/* Advanced — collapsible */}
+      <button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="flex items-center justify-between bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 active:bg-gray-50"
+      >
+        <span>Advanced</span>
+        <span className="text-xs">{showAdvanced ? '▴' : '▾'}</span>
+      </button>
+
+      {showAdvanced && (
+        <div className="flex flex-col gap-4">
+          {/* Backup */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-1">Database Protection</h3>
+            <p className="text-xs text-gray-400 mb-4">{dogs.length} dogs, audit logging, nightly backups at 2 AM ET</p>
+            <button
+              onClick={runBackup}
+              disabled={backing}
+              className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] disabled:opacity-50 transition-all"
+            >
+              {backing ? 'Backing up...' : '📦 Backup Now'}
+            </button>
+            {last && (
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Last backup: {new Date(last.backup_date).toLocaleString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium', timeStyle: 'short' })}
+                {' '}({last.dog_count} dogs) — {last.status === 'success' ? '✅' : '❌'}
+              </p>
+            )}
+          </div>
+
+          {/* Backup History */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Backup History (last 7)</h3>
+            {loading && <p className="text-xs text-gray-400 py-4 text-center">Loading...</p>}
+            {!loading && backups.length === 0 && (
+              <p className="text-xs text-gray-400 py-4 text-center">No backups yet.</p>
+            )}
+            {!loading && backups.map((b) => (
+              <div key={b.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    {new Date(b.backup_date).toLocaleDateString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'medium' })}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(b.backup_date).toLocaleTimeString('en-CA', { timeZone: 'America/Toronto', timeStyle: 'short' })}
+                    {' · '}{b.dog_count} dogs
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                  b.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {b.status === 'success' ? '✅ OK' : '❌ Failed'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Protection Status */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Protection Status</h3>
+            <div className="flex flex-col gap-1.5 text-xs">
+              <p className="text-gray-600">✅ DROP TABLE blocked (event trigger)</p>
+              <p className="text-gray-600">✅ TRUNCATE blocked (statement trigger)</p>
+              <p className="text-gray-600">✅ Audit log on every INSERT/UPDATE/DELETE</p>
+              <p className="text-gray-600">✅ Nightly backup at 2:00 AM ET</p>
+              <p className="text-gray-600">✅ Seed script requires --force if table has data</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -667,7 +727,7 @@ export default function Admin() {
 
       {/* Tab bar */}
       <div className="flex bg-white border-b border-gray-100 sticky top-[88px] z-20">
-        {['dogs', 'logs', 'owl', 'beast', 'database'].map((tab) => (
+        {['dogs', 'logs', 'owl', 'beast', 'system'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -677,7 +737,7 @@ export default function Admin() {
                 : 'border-transparent text-gray-400'
             }`}
           >
-            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : tab === 'owl' ? '🦉 Owl' : tab === 'beast' ? '🔥 Beast' : '🛡️ Database'}
+            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Walk Logs' : tab === 'owl' ? '🦉 Owl' : tab === 'beast' ? '🔥 Beast' : '⚙️ System'}
           </button>
         ))}
       </div>
@@ -833,7 +893,7 @@ export default function Admin() {
         {/* Database tab */}
         {activeTab === 'beast' && <BeastChat />}
 
-        {!loading && activeTab === 'database' && <DatabaseSection />}
+        {!loading && activeTab === 'system' && <SystemSection dogs={dogs} />}
       </main>
 
       {/* Dog form modal */}
