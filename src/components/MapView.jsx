@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { getTodayDayName } from '../lib/useAltAddress'
 import {
   DndContext,
   DragOverlay,
@@ -57,13 +58,13 @@ function buildRouteUrl(addresses) {
   return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=walking`
 }
 
-function orderedDogs(dogIds, eventsMap) {
+function orderedDogs(dogIds, eventsMap, addrResolver) {
   const dogs = []
   const noAddr = []
   for (const id of [...new Set(dogIds || [])]) {
     const ev = eventsMap.get(String(id))
     if (!ev) continue
-    const addr = ev.dog?.address || ev.location
+    const addr = addrResolver ? addrResolver(ev) : (ev.dog?.address || ev.location)
     if (addr && addr.trim()) {
       dogs.push({ event: ev, address: addr.trim() })
     } else {
@@ -263,6 +264,21 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
     load()
   }, [date, sector])
 
+  // Alt address lookup: dogId → alt address for today
+  const [altAddrMap, setAltAddrMap] = useState({})
+  useEffect(() => {
+    const dogIds = (events || []).map(ev => ev.dog?.id).filter(Boolean)
+    if (dogIds.length === 0) return
+    const today = getTodayDayName()
+    supabase.from('dog_alt_addresses').select('dog_id, address')
+      .eq('day_of_week', today).in('dog_id', dogIds)
+      .then(({ data }) => {
+        const m = {}
+        for (const row of data || []) m[row.dog_id] = row.address
+        setAltAddrMap(m)
+      })
+  }, [events])
+
   const eventsMap = useMemo(() => {
     const m = new Map()
     for (const ev of events || []) {
@@ -270,6 +286,12 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
     }
     return m
   }, [events])
+
+  function resolveAddress(ev) {
+    const dogId = ev?.dog?.id
+    if (dogId && altAddrMap[dogId]) return altAddrMap[dogId]
+    return ev?.dog?.address || ev?.location || ''
+  }
 
   const { sections, unassigned, dogsWithoutAddress } = useMemo(() => {
     if (!events || events.length === 0 || !loaded) {
@@ -288,7 +310,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
       const groupCards = []
 
       for (const wg of sectorGroups) {
-        const { dogs, noAddr } = orderedDogs(wg.dog_ids, eventsMap)
+        const { dogs, noAddr } = orderedDogs(wg.dog_ids, eventsMap, resolveAddress)
         for (const d of dogs) assignedIds.add(String(d.event._id))
         for (const id of [...new Set(wg.dog_ids || [])]) {
           const ev = eventsMap.get(String(id))
@@ -319,7 +341,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
       if (assignedIds.has(String(ev._id))) continue
       const evSector = ev.dog?.sector || ev.sector
       if (sector !== 'both' && evSector && evSector !== sector) continue
-      const addr = ev.dog?.address || ev.location
+      const addr = resolveAddress(ev)
       if (addr && addr.trim()) {
         unassignedOut.push({ event: ev, address: addr.trim() })
       } else {

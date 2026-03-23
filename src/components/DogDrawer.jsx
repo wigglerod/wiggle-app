@@ -7,6 +7,7 @@ import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
 import WalkerNotesSection from './WalkerNotesSection'
+import { useAltAddress } from '../lib/useAltAddress'
 
 const LEVEL_OPTIONS = [
   { value: 1, label: 'Level 1 — Chill', color: 'bg-green-500' },
@@ -207,6 +208,7 @@ function FriendCheck({ dogName, dogId }) {
 export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote, onDogNameClick }) {
   const { isAdmin, permissions, profile } = useAuth()
   const canEdit = permissions.canEditDogProfiles
+  const { todayAlt } = useAltAddress(event?.dog?.id)
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [revealedSteps, setRevealedSteps] = useState({})
   const [imgError, setImgError]         = useState(false)
@@ -365,14 +367,15 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   if (!event) return null
 
   const dog        = creating ? null : event.dog
-  const address    = (editing ? form.address : (dog?.address || event.location || '')).trim()
+  const defaultAddress = (editing ? form.address : (dog?.address || event.location || '')).trim()
+  const address    = todayAlt?.address || defaultAddress
   const dogNotes   = editing ? form.notes : (dog?.notes || null)
 
   const accessSteps = []
-  const bAccess = dog?.building_access || event.calendarDoorCode || null
+  const bAccess = todayAlt?.door_code || dog?.building_access || event.calendarDoorCode || null
   const uNumber = dog?.unit_number || null
   const uAccess = dog?.unit_access || null
-  const aNotes  = dog?.access_notes || null
+  const aNotes  = todayAlt?.access_notes || dog?.access_notes || null
   if (bAccess) accessSteps.push({ key: 'building', step: 1, emoji: '\u{1F3E2}', label: 'Building', value: bAccess })
   if (uNumber) accessSteps.push({ key: 'unit',     step: 2, emoji: '\u{1F6AA}', label: 'Unit',     value: uNumber })
   if (uAccess) accessSteps.push({ key: 'access',   step: 3, emoji: '\u{1F511}', label: 'Access',   value: uAccess })
@@ -742,21 +745,29 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* Address */}
+              {/* Address (uses today's alt address if available) */}
               {address && (
                 <a
                   href={directionsUrl || '#'}
                   target={directionsUrl ? '_blank' : undefined}
                   rel="noopener noreferrer"
-                  className="bg-gray-50 rounded-2xl p-4 flex items-start gap-2 active:bg-gray-100 transition-colors"
+                  className={`rounded-2xl p-4 flex items-start gap-2 transition-colors ${
+                    todayAlt ? 'bg-amber-50 border border-amber-200 active:bg-amber-100' : 'bg-gray-50 active:bg-gray-100'
+                  }`}
                 >
                   <span className="text-sm flex-shrink-0 mt-0.5">📍</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-0.5">Address</p>
+                    <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${todayAlt ? 'text-amber-700' : 'text-[#E8634A]'}`}>
+                      {todayAlt ? `${todayAlt.day_of_week.charAt(0).toUpperCase() + todayAlt.day_of_week.slice(1)} address` : 'Address'}
+                    </p>
                     <p className="text-sm text-gray-700 leading-snug">{address}</p>
+                    {todayAlt?.door_code && <p className="text-xs text-amber-600 mt-0.5">Code: {todayAlt.door_code}</p>}
+                    {todayAlt && defaultAddress && defaultAddress !== todayAlt.address && (
+                      <p className="text-xs text-gray-400 mt-1">Default: {defaultAddress}</p>
+                    )}
                   </div>
                   {directionsUrl && (
-                    <span className="flex-shrink-0 bg-[#E8634A] text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                    <span className={`flex-shrink-0 text-white text-xs font-semibold px-3 py-1.5 rounded-full ${todayAlt ? 'bg-amber-600' : 'bg-[#E8634A]'}`}>
                       Directions
                     </span>
                   )}

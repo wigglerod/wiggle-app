@@ -22,6 +22,7 @@ import DogChip from './DogChip'
 import { useWalkGroups } from '../lib/useWalkGroups'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useAltAddressDogIds } from '../lib/useAltAddress'
 import confetti from 'canvas-confetti'
 
 // ── Done groups persistence (localStorage) ──────────────────────────
@@ -398,6 +399,7 @@ function MobileGroup({
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
   isAdmin, onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
   walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+  altAddressDogIds,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -554,6 +556,7 @@ function MobileGroup({
                             isAdmin={isAdmin}
                             hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
                             hasConflict={conflictDogIds?.has(id)}
+                            hasAltAddress={ev.dog?.id && altAddressDogIds?.has(ev.dog.id)}
                           />
                         </motion.div>
                       )}
@@ -617,6 +620,7 @@ function DesktopGroup({
   onRename, canEdit, isAdmin, onReorder, owlDogIdSet, isLocked,
   conflictDogIds, hasConflict,
   walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+  altAddressDogIds,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
   const isUnassigned = groupKey === 'unassigned'
@@ -884,6 +888,10 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     for (const ev of events) m.set(String(ev._id), ev)
     return m
   }, [events])
+
+  // Set of dog IDs with alt address today
+  const allDogIds = useMemo(() => events.map(ev => ev.dog?.id).filter(Boolean), [events])
+  const altAddressDogIds = useAltAddressDogIds(allDogIds)
 
   // Set of dog IDs that have owl notes
   const owlDogIdSet = useMemo(() => {
@@ -1264,6 +1272,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
               isAdmin={isAdmin}
               onReorder={handleReorder}
               owlDogIdSet={owlDogIdSet}
+              altAddressDogIds={altAddressDogIds}
               isLocked={isLocked}
               conflictDogIds={conflictDogIds}
               hasConflict={false}

@@ -7,6 +7,7 @@ import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
 import WalkerNotesSection from './WalkerNotesSection'
+import { useAltAddress, getTodayDayName } from '../lib/useAltAddress'
 
 const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
@@ -49,6 +50,12 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   const [saveError, setSaveError] = useState(null)
   const [photoPulse, setPhotoPulse] = useState(false)
   const scrollRef = useRef(null)
+
+  // Alt addresses
+  const { altAddresses, todayAlt, refetch: refetchAlt } = useAltAddress(dog?.id)
+  const [showAltForm, setShowAltForm] = useState(false)
+  const [altForm, setAltForm] = useState({ day_of_week: '', address: '', door_code: '', access_notes: '' })
+  const [altSaving, setAltSaving] = useState(false)
 
   /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when dog prop changes */
   useEffect(() => {
@@ -139,10 +146,35 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
     onDogUpdated?.(d)
   }
 
+  async function saveAltAddress() {
+    if (!altForm.day_of_week || !altForm.address.trim()) return
+    setAltSaving(true)
+    const { error } = await supabase.from('dog_alt_addresses').insert({
+      dog_id: dog.id,
+      dog_name: dog.dog_name,
+      day_of_week: altForm.day_of_week,
+      address: altForm.address.trim(),
+      door_code: altForm.door_code.trim() || null,
+      access_notes: altForm.access_notes.trim() || null,
+    })
+    setAltSaving(false)
+    if (!error) {
+      setShowAltForm(false)
+      setAltForm({ day_of_week: '', address: '', door_code: '', access_notes: '' })
+      refetchAlt()
+    }
+  }
+
+  async function deleteAltAddress(id) {
+    await supabase.from('dog_alt_addresses').delete().eq('id', id)
+    refetchAlt()
+  }
+
   if (!dog) return null
 
+  const todayAddress = todayAlt?.address || dog.address
   const photoUrl = dog.photo_url && !imgError ? dog.photo_url : null
-  const directionsUrl = mapsUrl(dog.address)
+  const directionsUrl = mapsUrl(todayAddress)
 
   const updatedDate = dog.updated_at
     ? new Date(dog.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -435,25 +467,149 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                 </div>
               )}
 
-              {/* Address */}
-              {dog.address && (
+              {/* Today's alt address */}
+              {todayAlt && (
                 <a
-                  href={directionsUrl || '#'}
-                  target={directionsUrl ? '_blank' : undefined}
+                  href={mapsUrl(todayAlt.address) || '#'}
+                  target={mapsUrl(todayAlt.address) ? '_blank' : undefined}
                   rel="noopener noreferrer"
-                  className="bg-gray-50 rounded-2xl p-4 flex items-start gap-2 active:bg-gray-100 transition-colors"
+                  className="bg-amber-50 rounded-2xl p-4 flex items-start gap-2 border border-amber-200 active:bg-amber-100 transition-colors"
                 >
                   <span className="text-sm flex-shrink-0 mt-0.5">📍</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-0.5">Address</p>
-                    <p className="text-sm text-gray-700 leading-snug">{dog.address}</p>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-0.5">
+                      {todayAlt.day_of_week.charAt(0).toUpperCase() + todayAlt.day_of_week.slice(1)} address
+                    </p>
+                    <p className="text-sm text-gray-800 font-semibold leading-snug">{todayAlt.address}</p>
+                    {todayAlt.door_code && <p className="text-xs text-amber-600 mt-0.5">Code: {todayAlt.door_code}</p>}
+                    {todayAlt.access_notes && <p className="text-xs text-gray-500 mt-0.5">{todayAlt.access_notes}</p>}
                   </div>
-                  {directionsUrl && (
+                  {mapsUrl(todayAlt.address) && (
+                    <span className="flex-shrink-0 bg-amber-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                      Directions
+                    </span>
+                  )}
+                </a>
+              )}
+
+              {/* Default address */}
+              {dog.address && (
+                <a
+                  href={!todayAlt ? (directionsUrl || '#') : '#'}
+                  target={!todayAlt && directionsUrl ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  className={`rounded-2xl p-4 flex items-start gap-2 transition-colors ${
+                    todayAlt ? 'bg-gray-50/60' : 'bg-gray-50 active:bg-gray-100'
+                  }`}
+                >
+                  <span className="text-sm flex-shrink-0 mt-0.5">📍</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-0.5">
+                      {todayAlt ? 'Default Address' : 'Address'}
+                    </p>
+                    <p className={`text-sm leading-snug ${todayAlt ? 'text-gray-400' : 'text-gray-700'}`}>{dog.address}</p>
+                  </div>
+                  {!todayAlt && directionsUrl && (
                     <span className="flex-shrink-0 bg-[#E8634A] text-white text-xs font-semibold px-3 py-1.5 rounded-full active:bg-[#d4552d]">
                       Directions
                     </span>
                   )}
                 </a>
+              )}
+
+              {/* Alternate addresses — admin only */}
+              {canEdit && (
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide flex items-center gap-1">
+                      📍 Alternate Addresses
+                    </p>
+                    {!showAltForm && (
+                      <button
+                        onClick={() => setShowAltForm(true)}
+                        className="text-xs text-[#E8634A] font-semibold active:opacity-60"
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+
+                  {altAddresses.length > 0 && (
+                    <div className="flex flex-col gap-1.5 mb-2">
+                      {altAddresses.map(a => (
+                        <div key={a.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold text-gray-700 capitalize">{a.day_of_week}</span>
+                            <span className="text-gray-400 mx-1">·</span>
+                            <span className="text-gray-600 truncate">{a.address}</span>
+                            {a.door_code && <span className="text-gray-400 ml-1">({a.door_code})</span>}
+                          </div>
+                          <button
+                            onClick={() => deleteAltAddress(a.id)}
+                            className="text-gray-300 active:text-red-500 ml-2 text-xs min-w-[24px] min-h-[24px] flex items-center justify-center"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {altAddresses.length === 0 && !showAltForm && (
+                    <p className="text-xs text-gray-400 italic">No alternate addresses set</p>
+                  )}
+
+                  {showAltForm && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2">
+                      <select
+                        value={altForm.day_of_week}
+                        onChange={e => setAltForm(f => ({ ...f, day_of_week: e.target.value }))}
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      >
+                        <option value="">Select day...</option>
+                        {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                          <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Address"
+                        value={altForm.address}
+                        onChange={e => setAltForm(f => ({ ...f, address: e.target.value }))}
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Door code (optional)"
+                        value={altForm.door_code}
+                        onChange={e => setAltForm(f => ({ ...f, door_code: e.target.value }))}
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Access notes (optional)"
+                        value={altForm.access_notes}
+                        onChange={e => setAltForm(f => ({ ...f, access_notes: e.target.value }))}
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowAltForm(false)}
+                          className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveAltAddress}
+                          disabled={altSaving || !altForm.day_of_week || !altForm.address.trim()}
+                          className="flex-1 py-2 rounded-lg bg-[#E8634A] text-white text-sm font-bold disabled:opacity-40"
+                        >
+                          {altSaving ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Owner info */}

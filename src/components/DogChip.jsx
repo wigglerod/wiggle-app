@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 
 const ALERT_KEYWORDS = /reactive|aggressive|bite|careful|alarm|conflict|warning|danger|vet|medication|allergy/i
 
-const DogChip = memo(function DogChip({ event, onInfoClick, isSelected, onTap, onLongPress, isDragging, hasOwlNote, hasConflict }) {
+const DogChip = memo(function DogChip({ event, onInfoClick, isSelected, onTap, onLongPress, isDragging, hasOwlNote, hasConflict, hasAltAddress }) {
   const { isAdmin } = useAuth()
   const isMissing = !event.dog
   const hasAlert = event.dog && (
@@ -81,6 +81,7 @@ const DogChip = memo(function DogChip({ event, onInfoClick, isSelected, onTap, o
         <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-medium">New</span>
       )}
 
+      {hasAltAddress && <span className="text-xs flex-shrink-0 text-amber-500" title="Alt address today">📍</span>}
       {hasOwlNote && <span className="text-sm flex-shrink-0 owl-bounce" title="Owl note">🦉</span>}
       {hasAlert && <span className="text-[10px] text-gray-400 font-medium">!</span>}
 
