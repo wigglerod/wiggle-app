@@ -432,9 +432,9 @@ export function useWalkGroups(events, date, sector) {
     else toast.success('Updated')
   }
 
-  // Link two groups
+  // Link two groups (syncPosition: null=side-by-side, number=stagger at that dog index in group A)
   const linkGroups = useCallback(
-    async (groupNumA, groupNumB) => {
+    async (groupNumA, groupNumB, syncPosition) => {
       if (!date || !sector) return
       const keyA = `${date}_${sector}_${groupNumA}`
       const keyB = `${date}_${sector}_${groupNumB}`
@@ -443,6 +443,7 @@ export function useWalkGroups(events, date, sector) {
         group_b_key: keyB,
         walk_date: date,
         sector,
+        sync_position: syncPosition ?? null,
       }).select()
       if (!error && data) setGroupLinks(prev => [...prev, data[0]])
       else if (error) toast.error('Failed to link groups')

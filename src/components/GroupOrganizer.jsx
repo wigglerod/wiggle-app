@@ -237,6 +237,90 @@ function LockButton({ onLock }) {
   )
 }
 
+// ── Link picker with mode + stagger selection ───────────────────────
+function LinkPicker({ groupKey, allGroupNums, allGroupNames, eventsMap, groupDogIds, onLink, onClose }) {
+  const [step, setStep] = useState('group') // 'group' | 'mode' | 'stagger'
+  const [targetNum, setTargetNum] = useState(null)
+
+  function handleSelectGroup(n) {
+    setTargetNum(n)
+    setStep('mode')
+  }
+
+  function handleSideBySide() {
+    onLink(targetNum, null)
+  }
+
+  function handleStaggerAt(dogIndex) {
+    onLink(targetNum, dogIndex)
+  }
+
+  // Dogs in the current group (for stagger picker: "start Group B at which dog in Group A?")
+  const currentDogIds = (groupDogIds?.[Number(groupKey)] || []).map(String)
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); onClose() }} />
+      <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-[320px] overflow-y-auto">
+        {step === 'group' && (
+          <>
+            <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wide">Link with</p>
+            {(allGroupNums || []).filter(n => String(n) !== groupKey).map(n => (
+              <button
+                key={n}
+                onClick={() => handleSelectGroup(n)}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 active:bg-gray-50"
+              >
+                {allGroupNames?.[n] || `Group ${n}`}
+              </button>
+            ))}
+          </>
+        )}
+
+        {step === 'mode' && (
+          <>
+            <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wide">Link mode</p>
+            <button
+              onClick={handleSideBySide}
+              className="w-full text-left px-3 py-2.5 text-sm text-gray-700 active:bg-gray-50 flex items-center gap-2"
+            >
+              <span className="w-5 h-5 rounded bg-[#185FA5]/10 text-[#185FA5] flex items-center justify-center text-[10px] font-bold">||</span>
+              Side by side
+            </button>
+            <button
+              onClick={() => setStep('stagger')}
+              className="w-full text-left px-3 py-2.5 text-sm text-gray-700 active:bg-gray-50 flex items-center gap-2"
+            >
+              <span className="w-5 h-5 rounded bg-[#185FA5]/10 text-[#185FA5] flex items-center justify-center text-[10px] font-bold">/</span>
+              Staggered
+            </button>
+          </>
+        )}
+
+        {step === 'stagger' && (
+          <>
+            <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wide">Start at which dog?</p>
+            {currentDogIds.map((id, idx) => {
+              const ev = eventsMap?.get(id)
+              if (!ev) return null
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleStaggerAt(idx + 1)}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 active:bg-gray-50 flex items-center gap-2"
+                >
+                  <span className="text-[10px] text-gray-400 w-4">{idx + 1}</span>
+                  {ev.displayName}
+                </button>
+              )
+            })}
+          </>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ── Shared group header (long-press to rename) ─────────────────────
 function GroupHeader({
   groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked,
@@ -339,10 +423,11 @@ function GroupHeader({
         {!isUnassigned && linkedGroupNum && (
           <span
             onClick={canAssign ? (e) => { e.stopPropagation(); onUnlinkGroup?.(linkedLinkId) } : undefined}
-            className={`text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-semibold flex-shrink-0 ${canAssign ? 'cursor-pointer active:opacity-60' : ''}`}
+            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${canAssign ? 'cursor-pointer active:opacity-60' : ''}`}
+            style={{ backgroundColor: '#185FA5', color: 'white' }}
             title={canAssign ? 'Tap to unlink' : `Linked with Group ${linkedGroupNum}`}
           >
-            🔗 {linkedGroupNum}
+            &#128279; {linkedGroupNum}
           </span>
         )}
 
@@ -412,26 +497,17 @@ function GroupHeader({
         </>
       )}
 
-      {/* Link picker dropdown */}
+      {/* Link picker dropdown — enhanced with mode selection */}
       {showLinkPicker && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowLinkPicker(false) }} />
-          <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[140px]">
-            <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wide">Link with</p>
-            {(allGroupNums || []).filter(n => String(n) !== groupKey).map(n => (
-              <button
-                key={n}
-                onClick={() => {
-                  onLinkGroup?.(Number(groupKey), n)
-                  setShowLinkPicker(false)
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-700 active:bg-gray-50"
-              >
-                {allGroupNames?.[n] || `Group ${n}`}
-              </button>
-            ))}
-          </div>
-        </>
+        <LinkPicker
+          groupKey={groupKey}
+          allGroupNums={allGroupNums}
+          allGroupNames={allGroupNames}
+          eventsMap={eventsMap}
+          groupDogIds={groupDogIds}
+          onLink={(targetNum, syncPos) => { onLinkGroup?.(Number(groupKey), targetNum, syncPos); setShowLinkPicker(false) }}
+          onClose={() => setShowLinkPicker(false)}
+        />
       )}
     </div>
   )
@@ -600,7 +676,7 @@ function MobileGroup({
   onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
   walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
   linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
-  altAddressDogIds, owlDogNotesMap, onLockGroup, lockInfo,
+  altAddressDogIds, owlDogNotesMap, onLockGroup, lockInfo, eventsMap: parentEventsMap, allGroups,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -682,6 +758,8 @@ function MobileGroup({
         groupNums={allGroupNums}
         groupNames={allGroupNames}
         onLockGroup={onLockGroup}
+        eventsMap={parentEventsMap || eventsMap}
+        groupDogIds={allGroups}
       />
 
       {isUnassigned ? (
@@ -1159,11 +1237,108 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       onRemoveWalker: removeWalker,
       linkedGroupNum,
       linkedLinkId: linkedTo?.id || null,
+      linkedSyncPosition: linkedTo?.sync_position ?? null,
       onLinkGroup: linkGroups,
       onUnlinkGroup: unlinkGroups,
       groupNums,
       groupNames,
     }
+  }
+
+  // ── Render a single group (locked or unlocked) ──────────────────
+  function renderSingleGroup(num) {
+    const isGroupLocked = !!groupLocks[num]
+    const lockInfo = groupLocks[num]
+    const dogIds = (groups[num] || []).map(String)
+    const isDone = doneGroupNums.has(num)
+    const gName = groupNames[num] || `Group ${num}`
+    const { color, accent } = groupColor(num)
+    const wp = walkerProps(num)
+
+    if (isGroupLocked) {
+      const total = dogIds.length
+      const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
+      const allPickedUp = total > 0 && pickedCount === total
+      let elapsed = null
+      if (allPickedUp || isDone) {
+        const times = dogIds.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
+        if (times.length > 0) elapsed = Math.round((Math.max(...times) - Math.min(...times)) / 60000)
+      }
+      if (allPickedUp || isDone) {
+        return (
+          <div key={num} className="rounded-[14px] border border-gray-200 px-4 py-3 flex items-center justify-between" style={{ opacity: 0.45 }}>
+            <span className="text-[12px] font-medium text-emerald-600">&#10003; {gName} &middot; {elapsed || 0} min</span>
+            <span className="text-[10px] text-gray-400">{total} dogs</span>
+          </div>
+        )
+      }
+      return (
+        <SwipeableGroup key={num} groupNum={num} onDone={markGroupDone}>
+          <div className={`rounded-[14px] border-2 border-solid p-2.5 ${accent} ${color}`}>
+            <div className="flex items-center justify-between mb-1 px-1">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <span className="text-[13px] font-medium text-gray-700">{gName}</span>
+                {wp.walkerNames?.map((name, i) => (
+                  <span key={wp.walkerIds[i]} className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+                    wp.walkerIds[i] === user?.id ? 'bg-[#E8634A]/15 text-[#E8634A]' : 'bg-gray-200 text-gray-600'
+                  }`}>{name}</span>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[10px] text-gray-400">{pickedCount}/{total}</span>
+                <button onClick={() => unlockGroup(num)} className="text-sm active:scale-90 transition-transform">&#128275;</button>
+              </div>
+            </div>
+            {lockInfo?.locked_by_name && <p className="text-[10px] text-gray-400 px-1 mb-2">locked by {lockInfo.locked_by_name}</p>}
+            {groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
+              <p className="text-center text-[10px] text-gray-300 py-0.5 mb-1">&#8592; swipe = picked up | swipe &#8594; = note</p>
+            )}
+            <div className="flex flex-col gap-1.5">
+              {dogIds.map((id, idx) => {
+                const ev = eventsMap.get(id)
+                if (!ev) return null
+                const dogPickup = ev.dog?.id ? pickups[ev.dog.id] : null
+                return (
+                  <SwipeableDogRow key={id} ev={ev} pickupTime={dogPickup?.time}
+                    onPickup={(ev) => markPickup(ev.dog?.id, ev.displayName)}
+                    onNoteSwipe={(ev) => setSwipeNoteDog({ _id: ev._id, displayName: ev.displayName, dog_name: ev.dog?.dog_name, dogId: ev.dog?.id || null, photo_url: ev.dog?.photo_url || null, groupNum: num })}
+                    onDogClick={(ev) => enrichDogClick(ev, num)} owlDogIdSet={owlDogIdSet} owlDogNotesMap={owlDogNotesMap} routeNum={idx + 1}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        </SwipeableGroup>
+      )
+    }
+
+    // Unlocked
+    return (
+      <div key={num} className="relative">
+        {isDone && (
+          <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
+            <span className="text-emerald-600 font-bold text-sm">&#10003; Done</span>
+            <button onClick={() => undoGroupDone(num)} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm">Undo</button>
+          </div>
+        )}
+        <div className={isDone ? 'opacity-40 pointer-events-none' : ''}>
+          <MobileGroup
+            groupKey={String(num)} eventIds={groups[num] || []} eventsMap={eventsMap}
+            onDogClick={(ev) => enrichDogClick(ev, num)} selectedId={selectedId} onDogTap={handleDogTap}
+            selectedDogName={selectedDogName} groupName={groupNames[num] || null}
+            onRename={(name) => renameGroup(num, name)}
+            isTarget={selectedId !== null && selectedGroup !== num && !groupLocks[num]}
+            onTargetTap={() => handleGroupTap(num)} onReorder={handleReorder}
+            owlDogIdSet={owlDogIdSet} owlDogNotesMap={owlDogNotesMap} isLocked={false}
+            conflictDogIds={conflictDogIds} hasConflict={conflictGroupNums.has(num)}
+            altAddressDogIds={altAddressDogIds}
+            onLockGroup={() => { if (dogIds.length > 0) lockGroup(num) }}
+            lockInfo={lockInfo} allGroups={groups}
+            {...wp}
+          />
+        </div>
+      </div>
+    )
   }
 
   // ── Dog chip wrapper with long-hold gesture ──────────────────────
@@ -1260,134 +1435,60 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       })()}
 
       {/* ── Groups — each renders based on its own lock state ─── */}
-      {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
-        const isGroupLocked = !!groupLocks[num]
-        const lockInfo = groupLocks[num]
-        const dogIds = (groups[num] || []).map(String)
-        const isDone = doneGroupNums.has(num)
-        const gName = groupNames[num] || `Group ${num}`
-        const { color, accent } = groupColor(num)
-        const wp = walkerProps(num)
+      {(() => {
+        const renderedNums = new Set()
+        return groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
+        if (renderedNums.has(num)) return null
+        // Check if this group is linked to another
+        const groupKey = `${date}_${sector}_${num}`
+        const link = groupLinks.find(l => l.group_a_key === groupKey || l.group_b_key === groupKey)
+        const partnerNum = link ? Number((link.group_a_key === groupKey ? link.group_b_key : link.group_a_key).split('_').pop()) : null
+        const isGroupA = link ? link.group_a_key === groupKey : false
+        const syncPos = link?.sync_position ?? null
 
-        // ── Locked group → walking mode ──
-        if (isGroupLocked) {
-          // Compute pickup info
-          const total = dogIds.length
-          const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
-          const allPickedUp = total > 0 && pickedCount === total
+        // If linked to a partner, render them together
+        if (partnerNum && !renderedNums.has(partnerNum)) {
+          renderedNums.add(num)
+          renderedNums.add(partnerNum)
+          const groupA = isGroupA ? num : partnerNum
+          const groupB = isGroupA ? partnerNum : num
 
-          // Compute elapsed time for done groups
-          let elapsed = null
-          if (allPickedUp || isDone) {
-            const times = dogIds.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
-            if (times.length > 0) elapsed = Math.round((Math.max(...times) - Math.min(...times)) / 60000)
-          }
+          const renderGroupCard = (n) => renderSingleGroup(n)
+          const offsetPx = syncPos ? syncPos * 52 : 0 // ~52px per dog row including gap
 
-          // Collapsed done group
-          if (allPickedUp || isDone) {
+          if (!syncPos) {
+            // Side by side
             return (
-              <div key={num} className="rounded-[14px] border border-gray-200 px-4 py-3 flex items-center justify-between" style={{ opacity: 0.45 }}>
-                <span className="text-[12px] font-medium text-emerald-600">&#10003; {gName} &middot; {elapsed || 0} min</span>
-                <span className="text-[10px] text-gray-400">{total} dogs</span>
+              <div key={`link-${num}-${partnerNum}`} className="flex gap-0 items-stretch">
+                <div className="flex-1 min-w-0" style={{ borderRadius: '14px 0 0 14px', overflow: 'hidden' }}>
+                  {renderGroupCard(groupA)}
+                </div>
+                <div className="w-[3px] flex-shrink-0 my-5" style={{ backgroundColor: '#185FA5' }} />
+                <div className="flex-1 min-w-0" style={{ borderRadius: '0 14px 14px 0', overflow: 'hidden' }}>
+                  {renderGroupCard(groupB)}
+                </div>
+              </div>
+            )
+          } else {
+            // Staggered — on mobile, vertical with connector
+            return (
+              <div key={`link-${num}-${partnerNum}`} className="flex gap-0 items-start">
+                <div className="flex-1 min-w-0">
+                  {renderGroupCard(groupA)}
+                </div>
+                <div className="w-[3px] flex-shrink-0" style={{ backgroundColor: '#185FA5', marginTop: offsetPx, height: Math.max(80, 200 - offsetPx) }} />
+                <div className="flex-1 min-w-0" style={{ marginTop: offsetPx }}>
+                  {renderGroupCard(groupB)}
+                </div>
               </div>
             )
           }
-
-          return (
-            <SwipeableGroup key={num} groupNum={num} onDone={markGroupDone}>
-              <div className={`rounded-[14px] border-2 border-solid p-2.5 ${accent} ${color}`}>
-                {/* Group header with unlock button */}
-                <div className="flex items-center justify-between mb-1 px-1">
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <span className="text-[13px] font-medium text-gray-700">{gName}</span>
-                    {wp.walkerNames?.map((name, i) => (
-                      <span key={wp.walkerIds[i]} className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
-                        wp.walkerIds[i] === user?.id ? 'bg-[#E8634A]/15 text-[#E8634A]' : 'bg-gray-200 text-gray-600'
-                      }`}>{name}</span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] text-gray-400">{pickedCount}/{total}</span>
-                    <button onClick={() => unlockGroup(num)} className="text-sm active:scale-90 transition-transform">&#128275;</button>
-                  </div>
-                </div>
-                {lockInfo?.locked_by_name && (
-                  <p className="text-[10px] text-gray-400 px-1 mb-2">locked by {lockInfo.locked_by_name}</p>
-                )}
-
-                {/* Swipe hint (first locked group only) */}
-                {groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
-                  <p className="text-center text-[10px] text-gray-300 py-0.5 mb-1">
-                    &#8592; swipe = picked up &nbsp;|&nbsp; swipe &#8594; = note
-                  </p>
-                )}
-
-                {/* Individual swipeable dog rows */}
-                <div className="flex flex-col gap-1.5">
-                  {dogIds.map((id, idx) => {
-                    const ev = eventsMap.get(id)
-                    if (!ev) return null
-                    const dogPickup = ev.dog?.id ? pickups[ev.dog.id] : null
-                    return (
-                      <SwipeableDogRow
-                        key={id}
-                        ev={ev}
-                        pickupTime={dogPickup?.time}
-                        onPickup={(ev) => markPickup(ev.dog?.id, ev.displayName)}
-                        onNoteSwipe={(ev) => setSwipeNoteDog({
-                          _id: ev._id, displayName: ev.displayName, dog_name: ev.dog?.dog_name,
-                          dogId: ev.dog?.id || null, photo_url: ev.dog?.photo_url || null, groupNum: num,
-                        })}
-                        onDogClick={(ev) => enrichDogClick(ev, num)}
-                        owlDogIdSet={owlDogIdSet}
-                        owlDogNotesMap={owlDogNotesMap}
-                        routeNum={idx + 1}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-            </SwipeableGroup>
-          )
         }
 
-        // ── Unlocked group → organize mode ──
-        return (
-          <div key={num} className="relative">
-            {isDone && (
-              <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
-                <span className="text-emerald-600 font-bold text-sm">&#10003; Done</span>
-                <button onClick={() => undoGroupDone(num)} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm">Undo</button>
-              </div>
-            )}
-            <div className={isDone ? 'opacity-40 pointer-events-none' : ''}>
-              <MobileGroup
-                groupKey={String(num)}
-                eventIds={groups[num] || []}
-                eventsMap={eventsMap}
-                onDogClick={(ev) => enrichDogClick(ev, num)}
-                selectedId={selectedId}
-                onDogTap={handleDogTap}
-                selectedDogName={selectedDogName}
-                groupName={groupNames[num] || null}
-                onRename={(name) => renameGroup(num, name)}
-                isTarget={selectedId !== null && selectedGroup !== num && !groupLocks[num]}
-                onTargetTap={() => handleGroupTap(num)}
-                onReorder={handleReorder}
-                owlDogIdSet={owlDogIdSet}
-                owlDogNotesMap={owlDogNotesMap}
-                isLocked={false}
-                conflictDogIds={conflictDogIds}
-                hasConflict={conflictGroupNums.has(num)}
-                altAddressDogIds={altAddressDogIds}
-                onLockGroup={() => { if (dogIds.length > 0) lockGroup(num) }}
-                lockInfo={lockInfo}
-                {...walkerProps(num)}
-              />
-            </div>
-          </div>
-        )
-      })}
+        // Render a single group (used both standalone and in linked pairs)
+        return renderSingleGroup(num)
+      })
+      })()}
 
       {/* ── End of day celebration ── */}
       {(() => {
