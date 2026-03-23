@@ -22,7 +22,8 @@ export function useWalkGroups(events, date, sector) {
   const [loaded, setLoaded] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
   const [isLocked, setIsLocked] = useState(false)
-  const [walkerAssignments, setWalkerAssignments] = useState({}) // { groupNum: walkerId }
+  const [walkerAssignments, setWalkerAssignments] = useState({}) // { groupNum: [walkerId, ...] }
+  const [groupLinks, setGroupLinks] = useState([]) // [{ id, group_a_key, group_b_key }]
 
   // Refs to avoid stale closures in callbacks
   const groupsRef = useRef(groups)
@@ -64,7 +65,8 @@ export function useWalkGroups(events, date, sector) {
           saved[row.group_num] = ids
           ids.forEach((id) => assignedSet.add(id))
           if (row.group_name) names[row.group_num] = row.group_name
-          if (row.walker_id) walkers[row.group_num] = row.walker_id
+          const wIds = row.walker_ids?.length ? row.walker_ids : (row.walker_id ? [row.walker_id] : [])
+          if (wIds.length > 0) walkers[row.group_num] = wIds
           nums.add(row.group_num)
         }
       }
@@ -86,6 +88,14 @@ export function useWalkGroups(events, date, sector) {
       setGroups({ unassigned, ...saved })
       setIsLocked(locked)
       setLoaded(true)
+
+      // Load group links
+      const { data: links } = await supabase
+        .from('group_links')
+        .select('*')
+        .eq('walk_date', date)
+        .eq('sector', sector)
+      setGroupLinks(links || [])
     }
 
     load()
@@ -127,9 +137,10 @@ export function useWalkGroups(events, date, sector) {
             setIsLocked(row.locked)
           }
 
-          // Sync walker assignment from realtime
+          // Sync walker assignment from realtime (use walker_ids array, fall back to walker_id)
           setWalkerAssignments((prev) => {
-            if (row.walker_id) return { ...prev, [row.group_num]: row.walker_id }
+            const wIds = row.walker_ids?.length ? row.walker_ids : (row.walker_id ? [row.walker_id] : [])
+            if (wIds.length > 0) return { ...prev, [row.group_num]: wIds }
             const next = { ...prev }
             delete next[row.group_num]
             return next
@@ -162,6 +173,7 @@ export function useWalkGroups(events, date, sector) {
     async (groupNum, dogIds) => {
       if (!date || !sector || !user) return
 
+      const wIds = walkerAssignmentsRef.current[groupNum] || []
       const { error } = await supabase.from('walk_groups').upsert(
         {
           walk_date: date,
@@ -169,7 +181,8 @@ export function useWalkGroups(events, date, sector) {
           sector,
           dog_ids: dogIds,
           group_name: groupNamesRef.current[groupNum] ?? null,
-          walker_id: walkerAssignmentsRef.current[groupNum] ?? null,
+          walker_id: wIds[0] ?? null,
+          walker_ids: wIds.length > 0 ? wIds : null,
           updated_by: user.id,
           updated_at: new Date().toISOString(),
         },
@@ -313,39 +326,111 @@ export function useWalkGroups(events, date, sector) {
     }
   }, [date, sector, user])
 
-  // Assign a walker to a group
-  const assignWalker = useCallback(
+  // Add a walker to a group (supports co-walkers)
+  const addWalker = useCallback(
     async (groupNum, walkerId) => {
+      if (!walkerId) return
       setWalkerAssignments((prev) => {
-        if (walkerId) return { ...prev, [groupNum]: walkerId }
-        const next = { ...prev }
-        delete next[groupNum]
-        return next
+        const current = prev[groupNum] || []
+        if (current.includes(walkerId)) return prev
+        return { ...prev, [groupNum]: [...current, walkerId] }
       })
-
-      if (!date || !sector || !user) return
-
-      const { error } = await supabase.from('walk_groups').upsert(
-        {
-          walk_date: date,
-          group_num: groupNum,
-          sector,
-          dog_ids: groupsRef.current[groupNum] || [],
-          group_name: groupNamesRef.current[groupNum] ?? null,
-          walker_id: walkerId || null,
-          updated_by: user.id,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'walk_date,group_num,sector' }
-      )
-      if (error) {
-        toast.error('Failed to assign walker')
-      } else {
-        toast.success('Walker assigned')
-      }
+      await _persistWalkerIds(groupNum, [...(walkerAssignmentsRef.current[groupNum] || []), walkerId])
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [date, sector, user]
   )
 
-  return { groups, groupNums, groupNames, walkerAssignments, moveEvent, addGroup, renameGroup, reorderGroup, assignWalker, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule }
+  // Remove a walker from a group
+  const removeWalker = useCallback(
+    async (groupNum, walkerId) => {
+      setWalkerAssignments((prev) => {
+        const current = (prev[groupNum] || []).filter(id => id !== walkerId)
+        if (current.length === 0) {
+          const next = { ...prev }
+          delete next[groupNum]
+          return next
+        }
+        return { ...prev, [groupNum]: current }
+      })
+      const updated = (walkerAssignmentsRef.current[groupNum] || []).filter(id => id !== walkerId)
+      await _persistWalkerIds(groupNum, updated)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [date, sector, user]
+  )
+
+  // Backward-compat: assign single walker (replaces all)
+  const assignWalker = useCallback(
+    async (groupNum, walkerId) => {
+      if (walkerId) {
+        setWalkerAssignments((prev) => ({ ...prev, [groupNum]: [walkerId] }))
+        await _persistWalkerIds(groupNum, [walkerId])
+      } else {
+        setWalkerAssignments((prev) => {
+          const next = { ...prev }
+          delete next[groupNum]
+          return next
+        })
+        await _persistWalkerIds(groupNum, [])
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [date, sector, user]
+  )
+
+  // Internal helper: persist walker_ids to Supabase
+  async function _persistWalkerIds(groupNum, walkerIds) {
+    if (!date || !sector || !user) return
+    const { error } = await supabase.from('walk_groups').upsert(
+      {
+        walk_date: date,
+        group_num: groupNum,
+        sector,
+        dog_ids: groupsRef.current[groupNum] || [],
+        group_name: groupNamesRef.current[groupNum] ?? null,
+        walker_id: walkerIds[0] ?? null,
+        walker_ids: walkerIds.length > 0 ? walkerIds : null,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'walk_date,group_num,sector' }
+    )
+    if (error) toast.error('Failed to update walkers')
+    else toast.success('Updated')
+  }
+
+  // Link two groups
+  const linkGroups = useCallback(
+    async (groupNumA, groupNumB) => {
+      if (!date || !sector) return
+      const keyA = `${date}_${sector}_${groupNumA}`
+      const keyB = `${date}_${sector}_${groupNumB}`
+      const { data, error } = await supabase.from('group_links').insert({
+        group_a_key: keyA,
+        group_b_key: keyB,
+        walk_date: date,
+        sector,
+      }).select()
+      if (!error && data) setGroupLinks(prev => [...prev, data[0]])
+      else if (error) toast.error('Failed to link groups')
+    },
+    [date, sector]
+  )
+
+  // Unlink groups
+  const unlinkGroups = useCallback(
+    async (linkId) => {
+      await supabase.from('group_links').delete().eq('id', linkId)
+      setGroupLinks(prev => prev.filter(l => l.id !== linkId))
+    },
+    []
+  )
+
+  return {
+    groups, groupNums, groupNames, walkerAssignments, groupLinks,
+    moveEvent, addGroup, renameGroup, reorderGroup,
+    assignWalker, addWalker, removeWalker, linkGroups, unlinkGroups,
+    loaded, lastSaved, isLocked, lockSchedule, unlockSchedule,
+  }
 }

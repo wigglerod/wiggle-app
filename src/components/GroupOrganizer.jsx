@@ -209,15 +209,19 @@ function ReorderableSortableItem({ id, children, canEdit }) {
 // ── Shared group header (long-press to rename) ─────────────────────
 function GroupHeader({
   groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked,
-  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+  walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
+  linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
 }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [showWalkerPicker, setShowWalkerPicker] = useState(false)
+  const [showLinkPicker, setShowLinkPicker] = useState(false)
   const isUnassigned = groupKey === 'unassigned'
   const lpTimer = useRef(null)
 
   const displayName = isUnassigned ? 'Unassigned' : (groupName || `Group ${groupKey}`)
+  const names = walkerNames || []
+  const ids = walkerIds || []
 
   function startEdit() {
     setNameInput(groupName || `Group ${groupKey}`)
@@ -245,7 +249,7 @@ function GroupHeader({
 
   return (
     <div className="relative flex items-center justify-between mb-2">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
         {!isUnassigned && editing ? (
           <input
             autoFocus
@@ -266,27 +270,52 @@ function GroupHeader({
           </span>
         )}
 
-        {/* Walker name badge */}
-        {!isUnassigned && walkerName && (
-          <span
-            onClick={canAssign ? () => setShowWalkerPicker(true) : undefined}
-            className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${
-              isOwnGroup
-                ? 'bg-[#E8634A]/15 text-[#E8634A]'
-                : 'bg-gray-200 text-gray-600'
-            } ${canAssign ? 'cursor-pointer active:opacity-70' : ''}`}
-          >
-            {walkerName}
-          </span>
+        {/* Walker name badges — multiple supported */}
+        {!isUnassigned && names.length > 0 && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {names.map((name, i) => (
+              <span
+                key={ids[i]}
+                onClick={canAssign ? () => setShowWalkerPicker(true) : undefined}
+                className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  ids[i] && isOwnGroup ? 'bg-[#E8634A]/15 text-[#E8634A]' : 'bg-gray-200 text-gray-600'
+                } ${canAssign ? 'cursor-pointer active:opacity-70' : ''}`}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
         )}
 
-        {/* Assign walker button (admin only, no walker assigned yet) */}
-        {!isUnassigned && !walkerName && canAssign && (
+        {/* Assign walker button */}
+        {!isUnassigned && names.length === 0 && canAssign && (
           <button
             onClick={() => setShowWalkerPicker(true)}
             className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium flex-shrink-0 active:bg-gray-200"
           >
             + walker
+          </button>
+        )}
+
+        {/* Linked group indicator */}
+        {!isUnassigned && linkedGroupNum && (
+          <span
+            onClick={canAssign ? () => onUnlinkGroup?.(linkedLinkId) : undefined}
+            className={`text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-semibold flex-shrink-0 ${canAssign ? 'cursor-pointer active:opacity-60' : ''}`}
+            title={canAssign ? 'Tap to unlink' : `Linked with Group ${linkedGroupNum}`}
+          >
+            🔗 {linkedGroupNum}
+          </span>
+        )}
+
+        {/* Link button (admin, no existing link) */}
+        {!isUnassigned && !linkedGroupNum && canAssign && (
+          <button
+            onClick={() => setShowLinkPicker(true)}
+            className="text-[10px] text-gray-300 flex-shrink-0 active:text-gray-500"
+            title="Link with another group"
+          >
+            🔗
           </button>
         )}
 
@@ -310,32 +339,62 @@ function GroupHeader({
       {showWalkerPicker && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowWalkerPicker(false)} />
-          <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[140px] max-h-[200px] overflow-y-auto">
-            {availableWalkers?.map((w) => (
+          <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[160px] max-h-[240px] overflow-y-auto">
+            {/* Current walkers with remove buttons */}
+            {ids.length > 0 && (
+              <div className="px-3 py-1.5 border-b border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Assigned</p>
+                {ids.map((id, i) => (
+                  <div key={id} className="flex items-center justify-between py-1">
+                    <span className="text-sm font-semibold text-[#E8634A]">{names[i]}</span>
+                    <button
+                      onClick={() => { onRemoveWalker?.(Number(groupKey), id) }}
+                      className="text-gray-300 active:text-red-500 text-xs px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Add walkers */}
+            <p className="px-3 pt-1.5 pb-0.5 text-[10px] text-gray-400 uppercase tracking-wide">
+              {ids.length > 0 ? 'Add co-walker' : 'Assign walker'}
+            </p>
+            {availableWalkers?.filter(w => !ids.includes(w.id)).map((w) => (
               <button
                 key={w.id}
                 onClick={() => {
-                  onAssignWalker?.(Number(groupKey), w.id)
-                  setShowWalkerPicker(false)
+                  onAddWalker?.(Number(groupKey), w.id)
+                  if (ids.length > 0) setShowWalkerPicker(false)
                 }}
-                className={`w-full text-left px-3 py-2 text-sm active:bg-gray-50 transition-colors ${
-                  walkerId === w.id ? 'font-bold text-[#E8634A]' : 'text-gray-700'
-                }`}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 active:bg-gray-50 transition-colors"
               >
                 {w.full_name}
               </button>
             ))}
-            {walkerId && (
+          </div>
+        </>
+      )}
+
+      {/* Link picker dropdown */}
+      {showLinkPicker && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowLinkPicker(false)} />
+          <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[140px]">
+            <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wide">Link with</p>
+            {(allGroupNums || []).filter(n => String(n) !== groupKey).map(n => (
               <button
+                key={n}
                 onClick={() => {
-                  onAssignWalker?.(Number(groupKey), null)
-                  setShowWalkerPicker(false)
+                  onLinkGroup?.(Number(groupKey), n)
+                  setShowLinkPicker(false)
                 }}
-                className="w-full text-left px-3 py-2 text-xs text-gray-400 active:bg-gray-50 border-t border-gray-100"
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 active:bg-gray-50"
               >
-                Remove walker
+                {allGroupNames?.[n] || `Group ${n}`}
               </button>
-            )}
+            ))}
           </div>
         </>
       )}
@@ -398,7 +457,8 @@ function MobileGroup({
   groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
   isAdmin, onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
-  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+  walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
+  linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
   altAddressDogIds,
 }) {
   const isUnassigned = groupKey === 'unassigned'
@@ -462,12 +522,19 @@ function MobileGroup({
         onTargetTap={onTargetTap}
         selectedDogName={selectedDogName}
         isLocked={isLocked}
-        walkerName={walkerName}
-        walkerId={walkerId}
+        walkerNames={walkerNames}
+        walkerIds={walkerIds}
         isOwnGroup={isOwnGroup}
         canAssign={canAssign}
         availableWalkers={availableWalkers}
-        onAssignWalker={onAssignWalker}
+        onAddWalker={onAddWalker}
+        onRemoveWalker={onRemoveWalker}
+        linkedGroupNum={linkedGroupNum}
+        linkedLinkId={linkedLinkId}
+        onLinkGroup={onLinkGroup}
+        onUnlinkGroup={onUnlinkGroup}
+        groupNums={allGroupNums}
+        groupNames={allGroupNames}
       />
 
       {isUnassigned ? (
@@ -619,7 +686,8 @@ function DesktopGroup({
   groupKey, eventIds, eventsMap, onDogClick, activeId, groupName,
   onRename, canEdit, isAdmin, onReorder, owlDogIdSet, isLocked,
   conflictDogIds, hasConflict,
-  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+  walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
+  linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
   altAddressDogIds,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
@@ -657,12 +725,19 @@ function DesktopGroup({
         count={sortedItems.length}
         onRename={isLocked ? null : onRename}
         isLocked={isLocked}
-        walkerName={walkerName}
-        walkerId={walkerId}
+        walkerNames={walkerNames}
+        walkerIds={walkerIds}
         isOwnGroup={isOwnGroup}
         canAssign={canAssign}
         availableWalkers={availableWalkers}
-        onAssignWalker={onAssignWalker}
+        onAddWalker={onAddWalker}
+        onRemoveWalker={onRemoveWalker}
+        linkedGroupNum={linkedGroupNum}
+        linkedLinkId={linkedLinkId}
+        onLinkGroup={onLinkGroup}
+        onUnlinkGroup={onUnlinkGroup}
+        groupNums={allGroupNums}
+        groupNames={allGroupNames}
       />
 
       <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
@@ -803,8 +878,12 @@ function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, 
 export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [], onLocked }) {
   const { canEdit, isAdmin, permissions, user } = useAuth()
   const isMobile = useIsMobile()
-  const { groups, groupNums, groupNames, walkerAssignments, moveEvent, addGroup, renameGroup, reorderGroup, assignWalker, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule } =
-    useWalkGroups(events, date, sector)
+  const {
+    groups, groupNums, groupNames, walkerAssignments, groupLinks,
+    moveEvent, addGroup, renameGroup, reorderGroup,
+    assignWalker, addWalker, removeWalker, linkGroups, unlinkGroups,
+    loaded, lastSaved, isLocked, lockSchedule, unlockSchedule,
+  } = useWalkGroups(events, date, sector)
 
   // Available walkers for this sector + today
   const [availableWalkers, setAvailableWalkers] = useState([])
@@ -1229,14 +1308,27 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   // Walker props helper for group cards
   function walkerProps(num) {
-    const wId = walkerAssignments[num] || null
+    const wIds = walkerAssignments[num] || []
+    const names = wIds.map(id => walkerNameMap[id]).filter(Boolean)
+    const groupKey = `${date}_${sector}_${num}`
+    const linkedTo = groupLinks.find(l => l.group_a_key === groupKey || l.group_b_key === groupKey)
+    const linkedGroupNum = linkedTo
+      ? Number((linkedTo.group_a_key === groupKey ? linkedTo.group_b_key : linkedTo.group_a_key).split('_').pop())
+      : null
     return {
-      walkerName: wId ? (walkerNameMap[wId] || null) : null,
-      walkerId: wId,
-      isOwnGroup: wId === user?.id,
+      walkerNames: names,
+      walkerIds: wIds,
+      isOwnGroup: wIds.includes(user?.id),
       canAssign: permissions.canEditGroups && !isLocked,
       availableWalkers,
-      onAssignWalker: assignWalker,
+      onAddWalker: addWalker,
+      onRemoveWalker: removeWalker,
+      linkedGroupNum,
+      linkedLinkId: linkedTo?.id || null,
+      onLinkGroup: linkGroups,
+      onUnlinkGroup: unlinkGroups,
+      groupNums,
+      groupNames,
     }
   }
 
