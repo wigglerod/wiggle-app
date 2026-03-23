@@ -17,7 +17,7 @@ export default function OwlQuickDrawer({ open, onClose }) {
   useEffect(() => {
     if (!open || dogsFetched.current) return
     async function fetchDogs() {
-      let query = supabase.from('dogs').select('id, dog_name').order('dog_name')
+      let query = supabase.from('dogs').select('id, dog_name, sector').order('dog_name')
       if (!permissions.canSeeAllSectors && userSector && userSector !== 'both') {
         query = query.eq('sector', userSector)
       }
@@ -56,6 +56,7 @@ export default function OwlQuickDrawer({ open, onClose }) {
       label: d.dog_name,
       value: d.id,
       dogName: d.dog_name,
+      dogSector: d.sector,
     }))
     const all = [...specials, ...dogOptions]
     if (!q) return all.slice(0, 8)
@@ -104,7 +105,7 @@ export default function OwlQuickDrawer({ open, onClose }) {
       setTargetType('dog')
       setTargetDogId(option.value)
       setTargetDogName(option.dogName)
-      setTargetSector(null)
+      setTargetSector(option.dogSector || null)
     } else if (option.type === 'sector') {
       setTargetType('sector')
       setTargetSector(option.value)

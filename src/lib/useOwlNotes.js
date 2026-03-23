@@ -31,7 +31,8 @@ function parseDuration(text) {
  * They optionally auto-expire after a parsed duration.
  */
 export function useOwlNotes(sector) {
-  const { user, profile } = useAuth()
+  const { user, profile, permissions } = useAuth()
+  const userSector = profile?.sector
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -186,11 +187,16 @@ export function useOwlNotes(sector) {
 
   // Split notes into active (scheduled_date <= today) and scheduled (future)
   // For notes with duration: hide if acknowledged today
+  // For walkers: filter to their sector only
   const today = new Date().toISOString().split('T')[0]
   const activeNotes = notes.filter((n) => {
     if (n.scheduled_date && n.scheduled_date > today) return false
-    // Hide notes with duration that were acknowledged today
     if (n.expires_at && n.last_acknowledged_date === today) return false
+    // Sector filter for walkers
+    if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
+      if (n.target_type === 'dog' && n.target_sector && n.target_sector !== userSector) return false
+      if (n.target_type === 'sector' && n.target_sector && n.target_sector !== userSector) return false
+    }
     return true
   })
   const scheduledNotes = notes.filter(
