@@ -204,7 +204,8 @@ function FriendCheck({ dogName, dogId }) {
 }
 
 export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAcknowledgeNote, onDogNameClick }) {
-  const { canEdit, isAdmin, profile } = useAuth()
+  const { isAdmin, permissions, profile } = useAuth()
+  const canEdit = permissions.canEditDogProfiles
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [revealedSteps, setRevealedSteps] = useState({})
   const [imgError, setImgError]         = useState(false)

@@ -38,7 +38,8 @@ function mapsUrl(address) {
 }
 
 export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogNameClick }) {
-  const { canEdit, profile } = useAuth()
+  const { permissions, profile } = useAuth()
+  const canEdit = permissions.canEditDogProfiles
   const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [editing, setEditing] = useState(false)

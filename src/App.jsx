@@ -37,9 +37,16 @@ function ProtectedRoute({ children }) {
 }
 
 function AdminRoute({ children }) {
-  const { isAdmin, isLoading } = useAuth()
+  const { permissions, isLoading } = useAuth()
   if (isLoading) return null
-  if (!isAdmin) return <Navigate to="/" replace />
+  if (!permissions?.canAccessAdmin) return <Navigate to="/" replace />
+  return children
+}
+
+function SettingsRoute({ children }) {
+  const { permissions, isLoading } = useAuth()
+  if (isLoading) return null
+  if (!permissions?.canAccessSettings) return <Navigate to="/" replace />
   return children
 }
 
@@ -121,9 +128,11 @@ function AnimatedRoutes() {
             path="/settings"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LazyFallback />}>
-                  <SettingsPage />
-                </Suspense>
+                <SettingsRoute>
+                  <Suspense fallback={<LazyFallback />}>
+                    <SettingsPage />
+                  </Suspense>
+                </SettingsRoute>
               </ProtectedRoute>
             }
           />

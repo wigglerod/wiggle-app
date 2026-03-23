@@ -11,7 +11,7 @@ const SECTOR_COLORS = {
 }
 
 export default function Header({ date }) {
-  const { profile, isAdmin, signOut } = useAuth()
+  const { profile, permissions, signOut } = useAuth()
   const navigate = useNavigate()
   const [owlOpen, setOwlOpen] = useState(false)
   const owlCount = useOwlNoteCount()
@@ -39,7 +39,7 @@ export default function Header({ date }) {
             className="h-8 w-auto object-contain"
           />
           <div className="flex items-center gap-2">
-            {isAdmin && (
+            {permissions.canAddOwlNotes && (
               <button
                 onClick={() => setOwlOpen(true)}
                 className="relative text-base px-2 py-1 rounded-full bg-gray-100 active:bg-gray-200 min-h-[32px] flex items-center"
@@ -57,7 +57,7 @@ export default function Header({ date }) {
                 {roleLabel(profile.role)}
               </span>
             )}
-            {isAdmin && (
+            {permissions.canAccessAdmin && (
               <button
                 onClick={() => navigate('/admin')}
                 className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-medium min-h-[32px] flex items-center active:bg-gray-200"
@@ -84,7 +84,7 @@ export default function Header({ date }) {
         )}
       </header>
 
-      {isAdmin && <OwlQuickDrawer open={owlOpen} onClose={() => setOwlOpen(false)} />}
+      {permissions.canAddOwlNotes && <OwlQuickDrawer open={owlOpen} onClose={() => setOwlOpen(false)} />}
     </>
   )
 }

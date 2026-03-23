@@ -44,7 +44,7 @@ function formatDayLabel(dateStr) {
 const SECTOR_CYCLE = ['both', 'Plateau', 'Laurier']
 
 export default function Dashboard() {
-  const { profile, isChiefPup, canEdit: canEditAuth } = useAuth()
+  const { profile, permissions } = useAuth()
   const [dogs, setDogs] = useState([])
   const [nameMap, setNameMap] = useState(new Map())
   const [dogsReady, setDogsReady] = useState(false)
@@ -418,6 +418,15 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* View-only indicator for non-admin users */}
+        {!loading && !permissions.canEditGroups && filteredEvents.length > 0 && (
+          <div className="mb-2 flex justify-center">
+            <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-500 font-medium">
+              {permissions.canLogWalks ? '🐕 Your walks today' : '👀 View only'}
+            </span>
+          </div>
+        )}
+
         {/* Organizer / Map with slide transition */}
         {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
           <AnimatePresence mode="wait" initial={false}>
@@ -430,8 +439,8 @@ export default function Dashboard() {
                 transition={{ duration: 0.2 }}
                 className="flex flex-col gap-4"
               >
-                {/* Unlock button for Chief Pup and Wiggle Pro */}
-                {scheduleLocked && canEditAuth && (
+                {/* Unlock button for admin only */}
+                {scheduleLocked && permissions.canLockSchedule && (
                   <button
                     onClick={handleUnlock}
                     className="w-full py-3 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d] transition-all"

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { getPermissions } from '../lib/permissions'
 
 const AuthContext = createContext(null)
 
@@ -38,6 +39,7 @@ export function AuthProvider({ children }) {
   const role = profile?.role || null
   const sector = profile?.sector || null
   const schedule = profile?.schedule || null
+  const permissions = getPermissions(role)
   const value = {
     session,
     profile,
@@ -45,12 +47,13 @@ export function AuthProvider({ children }) {
     role,
     sector,
     schedule,
-    isChiefPup: role === 'admin', // Only true admin (Chief Pup)
-    isAdmin: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
+    permissions,
+    isChiefPup: role === 'admin',
+    isAdmin: role === 'admin' || role === 'senior_walker',
     isSenior: role === 'senior_walker',
     isJunior: role === 'junior_walker',
-    canEdit: role === 'admin' || role === 'senior_walker',
-    canDelete: role === 'admin' || role === 'senior_walker', // TEMP: Wiggle Pro full admin access
+    canEdit: permissions.canEditGroups,
+    canDelete: role === 'admin',
     isLoading: session === undefined,
     signOut: () => supabase.auth.signOut(),
   }

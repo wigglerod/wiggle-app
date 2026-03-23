@@ -43,7 +43,7 @@ function SkeletonWalkCard() {
 }
 
 export default function Schedule() {
-  const { profile, isAdmin, user } = useAuth()
+  const { profile, isAdmin, permissions, user } = useAuth()
   const [dogs, setDogs] = useState([])
   const [nameMap, setNameMap] = useState(new Map())
   const [dogsReady, setDogsReady] = useState(false)
@@ -304,7 +304,7 @@ export default function Schedule() {
         </div>
 
         {/* Note of the Day */}
-        {isAdmin && !dailyNote && !noteEditing && (
+        {permissions.canAddOwlNotes && !dailyNote && !noteEditing && (
           <button
             onClick={() => setNoteEditing(true)}
             className="w-full mb-4 py-3 rounded-full border-2 border-dashed border-[#E8634A]/30 text-[#E8634A] text-sm font-semibold active:bg-[#FFF4F1] transition-colors min-h-[48px]"
@@ -313,7 +313,7 @@ export default function Schedule() {
           </button>
         )}
 
-        {noteEditing && isAdmin && (
+        {noteEditing && permissions.canAddOwlNotes && (
           <div className="mb-4 bg-white rounded-xl border border-[#E8634A]/30 p-4 shadow-sm">
             <textarea
               value={noteInput}
@@ -345,7 +345,7 @@ export default function Schedule() {
         {dailyNote && !noteEditing && (
           <div
             className="mb-4 bg-[#E8634A] text-white rounded-xl px-4 py-3 shadow-sm"
-            onClick={isAdmin ? () => { setNoteInput(dailyNote.note_text); setNoteEditing(true) } : undefined}
+            onClick={permissions.canAddOwlNotes ? () => { setNoteInput(dailyNote.note_text); setNoteEditing(true) } : undefined}
           >
             <div className="flex items-start gap-2">
               <span className="text-base flex-shrink-0 mt-0.5">📣</span>
@@ -353,7 +353,7 @@ export default function Schedule() {
                 <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Note of the Day</p>
                 <p className="text-sm font-medium leading-snug">{dailyNote.note_text}</p>
               </div>
-              {isAdmin && (
+              {permissions.canAddOwlNotes && (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 opacity-60 flex-shrink-0 mt-0.5">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />

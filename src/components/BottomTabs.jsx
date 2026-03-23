@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useAuth } from '../context/AuthContext'
 
 const TABS = [
   {
@@ -44,13 +45,15 @@ const TABS = [
 export default function BottomTabs() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { permissions } = useAuth()
 
-  const activeId = TABS.find((t) => t.paths.includes(pathname))?.id ?? 'schedule'
+  const visibleTabs = TABS.filter((tab) => tab.id !== 'settings' || permissions.canAccessSettings)
+  const activeId = visibleTabs.find((t) => t.paths.includes(pathname))?.id ?? 'schedule'
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 shadow-[0_-1px_12px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
       <div className="flex max-w-lg mx-auto">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = tab.id === activeId
           return (
             <button
