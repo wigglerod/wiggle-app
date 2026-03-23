@@ -4,20 +4,19 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.jsx'
 
-// Register SW with periodic update checks (every 60s)
-// When a new version is detected, it auto-reloads
+// Register SW with periodic update checks (every 30 min)
+// Shows a banner instead of auto-reloading mid-walk
 const updateSW = registerSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
       window.__swRegistration = registration
       setInterval(() => {
         registration.update()
-      }, 60 * 1000)
+      }, 30 * 60 * 1000)
     }
   },
   onNeedRefresh() {
-    // Auto-apply the update immediately
-    updateSW(true)
+    window.dispatchEvent(new CustomEvent('wiggle-sw-update', { detail: updateSW }))
   },
 })
 

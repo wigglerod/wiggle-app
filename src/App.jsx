@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import LoadingDog from './components/LoadingDog'
 import OfflineBanner from './components/OfflineBanner'
+import UpdateBanner from './components/UpdateBanner'
 
 const Admin = lazy(() => import('./pages/Admin'))
 const DogsPage = lazy(() => import('./pages/DogsPage'))
@@ -146,6 +147,7 @@ function AnimatedRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <UpdateBanner />
       <AuthProvider>
         <OfflineBanner />
         <AnimatedRoutes />
