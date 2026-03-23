@@ -5,6 +5,7 @@ import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
 import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
+import QuickNoteSheet from '../components/QuickNoteSheet'
 
 import { useOwlNotes } from '../lib/useOwlNotes'
 import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
@@ -58,6 +59,7 @@ export default function Dashboard() {
   const [selectedDay, setSelectedDay] = useState('today')
   const [sectorFilter, setSectorFilter] = useState(null)
   const [scheduleLocked, setScheduleLocked] = useState(false)
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
@@ -502,6 +504,35 @@ export default function Dashboard() {
       </main>
 
       <BottomTabs />
+
+      {/* Quick-Note FAB — visible in locked/walking mode */}
+      {scheduleLocked && permissions.canLogWalks && (
+        <button
+          onClick={() => setQuickNoteOpen(true)}
+          className="fixed bottom-20 right-4 z-20 w-14 h-14 rounded-full bg-[#E8634A] text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition-transform"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          📝
+        </button>
+      )}
+
+      {/* Quick-Note bottom sheet */}
+      <AnimatePresence>
+        {quickNoteOpen && (
+          <QuickNoteSheet
+            open={quickNoteOpen}
+            onClose={() => setQuickNoteOpen(false)}
+            walkingDogs={allEvents.map(ev => ({
+              _id: ev._id,
+              displayName: ev.displayName,
+              dog_name: ev.dog?.dog_name,
+              dogId: ev.dog?.id || null,
+              groupNum: null,
+            }))}
+            date={activeDate}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Dog profile drawer */}
       {selectedEvent && (

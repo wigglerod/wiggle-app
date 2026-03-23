@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
+import WalkerNotesSection from './WalkerNotesSection'
 
 const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
@@ -540,6 +541,9 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                   </div>
                 </div>
               )}
+
+              {/* Walker notes */}
+              <WalkerNotesSection dogId={dog.id} />
 
               {/* Last updated footer */}
               {dog.updated_by && updatedDate && (

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
+import WalkerNotesSection from './WalkerNotesSection'
 
 const LEVEL_OPTIONS = [
   { value: 1, label: 'Level 1 — Chill', color: 'bg-green-500' },
@@ -842,6 +843,9 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                   </div>
                 </div>
               )}
+
+              {/* Walker notes */}
+              {dog?.id && <WalkerNotesSection dogId={dog.id} />}
 
               {/* Acuity booking info (no profile) */}
               {!dog && (isAdmin ? (event.email || event.ownerName) : false) && (
