@@ -31,6 +31,7 @@ const DogChip = memo(function DogChip({
   event, onInfoClick, isSelected, onTap, isDragging,
   hasOwlNote, owlNote, hasConflict, hasAltAddress,
   routeNum, showHandle, handleListeners, handleAttributes, handleRef,
+  pickedUpTime,
 }) {
   const { isAdmin } = useAuth()
   const [owlExpanded, setOwlExpanded] = useState(false)
@@ -110,17 +111,21 @@ const DogChip = memo(function DogChip({
 
         {/* Name + address column */}
         <div className="flex flex-col flex-1 min-w-0 py-2" onClick={() => onTap?.(event)}>
-          <span className="truncate text-[12px] font-medium leading-tight">
+          <span className={`truncate text-[12px] font-medium leading-tight ${pickedUpTime ? 'line-through text-gray-400' : ''}`}>
             {event.displayName}
           </span>
-          {shortAddress && (
+          {pickedUpTime ? (
+            <span className="text-[10px] text-emerald-600 font-medium leading-tight mt-0.5">
+              {pickedUpTime}
+            </span>
+          ) : shortAddress ? (
             <span
               className="text-[10px] text-[#185FA5] truncate leading-tight mt-0.5 cursor-pointer"
               onClick={(e) => { e.stopPropagation(); onInfoClick?.(event) }}
             >
               {shortAddress} &#8250;
             </span>
-          )}
+          ) : null}
         </div>
 
         {isMissing && !isAdmin && (

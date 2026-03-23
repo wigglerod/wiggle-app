@@ -6,49 +6,47 @@ import { useAuth } from '../context/AuthContext'
 import { DogPhoto } from './DogChip'
 
 const TAGS = [
-  { emoji: '🐕', label: 'Pulled hard' },
-  { emoji: '💩', label: 'Soft stool' },
-  { emoji: '💩', label: 'Diarrhea' },
-  { emoji: '🤒', label: 'Seemed off' },
-  { emoji: '😬', label: 'Reactive' },
-  { emoji: '🚫', label: 'Refused walk' },
-  { emoji: '🐾', label: 'Limping' },
-  { emoji: '💧', label: 'Drank a lot' },
-  { emoji: '🎉', label: 'Great walk!' },
-  { emoji: '⚡', label: 'High energy' },
-  { emoji: '😴', label: 'Low energy' },
-  { emoji: '🩹', label: 'Scratch/wound' },
+  { label: 'DM Me',                style: 'amber' },
+  { label: 'Seems off',            style: 'red' },
+  { label: 'Reactive',             style: 'red' },
+  { label: 'Limping',              style: 'red' },
+  { label: 'Refuse to walk',       style: 'red' },
+  { label: 'Wounded',              style: 'red' },
+  { label: 'Soft stool / diarrhea', style: 'red' },
+  { label: 'Great walk!',          style: 'green' },
+  { label: 'Sooo happyy',          style: 'green' },
 ]
 
-// Web Speech API support check
-const SpeechRecognition = typeof window !== 'undefined'
-  ? window.SpeechRecognition || window.webkitSpeechRecognition
-  : null
+const TAG_STYLES = {
+  amber:  { bg: '#FAEEDA', border: '#FAC775', text: '#412402', activeBg: '#FAC775', activeText: '#412402' },
+  red:    { bg: '#FCEBEB', border: '#F09595', text: '#791F1F', activeBg: '#F09595', activeText: '#791F1F' },
+  green:  { bg: '#E1F5EE', border: '#5DCAA5', text: '#04342C', activeBg: '#5DCAA5', activeText: '#04342C' },
+}
 
-export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
+export default function QuickNoteSheet({ open, onClose, walkingDogs, date, preSelectedDog }) {
   const { user, profile } = useAuth()
-  const [step, setStep] = useState('dog') // 'dog' | 'note'
+  const [step, setStep] = useState('dog')
   const [selectedDog, setSelectedDog] = useState(null)
   const [selectedTags, setSelectedTags] = useState([])
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
-  const [listening, setListening] = useState(false)
-  const recognitionRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Reset state when opened
   useEffect(() => {
     if (open) {
-      setStep('dog')
-      setSelectedDog(null)
       setSelectedTags([])
       setMessage('')
       setSaving(false)
-      setListening(false)
+      if (preSelectedDog) {
+        setSelectedDog(preSelectedDog)
+        setStep('note')
+      } else {
+        setStep('dog')
+        setSelectedDog(null)
+      }
     }
-  }, [open])
+  }, [open, preSelectedDog])
 
-  // Auto-advance if only one dog group
   const dogs = useMemo(() => walkingDogs || [], [walkingDogs])
 
   function selectDog(dog) {
@@ -66,16 +64,12 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
     if (!selectedDog || (selectedTags.length === 0 && !message.trim())) return
     setSaving(true)
 
-    const noteType = message.trim()
-      ? (listening ? 'voice' : 'text')
-      : 'tag'
-
     const { error } = await supabase.from('walker_notes').insert({
       dog_id: selectedDog.dogId || null,
       dog_name: selectedDog.displayName || selectedDog.dog_name || 'Unknown',
       walker_id: user.id,
       walker_name: profile?.full_name || 'Walker',
-      note_type: noteType,
+      note_type: message.trim() ? 'text' : 'tag',
       tags: selectedTags.length > 0 ? selectedTags : null,
       message: message.trim() || null,
       walk_date: date,
@@ -93,36 +87,10 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
     }
   }
 
-  function startListening() {
-    if (!SpeechRecognition) return
-    const recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.lang = 'en-US'
-
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript
-      setMessage(prev => prev ? `${prev} ${transcript}` : transcript)
-      setListening(false)
-    }
-    recognition.onerror = () => setListening(false)
-    recognition.onend = () => setListening(false)
-
-    recognitionRef.current = recognition
-    recognition.start()
-    setListening(true)
-  }
-
-  function stopListening() {
-    recognitionRef.current?.stop()
-    setListening(false)
-  }
-
   if (!open) return null
 
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -131,7 +99,6 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
         onClick={onClose}
       />
 
-      {/* Bottom sheet */}
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
@@ -139,7 +106,6 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]"
       >
-        {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
@@ -160,7 +126,7 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
                     <button
                       key={dog._id || i}
                       onClick={() => selectDog(dog)}
-                      className="flex items-center gap-2 px-3 py-3 rounded-xl bg-gray-50 border border-gray-200 active:bg-[#FFF4F1] active:border-[#E8634A] transition-all text-left min-h-[48px]"
+                      className="flex items-center gap-2 px-3 py-3 rounded-xl bg-gray-50 border border-gray-200 active:bg-[#FFF5F0] active:border-[#E8634A] transition-all text-left min-h-[48px]"
                     >
                       <DogPhoto dog={dog} displayName={dog.displayName || dog.dog_name} size={24} />
                       <span className="text-sm font-semibold text-gray-800 truncate">
@@ -181,13 +147,12 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.15 }}
               >
-                {/* Selected dog header */}
                 <div className="flex items-center justify-between mb-3">
                   <button
-                    onClick={() => setStep('dog')}
+                    onClick={() => preSelectedDog ? onClose() : setStep('dog')}
                     className="text-sm text-gray-400 active:text-gray-600 min-h-[44px] flex items-center"
                   >
-                    &larr; Back
+                    {preSelectedDog ? '\u2715 Close' : '\u2190 Back'}
                   </button>
                   <span className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
                     <DogPhoto dog={selectedDog} displayName={selectedDog?.displayName || selectedDog?.dog_name} size={20} />
@@ -196,52 +161,37 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
                   <div className="w-12" />
                 </div>
 
-                {/* Tags grid */}
-                <div className="grid grid-cols-2 gap-1.5 mb-4">
-                  {TAGS.map(({ emoji, label }) => {
+                {/* Tags grid — styled by type */}
+                <div className="flex flex-col gap-1.5 mb-4">
+                  {TAGS.map(({ label, style }) => {
                     const active = selectedTags.includes(label)
+                    const s = TAG_STYLES[style]
                     return (
                       <button
                         key={label}
                         onClick={() => toggleTag(label)}
-                        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
-                          active
-                            ? 'bg-[#E8634A] text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-700 border border-gray-200 active:bg-gray-100'
-                        }`}
+                        className="flex items-center px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all min-h-[44px]"
+                        style={active
+                          ? { backgroundColor: s.activeBg, color: s.activeText, border: `1.5px solid ${s.activeBg}` }
+                          : { backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}` }
+                        }
                       >
-                        <span className="text-base">{emoji}</span>
                         {label}
                       </button>
                     )
                   })}
                 </div>
 
-                {/* Free text input + mic */}
-                <div className="flex gap-2 mb-4">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Add a note..."
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A] min-h-[48px]"
-                  />
-                  {SpeechRecognition && (
-                    <button
-                      onClick={listening ? stopListening : startListening}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg transition-all flex-shrink-0 ${
-                        listening
-                          ? 'bg-red-500 text-white animate-pulse'
-                          : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-                      }`}
-                    >
-                      🎙️
-                    </button>
-                  )}
-                </div>
+                {/* Free text input — no voice memo */}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Add a note..."
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8634A] min-h-[48px] mb-4"
+                />
 
-                {/* Save button */}
                 <button
                   onClick={handleSave}
                   disabled={saving || (selectedTags.length === 0 && !message.trim())}
