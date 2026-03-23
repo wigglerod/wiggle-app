@@ -6,6 +6,7 @@ import BottomTabs from '../components/BottomTabs'
 import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
 import QuickNoteSheet from '../components/QuickNoteSheet'
+import WeeklyView from '../components/WeeklyView'
 
 import { useOwlNotes } from '../lib/useOwlNotes'
 import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
@@ -58,6 +59,8 @@ export default function Dashboard() {
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDay, setSelectedDay] = useState('today')
+  const [customDate, setCustomDate] = useState(null) // for week view day selection
+  const [viewMode, setViewMode] = useState('today') // 'today' | 'week'
   const [sectorFilter, setSectorFilter] = useState(null)
   const [anyGroupLocked, setAnyGroupLocked] = useState(false)
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
@@ -76,7 +79,7 @@ export default function Dashboard() {
     return { today: todayStr, tomorrow: tomorrowStr }
   }, [])
 
-  const activeDate = selectedDay === 'today' ? today : tomorrow
+  const activeDate = customDate || (selectedDay === 'today' ? today : tomorrow)
   const profileSector = profile?.sector || 'both'
   const sector = sectorFilter || profileSector
 
@@ -232,6 +235,13 @@ export default function Dashboard() {
 
   function handleDayToggle() {
     setSelectedDay((prev) => (prev === 'today' ? 'tomorrow' : 'today'))
+    setCustomDate(null)
+    setAllEvents([])
+  }
+
+  function handleWeekDaySelect(dateStr) {
+    setCustomDate(dateStr)
+    setViewMode('today')
     setAllEvents([])
   }
 
@@ -256,28 +266,39 @@ export default function Dashboard() {
     >
       <Header />
 
-      {/* Date line: tappable date · sector badge · map icon */}
+      {/* Date line: date toggle · Today/Week pills · sector badge · map icon */}
       <div className="px-4 pt-2 pb-1 max-w-lg mx-auto flex items-center justify-between">
-        <button
-          onClick={handleDayToggle}
-          className="text-sm font-semibold text-gray-700 active:opacity-60 transition-opacity"
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={selectedDay}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.15 }}
-              className="inline-flex items-center gap-1"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { if (viewMode === 'week') { setViewMode('today'); } else { handleDayToggle(); } }}
+            className="text-[13px] font-semibold text-gray-700 active:opacity-60 transition-opacity"
+          >
+            {viewMode === 'week' ? 'This Week' : customDate && customDate !== today
+              ? formatDayLabel(customDate)
+              : selectedDay === 'today' ? `Today \u00b7 ${formatDayLabel(today)}` : `Tomorrow \u00b7 ${formatDayLabel(tomorrow)}`
+            }
+          </button>
+
+          {/* Today / Week pills */}
+          <div className="flex rounded-full bg-gray-100 p-0.5">
+            <button
+              onClick={() => { setViewMode('today'); setCustomDate(null); setSelectedDay('today') }}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                viewMode === 'today' ? 'bg-[#E8634A] text-white shadow-sm' : 'text-gray-500'
+              }`}
             >
-              {selectedDay === 'today' ? 'Today' : 'Tomorrow'} &middot; {formatDayLabel(activeDate)}
-              <svg className="w-3 h-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-              </svg>
-            </motion.span>
-          </AnimatePresence>
-        </button>
+              Today
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                viewMode === 'week' ? 'bg-[#E8634A] text-white shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              Week
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2">
           {permissions.canSeeAllSectors ? (
@@ -334,13 +355,13 @@ export default function Dashboard() {
           </p>
         )}
 
-        {loading && !refreshing && (
+        {viewMode === 'today' && loading && !refreshing && (
           <div className="flex justify-center py-20">
             <LoadingDog />
           </div>
         )}
 
-        {!loading && filteredEvents.length === 0 && (
+        {viewMode === 'today' && !loading && filteredEvents.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <span className="text-5xl">🐾</span>
             <p className="text-lg font-semibold text-gray-600">
@@ -393,8 +414,13 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Weekly view */}
+        {viewMode === 'week' && (
+          <WeeklyView sector={sector} today={today} onSelectDay={handleWeekDaySelect} />
+        )}
+
         {/* Organizer / Map with slide transition */}
-        {!loading && (filteredEvents.length > 0 || anyGroupLocked) && (
+        {viewMode === 'today' && !loading && (filteredEvents.length > 0 || anyGroupLocked) && (
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'organizer' ? (
               <motion.div
