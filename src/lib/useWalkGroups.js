@@ -15,13 +15,13 @@ import { useAuth } from '../context/AuthContext'
  *   ALTER TABLE walk_groups ADD COLUMN IF NOT EXISTS group_name TEXT;
  */
 export function useWalkGroups(events, date, sector) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [groups, setGroups] = useState({ unassigned: [] })
   const [groupNums, setGroupNums] = useState([1, 2, 3])
   const [groupNames, setGroupNames] = useState({})
   const [loaded, setLoaded] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
-  const [isLocked, setIsLocked] = useState(false)
+  const [groupLocks, setGroupLocks] = useState({}) // { groupNum: { locked: bool, locked_by: uuid, locked_by_name: string } }
   const [walkerAssignments, setWalkerAssignments] = useState({}) // { groupNum: [walkerId, ...] }
   const [groupLinks, setGroupLinks] = useState([]) // [{ id, group_a_key, group_b_key }]
 
@@ -55,6 +55,7 @@ export function useWalkGroups(events, date, sector) {
       const saved = {}
       const names = {}
       const walkers = {}
+      const locks = {}
       const assignedSet = new Set()
       const nums = new Set([1, 2, 3])
 
@@ -67,6 +68,7 @@ export function useWalkGroups(events, date, sector) {
           if (row.group_name) names[row.group_num] = row.group_name
           const wIds = row.walker_ids?.length ? row.walker_ids : (row.walker_id ? [row.walker_id] : [])
           if (wIds.length > 0) walkers[row.group_num] = wIds
+          if (row.locked) locks[row.group_num] = { locked: true, locked_by: row.locked_by || null, locked_by_name: row.locked_by_name || null }
           nums.add(row.group_num)
         }
       }
@@ -79,14 +81,11 @@ export function useWalkGroups(events, date, sector) {
       const sortedNums = Array.from(nums).sort((a, b) => a - b)
       const unassigned = allEventIds.filter((id) => !assignedSet.has(id))
 
-      // Check if any group is locked
-      const locked = data?.some((row) => row.locked) || false
-
       setGroupNums(sortedNums)
       setGroupNames(names)
       setWalkerAssignments(walkers)
+      setGroupLocks(locks)
       setGroups({ unassigned, ...saved })
-      setIsLocked(locked)
       setLoaded(true)
 
       // Load group links
@@ -132,9 +131,16 @@ export function useWalkGroups(events, date, sector) {
             setGroupNames((prev) => ({ ...prev, [row.group_num]: row.group_name }))
           }
 
-          // Sync locked state from realtime
+          // Sync per-group lock state from realtime
           if (row.locked !== undefined) {
-            setIsLocked(row.locked)
+            setGroupLocks((prev) => {
+              if (row.locked) {
+                return { ...prev, [row.group_num]: { locked: true, locked_by: row.locked_by || null, locked_by_name: row.locked_by_name || null } }
+              }
+              const next = { ...prev }
+              delete next[row.group_num]
+              return next
+            })
           }
 
           // Sync walker assignment from realtime (use walker_ids array, fall back to walker_id)
@@ -294,41 +300,61 @@ export function useWalkGroups(events, date, sector) {
     [saveGroup]
   )
 
-  // Lock all groups for this date/sector
-  const lockSchedule = useCallback(async () => {
+  // Lock a single group
+  const lockGroup = useCallback(async (groupNum) => {
     if (!date || !sector || !user) return
-    setIsLocked(true)
+    const lockerName = profile?.full_name?.split(' ')[0] || 'Walker'
+    setGroupLocks((prev) => ({ ...prev, [groupNum]: { locked: true, locked_by: user.id, locked_by_name: lockerName } }))
 
-    const { error } = await supabase
-      .from('walk_groups')
-      .update({ locked: true, updated_by: user.id, updated_at: new Date().toISOString() })
-      .eq('walk_date', date)
-      .eq('sector', sector)
+    const { error } = await supabase.from('walk_groups').upsert(
+      {
+        walk_date: date,
+        group_num: groupNum,
+        sector,
+        dog_ids: groupsRef.current[groupNum] || [],
+        group_name: groupNamesRef.current[groupNum] ?? null,
+        walker_id: (walkerAssignmentsRef.current[groupNum] || [])[0] ?? null,
+        walker_ids: (walkerAssignmentsRef.current[groupNum] || []).length > 0 ? walkerAssignmentsRef.current[groupNum] : null,
+        locked: true,
+        locked_by: user.id,
+        locked_by_name: lockerName,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'walk_date,group_num,sector' }
+    )
 
     if (error) {
-      toast.error('Failed to lock schedule')
-      setIsLocked(false)
-    } else {
-      toast.success('Schedule locked!')
+      toast.error('Failed to lock group')
+      setGroupLocks((prev) => { const next = { ...prev }; delete next[groupNum]; return next })
     }
-  }, [date, sector, user])
+  }, [date, sector, user, profile])
 
-  // Unlock all groups for this date/sector (Chief Pup only)
-  const unlockSchedule = useCallback(async () => {
+  // Unlock a single group
+  const unlockGroup = useCallback(async (groupNum) => {
     if (!date || !sector || !user) return
-    setIsLocked(false)
+    setGroupLocks((prev) => { const next = { ...prev }; delete next[groupNum]; return next })
 
-    const { error } = await supabase
-      .from('walk_groups')
-      .update({ locked: false, updated_by: user.id, updated_at: new Date().toISOString() })
-      .eq('walk_date', date)
-      .eq('sector', sector)
+    const { error } = await supabase.from('walk_groups').upsert(
+      {
+        walk_date: date,
+        group_num: groupNum,
+        sector,
+        dog_ids: groupsRef.current[groupNum] || [],
+        group_name: groupNamesRef.current[groupNum] ?? null,
+        walker_id: (walkerAssignmentsRef.current[groupNum] || [])[0] ?? null,
+        walker_ids: (walkerAssignmentsRef.current[groupNum] || []).length > 0 ? walkerAssignmentsRef.current[groupNum] : null,
+        locked: false,
+        locked_by: null,
+        locked_by_name: null,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'walk_date,group_num,sector' }
+    )
 
     if (error) {
-      toast.error('Failed to unlock schedule')
-      setIsLocked(true)
-    } else {
-      toast.success('Schedule unlocked')
+      toast.error('Failed to unlock group')
     }
   }, [date, sector, user])
 
@@ -434,9 +460,9 @@ export function useWalkGroups(events, date, sector) {
   )
 
   return {
-    groups, groupNums, groupNames, walkerAssignments, groupLinks,
+    groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
     moveEvent, addGroup, renameGroup, reorderGroup,
     assignWalker, addWalker, removeWalker, linkGroups, unlinkGroups,
-    loaded, lastSaved, isLocked, lockSchedule, unlockSchedule,
+    loaded, lastSaved, lockGroup, unlockGroup,
   }
 }

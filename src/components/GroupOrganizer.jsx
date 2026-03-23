@@ -205,10 +205,42 @@ function groupColor(groupNum) {
   return GROUP_COLORS[(groupNum - 1) % GROUP_COLORS.length]
 }
 
+// ── Hold-to-lock button for per-group lock ────────────────────────
+function LockButton({ onLock }) {
+  const timer = useRef(null)
+  const [filling, setFilling] = useState(false)
+
+  function handlePointerDown() {
+    setFilling(true)
+    timer.current = setTimeout(() => {
+      setFilling(false)
+      try { navigator.vibrate?.(20) } catch {}
+      onLock()
+    }, 1000)
+  }
+  function handlePointerUp() {
+    clearTimeout(timer.current)
+    setFilling(false)
+  }
+
+  return (
+    <button
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      className="relative w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 text-gray-500 text-sm overflow-hidden flex-shrink-0 active:bg-gray-200"
+      title="Hold to lock"
+    >
+      {filling && <span className="absolute inset-0 bg-[#E8634A] origin-left animate-lock-fill" />}
+      <span className="relative z-10 text-[13px]">&#128274;</span>
+    </button>
+  )
+}
+
 // ── Shared group header (long-press to rename) ─────────────────────
 function GroupHeader({
   groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked,
-  walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
+  walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker, onLockGroup,
   linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
 }) {
   const [editing, setEditing] = useState(false)
@@ -324,7 +356,10 @@ function GroupHeader({
           </button>
         )}
 
-        {isLocked && !isUnassigned && <span className="text-xs flex-shrink-0">🔒</span>}
+        {/* Per-group lock button (hold 1s to lock) */}
+        {!isUnassigned && onLockGroup && count > 0 && (
+          <LockButton onLock={onLockGroup} />
+        )}
 
         <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full flex-shrink-0">
           {count} {count === 1 ? 'dog' : 'dogs'}
@@ -565,7 +600,7 @@ function MobileGroup({
   onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
   walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
   linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
-  altAddressDogIds, owlDogNotesMap,
+  altAddressDogIds, owlDogNotesMap, onLockGroup, lockInfo,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -646,6 +681,7 @@ function MobileGroup({
         onUnlinkGroup={onUnlinkGroup}
         groupNums={allGroupNums}
         groupNames={allGroupNames}
+        onLockGroup={onLockGroup}
       />
 
       {isUnassigned ? (
@@ -759,14 +795,19 @@ function MobileGroup({
 }
 
 // ── Main export ─────────────────────────────────────────────────────
-export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [], onLocked, onUnassignedCount }) {
+export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [], onAnyGroupLocked }) {
   const { canEdit, isAdmin, permissions, user } = useAuth()
   const {
-    groups, groupNums, groupNames, walkerAssignments, groupLinks,
+    groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
     moveEvent, addGroup, renameGroup, reorderGroup,
     assignWalker, addWalker, removeWalker, linkGroups, unlinkGroups,
-    loaded, lastSaved, isLocked, lockSchedule, unlockSchedule,
+    loaded, lastSaved, lockGroup, unlockGroup,
   } = useWalkGroups(events, date, sector)
+
+  const anyGroupLocked = Object.keys(groupLocks).length > 0
+
+  // Report lock state to parent
+  useEffect(() => { onAnyGroupLocked?.(anyGroupLocked) }, [anyGroupLocked, onAnyGroupLocked])
 
   // Pickup tracking (walking mode)
   const { pickups, markPickup } = usePickups(date)
@@ -844,11 +885,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     }
     loadConflicts()
   }, [])
-
-  // Report unassigned count to parent for lock button
-  useEffect(() => {
-    if (loaded) onUnassignedCount?.((groups.unassigned || []).length)
-  }, [loaded, groups.unassigned, onUnassignedCount])
 
   const eventsMap = useMemo(() => {
     const m = new Map()
@@ -937,16 +973,17 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   // Gesture 1: Quick tap a dog
   function handleDogTap(event) {
-    // When locked, disable tap-to-assign
-    if (isLocked) return
     const id = String(event._id)
+    // Check if this dog's group is locked
+    const dogGroup = findGroup(id)
+    if (dogGroup !== 'unassigned' && dogGroup !== null && groupLocks[dogGroup]) return
     setSelectedId((prev) => (prev === id ? null : id))
     setLongPressMenu(null)
   }
 
   // Gesture 1: Tap a group header to move selected dog there
   function handleGroupTap(targetGroup) {
-    if (isLocked) return
+    if (targetGroup !== 'unassigned' && groupLocks[targetGroup]) return
     if (!selectedId) return
     const fromGroup = findGroup(selectedId)
     if (fromGroup === null || fromGroup === targetGroup) {
@@ -1116,7 +1153,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       walkerNames: names,
       walkerIds: wIds,
       isOwnGroup: wIds.includes(user?.id),
-      canAssign: permissions.canEditGroups && !isLocked,
+      canAssign: permissions.canEditGroups && !groupLocks[num],
       availableWalkers,
       onAddWalker: addWalker,
       onRemoveWalker: removeWalker,
@@ -1140,8 +1177,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         <DogChip
           event={ev}
           onInfoClick={(ev) => enrichDogClick(ev, groupKey)}
-          onTap={isLocked ? undefined : handleDogTap}
-          isSelected={!isLocked && selectedId === id}
+          onTap={handleDogTap}
+          isSelected={selectedId === id}
           hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
           owlNote={ev.dog?.id ? owlDogNotesMap?.get(ev.dog.id) : null}
           hasConflict={conflictDogIds?.has(id)}
@@ -1159,12 +1196,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
       {/* Unassigned pool */}
       {(groups.unassigned || []).length === 0 ? (
-        <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
+        <p className="text-xs text-gray-400 text-center py-1">&#10003; All dogs assigned</p>
       ) : (
         <>
-          {isLocked && (groups.unassigned || []).length > 0 && (
+          {anyGroupLocked && (groups.unassigned || []).length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 font-medium">
-              ⚠️ {(groups.unassigned || []).length} new {(groups.unassigned || []).length === 1 ? 'dog' : 'dogs'} added after lock — unlock to assign
+              {(groups.unassigned || []).length} dog{(groups.unassigned || []).length > 1 ? 's' : ''} still unassigned
             </div>
           )}
           <MobileGroup
@@ -1172,202 +1209,155 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             eventIds={groups.unassigned || []}
             eventsMap={eventsMap}
             onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
-            selectedId={isLocked ? null : selectedId}
+            selectedId={selectedId}
             onDogTap={handleDogTap}
             selectedDogName={selectedDogName}
             groupName={null}
             onRename={null}
-            isTarget={!isLocked && selectedId !== null && selectedGroup !== 'unassigned'}
+            isTarget={selectedId !== null && selectedGroup !== 'unassigned'}
             onTargetTap={() => handleGroupTap('unassigned')}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
             owlDogNotesMap={owlDogNotesMap}
             altAddressDogIds={altAddressDogIds}
-            isLocked={isLocked}
+            isLocked={false}
             conflictDogIds={conflictDogIds}
             hasConflict={false}
           />
         </>
       )}
 
-      {/* ── Walking mode (locked) ──────────────────────────────────── */}
-      {isLocked && (() => {
-        // Compute per-group pickup status
-        const myGroupNums = groupNums.filter(num => {
-          const wIds = walkerAssignments[num] || []
-          return wIds.includes(user?.id) || wIds.length === 0
-        })
-        const groupPickupInfo = {}
-        for (const num of groupNums) {
+      {/* ── Progress bar (when any locked groups with current walker) ─── */}
+      {(() => {
+        const myLockedNums = groupNums.filter(n => groupLocks[n] && ((walkerAssignments[n] || []).includes(user?.id) || (walkerAssignments[n] || []).length === 0))
+        if (myLockedNums.length < 2) return null
+
+        // Compute pickup info for progress dots
+        const progressInfo = {}
+        for (const num of myLockedNums) {
           const ids = (groups[num] || []).map(String)
           const total = ids.length
-          const pickedCount = ids.filter(id => {
-            const ev = eventsMap.get(id)
-            return ev?.dog?.id && pickups[ev.dog.id]
-          }).length
-          const allDone = total > 0 && pickedCount === total
-          // Compute elapsed time for done groups
-          let elapsed = null
-          if (allDone) {
-            const times = ids.map(id => {
-              const ev = eventsMap.get(id)
-              return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null
-            }).filter(Boolean)
-            if (times.length > 0) {
-              const minT = Math.min(...times)
-              const maxT = Math.max(...times)
-              elapsed = Math.round((maxT - minT) / 60000)
-            }
-          }
-          groupPickupInfo[num] = { total, pickedCount, allDone, elapsed }
-        }
-
-        const allMyGroupsDone = myGroupNums.length > 0 && myGroupNums.every(n => groupPickupInfo[n]?.allDone || doneGroupNums.has(n))
-        const totalDogs = myGroupNums.reduce((s, n) => s + (groups[n] || []).length, 0)
-
-        // End of day celebration
-        if (allMyGroupsDone) {
-          const totalTime = myGroupNums.reduce((s, n) => s + (groupPickupInfo[n]?.elapsed || 0), 0)
-          const hours = Math.floor(totalTime / 60)
-          const mins = totalTime % 60
-          return (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <p className="text-4xl">&#128062; &#128062; &#128062;</p>
-              <p className="text-lg font-bold text-gray-800">All walks done!</p>
-              <div className="text-[13px] text-gray-500 text-center leading-relaxed">
-                <p>{myGroupNums.length} group{myGroupNums.length > 1 ? 's' : ''} &middot; {totalDogs} dog{totalDogs > 1 ? 's' : ''} &middot; {hours > 0 ? `${hours}h ` : ''}{mins}m</p>
-                {myGroupNums.map(n => (
-                  <p key={n} className="text-[11px] text-gray-400">
-                    {groupNames[n] || `Group ${n}`}: {groupPickupInfo[n]?.elapsed || 0} min
-                  </p>
-                ))}
-              </div>
-              <div className="bg-gray-50 rounded-[14px] px-6 py-4 text-center mt-2">
-                <p className="text-[13px] text-gray-400">See you tomorrow!</p>
-              </div>
-            </div>
-          )
+          const pickedCount = ids.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
+          progressInfo[num] = { allDone: total > 0 && pickedCount === total }
         }
 
         return (
-          <>
-            {/* Progress bar */}
-            {myGroupNums.length > 1 && (
-              <div className="flex items-center justify-center gap-1 py-2">
-                {myGroupNums.map((num, idx) => {
-                  const info = groupPickupInfo[num]
-                  const isDone = info?.allDone || doneGroupNums.has(num)
-                  const isCurrent = !isDone && (idx === 0 || myGroupNums.slice(0, idx).every(n => groupPickupInfo[n]?.allDone || doneGroupNums.has(n)))
-                  return (
-                    <React.Fragment key={num}>
-                      {idx > 0 && (
-                        <div className={`h-[3px] w-6 rounded-full ${isDone || isCurrent ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-                      )}
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                        isDone ? 'bg-emerald-500 text-white'
-                          : isCurrent ? 'bg-[#E8634A] text-white'
-                          : 'bg-gray-200 text-gray-500'
-                      }`}>
-                        {isDone ? '\u2713' : num}
-                      </div>
-                    </React.Fragment>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Swipe hint */}
-            <p className="text-center text-[10px] text-gray-300 py-0.5">
-              &#8592; swipe left = picked up &nbsp;|&nbsp; swipe right = note &#8594;
-            </p>
-
-            {/* Groups */}
-            {groupNums.filter(n => (groups[n] || []).length > 0).map(num => {
-              const info = groupPickupInfo[num]
-              const isDone = info?.allDone || doneGroupNums.has(num)
-              const dogIds = (groups[num] || []).map(String)
-              const { color, accent } = groupColor(num)
-              const wp = walkerProps(num)
-              const gName = groupNames[num] || `Group ${num}`
-
-              // Collapsed done group
-              if (isDone) {
-                return (
-                  <div key={num} className="rounded-[14px] border border-gray-200 px-4 py-3 flex items-center justify-between" style={{ opacity: 0.45 }}>
-                    <span className="text-[12px] font-medium text-emerald-600">
-                      &#10003; {gName} &middot; {info?.elapsed || 0} min
-                    </span>
-                    <span className="text-[10px] text-gray-400">{dogIds.length} dogs</span>
-                  </div>
-                )
-              }
-
+          <div className="flex items-center justify-center gap-1 py-2">
+            {myLockedNums.map((num, idx) => {
+              const isDone = progressInfo[num]?.allDone || doneGroupNums.has(num)
+              const isCurrent = !isDone && (idx === 0 || myLockedNums.slice(0, idx).every(n => progressInfo[n]?.allDone || doneGroupNums.has(n)))
               return (
-                <SwipeableGroup key={num} groupNum={num} onDone={markGroupDone}>
-                  <div className={`rounded-[14px] border-2 border-dashed p-2.5 ${accent} ${color}`}>
-                    {/* Group header */}
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[13px] font-medium text-gray-700">{gName}</span>
-                        {wp.walkerNames?.map((name, i) => (
-                          <span key={wp.walkerIds[i]} className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
-                            wp.walkerIds[i] === user?.id ? 'bg-[#E8634A]/15 text-[#E8634A]' : 'bg-gray-200 text-gray-600'
-                          }`}>{name}</span>
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-gray-400">{info?.pickedCount}/{info?.total}</span>
-                    </div>
-
-                    {/* Individual dog rows */}
-                    <div className="flex flex-col gap-1.5">
-                      {dogIds.map((id, idx) => {
-                        const ev = eventsMap.get(id)
-                        if (!ev) return null
-                        const dogPickup = ev.dog?.id ? pickups[ev.dog.id] : null
-                        return (
-                          <SwipeableDogRow
-                            key={id}
-                            ev={ev}
-                            pickupTime={dogPickup?.time}
-                            onPickup={(ev) => markPickup(ev.dog?.id, ev.displayName)}
-                            onNoteSwipe={(ev) => setSwipeNoteDog({
-                              _id: ev._id,
-                              displayName: ev.displayName,
-                              dog_name: ev.dog?.dog_name,
-                              dogId: ev.dog?.id || null,
-                              photo_url: ev.dog?.photo_url || null,
-                              groupNum: num,
-                            })}
-                            onDogClick={(ev) => enrichDogClick(ev, num)}
-                            owlDogIdSet={owlDogIdSet}
-                            owlDogNotesMap={owlDogNotesMap}
-                            routeNum={idx + 1}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                </SwipeableGroup>
+                <React.Fragment key={num}>
+                  {idx > 0 && <div className={`h-[3px] w-6 rounded-full ${isDone || isCurrent ? 'bg-emerald-400' : 'bg-gray-200'}`} />}
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                    isDone ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-[#E8634A] text-white' : 'bg-gray-200 text-gray-500'
+                  }`}>{isDone ? '\u2713' : num}</div>
+                </React.Fragment>
               )
             })}
-          </>
+          </div>
         )
       })()}
 
-      {/* ── Unlocked mode ──────────────────────────────────────────── */}
-      {!isLocked && groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
+      {/* ── Groups — each renders based on its own lock state ─── */}
+      {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
+        const isGroupLocked = !!groupLocks[num]
+        const lockInfo = groupLocks[num]
+        const dogIds = (groups[num] || []).map(String)
         const isDone = doneGroupNums.has(num)
+        const gName = groupNames[num] || `Group ${num}`
+        const { color, accent } = groupColor(num)
+        const wp = walkerProps(num)
+
+        // ── Locked group → walking mode ──
+        if (isGroupLocked) {
+          // Compute pickup info
+          const total = dogIds.length
+          const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
+          const allPickedUp = total > 0 && pickedCount === total
+
+          // Compute elapsed time for done groups
+          let elapsed = null
+          if (allPickedUp || isDone) {
+            const times = dogIds.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
+            if (times.length > 0) elapsed = Math.round((Math.max(...times) - Math.min(...times)) / 60000)
+          }
+
+          // Collapsed done group
+          if (allPickedUp || isDone) {
+            return (
+              <div key={num} className="rounded-[14px] border border-gray-200 px-4 py-3 flex items-center justify-between" style={{ opacity: 0.45 }}>
+                <span className="text-[12px] font-medium text-emerald-600">&#10003; {gName} &middot; {elapsed || 0} min</span>
+                <span className="text-[10px] text-gray-400">{total} dogs</span>
+              </div>
+            )
+          }
+
+          return (
+            <SwipeableGroup key={num} groupNum={num} onDone={markGroupDone}>
+              <div className={`rounded-[14px] border-2 border-solid p-2.5 ${accent} ${color}`}>
+                {/* Group header with unlock button */}
+                <div className="flex items-center justify-between mb-1 px-1">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <span className="text-[13px] font-medium text-gray-700">{gName}</span>
+                    {wp.walkerNames?.map((name, i) => (
+                      <span key={wp.walkerIds[i]} className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        wp.walkerIds[i] === user?.id ? 'bg-[#E8634A]/15 text-[#E8634A]' : 'bg-gray-200 text-gray-600'
+                      }`}>{name}</span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] text-gray-400">{pickedCount}/{total}</span>
+                    <button onClick={() => unlockGroup(num)} className="text-sm active:scale-90 transition-transform">&#128275;</button>
+                  </div>
+                </div>
+                {lockInfo?.locked_by_name && (
+                  <p className="text-[10px] text-gray-400 px-1 mb-2">locked by {lockInfo.locked_by_name}</p>
+                )}
+
+                {/* Swipe hint (first locked group only) */}
+                {groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
+                  <p className="text-center text-[10px] text-gray-300 py-0.5 mb-1">
+                    &#8592; swipe = picked up &nbsp;|&nbsp; swipe &#8594; = note
+                  </p>
+                )}
+
+                {/* Individual swipeable dog rows */}
+                <div className="flex flex-col gap-1.5">
+                  {dogIds.map((id, idx) => {
+                    const ev = eventsMap.get(id)
+                    if (!ev) return null
+                    const dogPickup = ev.dog?.id ? pickups[ev.dog.id] : null
+                    return (
+                      <SwipeableDogRow
+                        key={id}
+                        ev={ev}
+                        pickupTime={dogPickup?.time}
+                        onPickup={(ev) => markPickup(ev.dog?.id, ev.displayName)}
+                        onNoteSwipe={(ev) => setSwipeNoteDog({
+                          _id: ev._id, displayName: ev.displayName, dog_name: ev.dog?.dog_name,
+                          dogId: ev.dog?.id || null, photo_url: ev.dog?.photo_url || null, groupNum: num,
+                        })}
+                        onDogClick={(ev) => enrichDogClick(ev, num)}
+                        owlDogIdSet={owlDogIdSet}
+                        owlDogNotesMap={owlDogNotesMap}
+                        routeNum={idx + 1}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            </SwipeableGroup>
+          )
+        }
+
+        // ── Unlocked group → organize mode ──
         return (
           <div key={num} className="relative">
             {isDone && (
               <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
                 <span className="text-emerald-600 font-bold text-sm">&#10003; Done</span>
-                <button
-                  onClick={() => undoGroupDone(num)}
-                  className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm"
-                >
-                  Undo
-                </button>
+                <button onClick={() => undoGroupDone(num)} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold active:bg-gray-50 shadow-sm">Undo</button>
               </div>
             )}
             <div className={isDone ? 'opacity-40 pointer-events-none' : ''}>
@@ -1376,20 +1366,22 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                 eventIds={groups[num] || []}
                 eventsMap={eventsMap}
                 onDogClick={(ev) => enrichDogClick(ev, num)}
-                selectedId={isLocked ? null : selectedId}
+                selectedId={selectedId}
                 onDogTap={handleDogTap}
                 selectedDogName={selectedDogName}
                 groupName={groupNames[num] || null}
                 onRename={(name) => renameGroup(num, name)}
-                isTarget={!isLocked && selectedId !== null && selectedGroup !== num}
+                isTarget={selectedId !== null && selectedGroup !== num && !groupLocks[num]}
                 onTargetTap={() => handleGroupTap(num)}
                 onReorder={handleReorder}
                 owlDogIdSet={owlDogIdSet}
                 owlDogNotesMap={owlDogNotesMap}
-                isLocked={isLocked}
+                isLocked={false}
                 conflictDogIds={conflictDogIds}
                 hasConflict={conflictGroupNums.has(num)}
                 altAddressDogIds={altAddressDogIds}
+                onLockGroup={() => { if (dogIds.length > 0) lockGroup(num) }}
+                lockInfo={lockInfo}
                 {...walkerProps(num)}
               />
             </div>
@@ -1397,7 +1389,29 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         )
       })}
 
-      {canEdit && !isLocked && (
+      {/* ── End of day celebration ── */}
+      {(() => {
+        const myLockedNums = groupNums.filter(n => groupLocks[n] && ((walkerAssignments[n] || []).includes(user?.id) || (walkerAssignments[n] || []).length === 0))
+        if (myLockedNums.length === 0) return null
+        const allDone = myLockedNums.every(n => {
+          const ids = (groups[n] || []).map(String)
+          return ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }) || doneGroupNums.has(n)
+        })
+        if (!allDone) return null
+        const totalDogs = myLockedNums.reduce((s, n) => s + (groups[n] || []).length, 0)
+        return (
+          <div className="flex flex-col items-center gap-4 py-8">
+            <p className="text-4xl">&#128062; &#128062; &#128062;</p>
+            <p className="text-lg font-bold text-gray-800">All walks done!</p>
+            <p className="text-[13px] text-gray-500">{myLockedNums.length} group{myLockedNums.length > 1 ? 's' : ''} &middot; {totalDogs} dog{totalDogs > 1 ? 's' : ''}</p>
+            <div className="bg-gray-50 rounded-[14px] px-6 py-4 text-center mt-2">
+              <p className="text-[13px] text-gray-400">See you tomorrow!</p>
+            </div>
+          </div>
+        )
+      })()}
+
+      {canEdit && (
         <button
           onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
           className="flex items-center justify-center gap-2 rounded-[14px] border-2 border-dashed border-[#E8634A]/40 py-3 text-[13px] font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors min-h-[48px]"

@@ -59,14 +59,8 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDay, setSelectedDay] = useState('today')
   const [sectorFilter, setSectorFilter] = useState(null)
-  const [scheduleLocked, setScheduleLocked] = useState(false)
+  const [anyGroupLocked, setAnyGroupLocked] = useState(false)
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
-  const [unassignedCount, setUnassignedCount] = useState(null)
-  const [lockWiggle, setLockWiggle] = useState(false)
-  const [lockHoldProgress, setLockHoldProgress] = useState(false)
-  const [lockTooltip, setLockTooltip] = useState(false)
-  const lockHoldTimer = useRef(null)
-  const lockTooltipTimer = useRef(null)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
@@ -250,92 +244,6 @@ export default function Dashboard() {
     })
   }
 
-  // Check lock state for the current date/sector
-  useEffect(() => {
-    if (!activeDate) return
-    async function checkLock() {
-      const { data } = await supabase
-        .from('walk_groups')
-        .select('locked')
-        .eq('walk_date', activeDate)
-        .eq('locked', true)
-        .limit(1)
-      const locked = data && data.length > 0
-      setScheduleLocked(locked)
-      if (locked) setActiveTab('map')
-    }
-    checkLock()
-  }, [activeDate, sector, refreshKey])
-
-  function handleScheduleLocked() {
-    setScheduleLocked(true)
-    // Auto-switch to map view
-    setTimeout(() => setActiveTab('map'), 300)
-  }
-
-  async function doLock() {
-    if (unassignedCount > 0) return
-    const { error } = await supabase
-      .from('walk_groups')
-      .update({ locked: true })
-      .eq('walk_date', activeDate)
-    if (!error) {
-      setScheduleLocked(true)
-      setActiveTab('map')
-      setLockWiggle(true)
-      setTimeout(() => setLockWiggle(false), 600)
-      toast('Schedule locked')
-    }
-  }
-
-  async function doUnlock() {
-    const { error } = await supabase
-      .from('walk_groups')
-      .update({ locked: false })
-      .eq('walk_date', activeDate)
-    if (!error) {
-      setScheduleLocked(false)
-      setActiveTab('organizer')
-    }
-  }
-
-  // Quick tap on lock → show tooltip; unlock is immediate tap
-  function handleLockClick() {
-    if (scheduleLocked) {
-      doUnlock()
-      return
-    }
-    // Show "Hold to lock" tooltip briefly
-    setLockTooltip(true)
-    clearTimeout(lockTooltipTimer.current)
-    lockTooltipTimer.current = setTimeout(() => setLockTooltip(false), 1500)
-  }
-
-  // Long-press handlers for lock (admin only, unlocked state)
-  function handleLockPointerDown() {
-    if (scheduleLocked || unassignedCount > 0) return
-    setLockHoldProgress(true)
-    lockHoldTimer.current = setTimeout(() => {
-      setLockHoldProgress(false)
-      doLock()
-    }, 1000)
-  }
-
-  function handleLockPointerUp() {
-    clearTimeout(lockHoldTimer.current)
-    setLockHoldProgress(false)
-  }
-
-  // Auto-unlock when new unassigned dogs appear while locked
-  useEffect(() => {
-    if (scheduleLocked && unassignedCount > 0) {
-      doUnlock().then(() => {
-        toast('Schedule unlocked — new dogs added')
-      })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unassignedCount, scheduleLocked])
-
   const sectorEmoji = sector === 'Plateau' ? '🟡' : sector === 'Laurier' ? '🔵' : ''
   const sectorLabel = sector === 'both' ? 'All Sectors' : sector
 
@@ -392,56 +300,7 @@ export default function Dashboard() {
             </span>
           )}
 
-          {/* Lock status — visible to everyone, interactive for admin */}
-          {!loading && filteredEvents.length > 0 && (() => {
-            const canLock = permissions.canLockSchedule
-            const disabled = !scheduleLocked && unassignedCount > 0
-            const icon = scheduleLocked ? '🔓' : '🔒'
-
-            return (
-              <div className="relative">
-                {canLock ? (
-                  <button
-                    onClick={handleLockClick}
-                    onPointerDown={!scheduleLocked && !disabled ? handleLockPointerDown : undefined}
-                    onPointerUp={handleLockPointerUp}
-                    onPointerLeave={handleLockPointerUp}
-                    disabled={disabled}
-                    className={`h-8 flex items-center justify-center rounded-lg text-sm transition-all gap-1 overflow-hidden relative ${
-                      scheduleLocked
-                        ? 'bg-gray-800 text-white px-2.5'
-                        : disabled
-                          ? 'bg-gray-100 text-gray-300 px-2.5 cursor-not-allowed'
-                          : 'bg-gray-100 text-gray-600 px-2.5'
-                    } ${lockWiggle ? 'animate-wiggle' : ''}`}
-                  >
-                    {/* Hold-to-lock fill animation */}
-                    {lockHoldProgress && (
-                      <span className="absolute inset-0 bg-[#E8634A] origin-left animate-lock-fill" />
-                    )}
-                    <span className="relative z-10">{icon}</span>
-                    {!scheduleLocked && unassignedCount > 0 && (
-                      <span className="relative z-10 text-[10px] font-medium">{unassignedCount}</span>
-                    )}
-                  </button>
-                ) : (
-                  <span className={`h-8 flex items-center justify-center rounded-lg text-sm px-2.5 ${
-                    scheduleLocked ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    {icon}
-                  </span>
-                )}
-                {/* Hold to lock tooltip */}
-                {lockTooltip && !scheduleLocked && (
-                  <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] bg-gray-800 text-white px-2 py-0.5 rounded-full z-50">
-                    Hold to lock
-                  </span>
-                )}
-              </div>
-            )
-          })()}
-
-          {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
+          {!loading && filteredEvents.length > 0 && (
             <button
               onClick={() => setActiveTab((t) => (t === 'map' ? 'organizer' : 'map'))}
               className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all ${
@@ -525,18 +384,6 @@ export default function Dashboard() {
           )
         })()}
 
-        {/* Lock banner — tap to toggle between organizer/map */}
-        {!loading && scheduleLocked && (
-          <div className="mb-3">
-            <button
-              onClick={() => setActiveTab(activeTab === 'map' ? 'organizer' : 'map')}
-              className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 text-sm font-semibold text-center select-none active:bg-gray-700"
-            >
-              🔒 Schedule locked — tap to view {activeTab === 'map' ? 'organizer' : 'map'}
-            </button>
-          </div>
-        )}
-
         {/* View-only indicator for non-admin users */}
         {!loading && !permissions.canEditGroups && filteredEvents.length > 0 && (
           <div className="mb-2 flex justify-center">
@@ -547,7 +394,7 @@ export default function Dashboard() {
         )}
 
         {/* Organizer / Map with slide transition */}
-        {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
+        {!loading && (filteredEvents.length > 0 || anyGroupLocked) && (
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === 'organizer' ? (
               <motion.div
@@ -572,8 +419,7 @@ export default function Dashboard() {
                       sector={sectorName}
                       onDogClick={setSelectedEvent}
                       owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
-                      onLocked={handleScheduleLocked}
-                      onUnassignedCount={setUnassignedCount}
+                      onAnyGroupLocked={setAnyGroupLocked}
                     />
                   </div>
                 ))}
@@ -589,11 +435,11 @@ export default function Dashboard() {
                 <MapTabBoundary>
                   <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
                     <MapView
-                      events={scheduleLocked ? allEvents : filteredEvents}
+                      events={anyGroupLocked ? allEvents : filteredEvents}
                       date={activeDate}
-                      sector={scheduleLocked ? 'both' : sector}
+                      sector={anyGroupLocked ? 'both' : sector}
                       onDogClick={setSelectedEvent}
-                      lockedView={scheduleLocked}
+                      lockedView={anyGroupLocked}
                     />
                   </Suspense>
                 </MapTabBoundary>
@@ -606,7 +452,7 @@ export default function Dashboard() {
       <BottomTabs />
 
       {/* Quick-Note FAB — visible in locked/walking mode */}
-      {scheduleLocked && permissions.canLogWalks && (
+      {anyGroupLocked && permissions.canLogWalks && (
         <button
           onClick={() => setQuickNoteOpen(true)}
           className="fixed bottom-20 right-4 z-20 w-14 h-14 rounded-full bg-[#E8634A] text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition-transform"
