@@ -783,6 +783,31 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
+              {/* Contact & Instagram */}
+              {(dog?.contact_method || dog?.ig_handle) && (
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm flex-shrink-0 mt-0.5">📱</span>
+                    <div>
+                      <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-0.5">Contact</p>
+                      {dog.contact_method && (
+                        <p className="text-sm text-gray-700">{dog.contact_method}</p>
+                      )}
+                      {dog.ig_handle && (
+                        <a
+                          href={`https://instagram.com/${dog.ig_handle.replace(/^@/, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[#E8634A] font-medium block mt-0.5"
+                        >
+                          @{dog.ig_handle.replace(/^@/, '')}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* BFF as pill badges */}
               {dog?.bff && (
                 <div className="bg-pink-50 rounded-2xl p-4">

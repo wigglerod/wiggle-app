@@ -9,16 +9,20 @@ const SECTORS = ['Plateau', 'Laurier']
 export default function OwlQuickDrawer({ open, onClose }) {
   const { notes, createNote, loading } = useOwlNotes()
 
-  // Dog list for autocomplete
+  // Dog list for autocomplete — fetch once and cache
   const [dogs, setDogs] = useState([])
+  const dogsFetched = useRef(false)
   useEffect(() => {
-    if (!open) return
+    if (!open || dogsFetched.current) return
     async function fetchDogs() {
       const { data } = await supabase
         .from('dogs')
         .select('id, dog_name')
         .order('dog_name')
-      if (data) setDogs(data)
+      if (data) {
+        setDogs(data)
+        dogsFetched.current = true
+      }
     }
     fetchDogs()
   }, [open])

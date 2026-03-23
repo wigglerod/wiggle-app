@@ -335,7 +335,15 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
     const legend = []
 
     for (const sec of sections) {
+      // Filter out done groups from map pins
+      let doneNums = new Set()
+      try {
+        const raw = localStorage.getItem(`doneGroups_${date}_${sec.sectorName}`)
+        if (raw) doneNums = new Set(JSON.parse(raw))
+      } catch { /* ignore */ }
+
       for (const group of sec.groups) {
+        if (doneNums.has(group.groupNum)) continue
         const color = getGroupColor(group.groupNum)
         legend.push({ name: group.groupName, color })
         for (const dog of group.dogs) {
@@ -348,7 +356,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
     }
 
     return { allMapDogs: dogs, groupLegend: legend }
-  }, [sections, unassigned])
+  }, [sections, unassigned, date])
 
   function handleChipTap(ev) {
     if (didLongPress.current) { didLongPress.current = false; return }

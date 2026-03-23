@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import LoadingDog from './LoadingDog'
 import {
@@ -359,8 +359,8 @@ function MobileGroup({
 
   // Within-group reorder DnD (only for numbered groups)
   const [reorderActiveId, setReorderActiveId] = useState(null)
-  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } })
-  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } })
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
   const reorderSensors = useSensors(touchSensor, pointerSensor)
 
   function handleReorderDragStart(event) {
@@ -403,23 +403,37 @@ function MobileGroup({
           {sortedItems.length === 0 && (
             <p className="text-xs text-gray-400 italic py-2 w-full text-center">All dogs assigned</p>
           )}
-          {sortedItems.map((id) => {
-            const ev = eventsMap.get(id)
-            if (!ev) return null
-            return (
-              <UnassignedChip
-                key={id}
-                ev={ev}
-                id={id}
-                selectedId={selectedId}
-                canEdit={canEdit}
-                onDogTap={onDogTap}
-                onDogClick={onDogClick}
-                onLongPress={onLongPress}
-                owlDogIdSet={owlDogIdSet}
-              />
-            )
-          })}
+          {(() => {
+            let dividerShown = false
+            return sortedItems.map((id) => {
+              const ev = eventsMap.get(id)
+              if (!ev) return null
+              const startHour = ev.start ? new Date(ev.start).getHours() : 0
+              const showDivider = !dividerShown && startHour >= 12
+              if (showDivider) dividerShown = true
+              return (
+                <React.Fragment key={id}>
+                  {showDivider && sortedItems.length > 1 && (
+                    <div className="w-full flex items-center gap-2 py-1.5">
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">12 PM</span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                  )}
+                  <UnassignedChip
+                    ev={ev}
+                    id={id}
+                    selectedId={selectedId}
+                    canEdit={canEdit}
+                    onDogTap={onDogTap}
+                    onDogClick={onDogClick}
+                    onLongPress={onLongPress}
+                    owlDogIdSet={owlDogIdSet}
+                  />
+                </React.Fragment>
+              )
+            })
+          })()}
         </div>
       ) : canEdit ? (
         <DndContext
@@ -937,8 +951,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   // ── Desktop DnD state ───────────────────────────────────────────
   const [activeId, setActiveId] = useState(null)
-  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  const sensors = useSensors(...(canEdit && !isMobile && !isLocked ? [pointerSensor] : []))
+  const desktopPointerSensor = useSensor(PointerSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
+  const sensors = useSensors(...(canEdit && !isMobile && !isLocked ? [desktopPointerSensor] : []))
 
   const groupKeySet = useMemo(
     () => new Set(['unassigned', ...groupNums.map(String)]),
@@ -1102,26 +1116,33 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         {(groups.unassigned || []).length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-1">✓ All dogs assigned</p>
         ) : (
-          <MobileGroup
-            groupKey="unassigned"
-            eventIds={groups.unassigned || []}
-            eventsMap={eventsMap}
-            onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
-            selectedId={isLocked ? null : selectedId}
-            onDogTap={handleDogTap}
-            onLongPress={handleLongPress}
-            groupName={null}
-            onRename={null}
-            isTarget={!isLocked && selectedId !== null && selectedGroup !== 'unassigned'}
-            onTargetTap={() => handleGroupTap('unassigned')}
-            canEdit={canEdit && !isLocked}
-            isAdmin={isAdmin}
-            onReorder={handleReorder}
-            owlDogIdSet={owlDogIdSet}
-            isLocked={isLocked}
-            conflictDogIds={conflictDogIds}
-            hasConflict={false}
-          />
+          <>
+            {isLocked && (groups.unassigned || []).length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 font-medium">
+                ⚠️ {(groups.unassigned || []).length} new {(groups.unassigned || []).length === 1 ? 'dog' : 'dogs'} added after lock — unlock to assign
+              </div>
+            )}
+            <MobileGroup
+              groupKey="unassigned"
+              eventIds={groups.unassigned || []}
+              eventsMap={eventsMap}
+              onDogClick={(ev) => enrichDogClick(ev, 'unassigned')}
+              selectedId={isLocked ? null : selectedId}
+              onDogTap={handleDogTap}
+              onLongPress={handleLongPress}
+              groupName={null}
+              onRename={null}
+              isTarget={!isLocked && selectedId !== null && selectedGroup !== 'unassigned'}
+              onTargetTap={() => handleGroupTap('unassigned')}
+              canEdit={canEdit && !isLocked}
+              isAdmin={isAdmin}
+              onReorder={handleReorder}
+              owlDogIdSet={owlDogIdSet}
+              isLocked={isLocked}
+              conflictDogIds={conflictDogIds}
+              hasConflict={false}
+            />
+          </>
         )}
 
         {groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null).map((num) => {
