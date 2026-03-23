@@ -341,7 +341,7 @@ export default function Dashboard() {
 
   return (
     <div
-      className="min-h-screen bg-[#FFF4F1] pb-20"
+      className="min-h-screen bg-[#FFF5F0] pb-20"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -627,6 +627,7 @@ export default function Dashboard() {
               displayName: ev.displayName,
               dog_name: ev.dog?.dog_name,
               dogId: ev.dog?.id || null,
+              photo_url: ev.dog?.photo_url || null,
               groupNum: null,
             }))}
             date={activeDate}

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { DogPhoto } from './DogChip'
 
 const TAGS = [
   { emoji: '🐕', label: 'Pulled hard' },
@@ -161,7 +162,7 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
                       onClick={() => selectDog(dog)}
                       className="flex items-center gap-2 px-3 py-3 rounded-xl bg-gray-50 border border-gray-200 active:bg-[#FFF4F1] active:border-[#E8634A] transition-all text-left min-h-[48px]"
                     >
-                      <span className="text-lg">🐕</span>
+                      <DogPhoto dog={dog} displayName={dog.displayName || dog.dog_name} size={24} />
                       <span className="text-sm font-semibold text-gray-800 truncate">
                         {dog.displayName || dog.dog_name}
                       </span>
@@ -188,8 +189,9 @@ export default function QuickNoteSheet({ open, onClose, walkingDogs, date }) {
                   >
                     &larr; Back
                   </button>
-                  <span className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                    🐕 {selectedDog?.displayName || selectedDog?.dog_name}
+                  <span className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                    <DogPhoto dog={selectedDog} displayName={selectedDog?.displayName || selectedDog?.dog_name} size={20} />
+                    {selectedDog?.displayName || selectedDog?.dog_name}
                   </span>
                   <div className="w-12" />
                 </div>

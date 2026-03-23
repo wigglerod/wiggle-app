@@ -8,7 +8,7 @@
 
 body {
   margin: 0;
-  background-color: #FFF4F1;
+  background-color: #FFF5F0;
   color: #1A1A1A;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -105,23 +105,23 @@ input, textarea, select {
 
 /* 3D chip — raised card with bottom shadow border */
 .chip-3d {
-  border-bottom-width: 3px;
+  border-bottom-width: 2px;
   border-bottom-color: #d1d5db;
 }
 .chip-3d:active {
   transform: translateY(1px);
-  border-bottom-width: 2px;
+  border-bottom-width: 1px;
 }
 .chip-3d-amber {
-  border-bottom-width: 3px;
+  border-bottom-width: 2px;
   border-bottom-color: #d97706;
 }
 .chip-3d-amber:active {
   transform: translateY(1px);
-  border-bottom-width: 2px;
+  border-bottom-width: 1px;
 }
 .chip-3d-red {
-  border-bottom-width: 3px;
+  border-bottom-width: 2px;
   border-bottom-color: #dc2626;
 }
 .chip-selected {
@@ -136,7 +136,7 @@ input, textarea, select {
 /* Group target pulse — coral dashed border when dog is selected */
 .group-target-pulse {
   border-color: #E8634A !important;
-  background-color: #FFF4F1 !important;
+  background-color: #FFF5F0 !important;
   animation: target-pulse 1.2s ease-in-out infinite;
 }
 @keyframes target-pulse {

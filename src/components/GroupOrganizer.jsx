@@ -18,7 +18,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import DogChip from './DogChip'
+import DogChip, { DogPhoto } from './DogChip'
 import { useWalkGroups } from '../lib/useWalkGroups'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -189,7 +189,7 @@ function GroupHeader({
             onPointerDown={!isUnassigned ? handlePointerDown : undefined}
             onPointerUp={!isUnassigned ? handlePointerUp : undefined}
             onPointerCancel={!isUnassigned ? handlePointerUp : undefined}
-            className={`text-sm font-bold text-left truncate ${!isUnassigned ? 'select-none' : ''} ${
+            className={`text-[13px] font-medium text-left truncate ${!isUnassigned ? 'select-none' : ''} ${
               isTarget ? 'text-[#E8634A]' : 'text-gray-700'
             }`}
           >
@@ -324,7 +324,7 @@ function GroupHeader({
 }
 
 // ── Sortable dog chip with handle-only DnD ─────────────────────────
-function SortableDogChip({ id, ev, onInfoClick, onTap, isSelected, owlDogIdSet, conflictDogIds, altAddressDogIds, routeNum, canDrag }) {
+function SortableDogChip({ id, ev, onInfoClick, onTap, isSelected, owlDogIdSet, owlDogNotesMap, conflictDogIds, altAddressDogIds, routeNum, canDrag }) {
   const {
     attributes,
     listeners,
@@ -350,6 +350,7 @@ function SortableDogChip({ id, ev, onInfoClick, onTap, isSelected, owlDogIdSet, 
         isSelected={isSelected}
         isDragging={isDragging}
         hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+        owlNote={ev.dog?.id ? owlDogNotesMap?.get(ev.dog.id) : null}
         hasConflict={conflictDogIds?.has(id)}
         hasAltAddress={ev.dog?.id && altAddressDogIds?.has(ev.dog.id)}
         routeNum={routeNum}
@@ -370,22 +371,16 @@ function UnassignedChip({ ev, id, selectedId, onDogTap, onDogClick, owlDogIdSet 
     <div className="inline-flex items-center">
       <button
         onClick={() => onDogTap?.(ev)}
-        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all h-9 select-none
           ${selectedId === id
             ? 'bg-[#E8634A] text-white shadow-md chip-selected'
             : 'bg-white text-gray-700 border border-gray-200 shadow-sm chip-3d active:scale-[0.97]'
           }
         `}
       >
-        {hasOwl && <span className="owl-bounce text-xs">🦉</span>}
-        <span className="truncate max-w-[140px]">{ev.displayName}</span>
-        <span
-          onClick={(e) => { e.stopPropagation(); onDogClick?.(ev) }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className={`w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-semibold flex-shrink-0 ${
-            selectedId === id ? 'bg-white/30 text-white' : 'bg-gray-100 border border-gray-200/60 text-gray-500'
-          }`}
-        >i</span>
+        {hasOwl && <span className="owl-bounce text-[10px]" style={{ lineHeight: 1 }}>&#129417;</span>}
+        <DogPhoto dog={ev.dog} displayName={ev.displayName} size={20} />
+        <span className="truncate max-w-[120px] text-[12px]">{ev.displayName}</span>
       </button>
     </div>
   )
@@ -491,7 +486,7 @@ function MobileGroup({
   onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
   walkerNames, walkerIds, isOwnGroup, canAssign, availableWalkers, onAddWalker, onRemoveWalker,
   linkedGroupNum, linkedLinkId, onLinkGroup, onUnlinkGroup, groupNums: allGroupNums, groupNames: allGroupNames,
-  altAddressDogIds,
+  altAddressDogIds, owlDogNotesMap,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -544,7 +539,7 @@ function MobileGroup({
 
   return (
     <div
-      className={`rounded-2xl border-2 border-dashed p-3 transition-all min-h-[80px]
+      className={`rounded-[14px] border-2 border-dashed p-2.5 transition-all min-h-[80px]
         ${hasConflict ? 'sos-flash' : `${accent} ${color}`}
         ${isTarget ? 'group-target-pulse' : ''}
         ${isOwnGroup && !isTarget ? 'ring-2 ring-[#E8634A]/20' : ''}
@@ -651,6 +646,7 @@ function MobileGroup({
                         onTap={onDogTap}
                         isSelected={selectedId === id}
                         owlDogIdSet={owlDogIdSet}
+                        owlDogNotesMap={owlDogNotesMap}
                         conflictDogIds={conflictDogIds}
                         altAddressDogIds={altAddressDogIds}
                         routeNum={idx + 1}
@@ -664,8 +660,8 @@ function MobileGroup({
           </SortableContext>
           <DragOverlay>
             {reorderActiveEvent ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white text-gray-700 border-2 border-[#E8634A] shadow-xl ring-2 ring-[#E8634A]/20 scale-105">
-                <span className="text-base">🐕</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-[12px] font-medium bg-white text-gray-700 border-2 border-[#E8634A] shadow-xl ring-2 ring-[#E8634A]/20 scale-105">
+                <DogPhoto dog={reorderActiveEvent.dog} displayName={reorderActiveEvent.displayName} size={24} />
                 {reorderActiveEvent.displayName}
               </div>
             ) : null}
@@ -779,11 +775,17 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const allDogIds = useMemo(() => events.map(ev => ev.dog?.id).filter(Boolean), [events])
   const altAddressDogIds = useAltAddressDogIds(allDogIds)
 
-  // Set of dog IDs that have owl notes
+  // Set of dog IDs that have owl notes + map to note data
   const owlDogIdSet = useMemo(() => {
     const s = new Set()
     for (const n of owlDogNotes) if (n.target_dog_id) s.add(n.target_dog_id)
     return s
+  }, [owlDogNotes])
+
+  const owlDogNotesMap = useMemo(() => {
+    const m = new Map()
+    for (const n of owlDogNotes) if (n.target_dog_id) m.set(n.target_dog_id, n)
+    return m
   }, [owlDogNotes])
 
   // ── Compute active conflicts from current group state ──────────────
@@ -1046,6 +1048,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           onTap={isLocked ? undefined : handleDogTap}
           isSelected={!isLocked && selectedId === id}
           hasOwlNote={ev.dog?.id && owlDogIdSet?.has(ev.dog.id)}
+          owlNote={ev.dog?.id ? owlDogNotesMap?.get(ev.dog.id) : null}
           hasConflict={conflictDogIds?.has(id)}
           hasAltAddress={ev.dog?.id && altAddressDogIds?.has(ev.dog.id)}
           showHandle={false}
@@ -1083,6 +1086,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onTargetTap={() => handleGroupTap('unassigned')}
             onReorder={handleReorder}
             owlDogIdSet={owlDogIdSet}
+            owlDogNotesMap={owlDogNotesMap}
             altAddressDogIds={altAddressDogIds}
             isLocked={isLocked}
             conflictDogIds={conflictDogIds}
@@ -1113,6 +1117,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                 onTargetTap={() => {}}
                 onReorder={handleReorder}
                 owlDogIdSet={owlDogIdSet}
+                owlDogNotesMap={owlDogNotesMap}
                 isLocked={isLocked}
                 conflictDogIds={conflictDogIds}
                 hasConflict={conflictGroupNums.has(num)}
@@ -1151,6 +1156,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                 onTargetTap={() => handleGroupTap(num)}
                 onReorder={handleReorder}
                 owlDogIdSet={owlDogIdSet}
+                owlDogNotesMap={owlDogNotesMap}
                 isLocked={isLocked}
                 conflictDogIds={conflictDogIds}
                 hasConflict={conflictGroupNums.has(num)}
