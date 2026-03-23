@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import LoadingDog from '../components/LoadingDog'
 import OwlNotesTab from '../components/OwlNotesTab'
+import BeastChat from '../components/BeastChat'
 
 const SECTORS = ['Plateau', 'Laurier']
 
@@ -666,7 +667,7 @@ export default function Admin() {
 
       {/* Tab bar */}
       <div className="flex bg-white border-b border-gray-100 sticky top-[88px] z-20">
-        {['dogs', 'logs', 'owl', 'database'].map((tab) => (
+        {['dogs', 'logs', 'owl', 'beast', 'database'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -676,7 +677,7 @@ export default function Admin() {
                 : 'border-transparent text-gray-400'
             }`}
           >
-            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : tab === 'owl' ? '🦉 Owl' : '🛡️ Database'}
+            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Logs' : tab === 'owl' ? '🦉 Owl' : tab === 'beast' ? '🔥 Beast' : '🛡️ Database'}
           </button>
         ))}
       </div>
@@ -830,6 +831,8 @@ export default function Admin() {
         {/* Owl Notes tab */}
         {!loading && activeTab === 'owl' && <OwlNotesTab />}
         {/* Database tab */}
+        {activeTab === 'beast' && <BeastChat />}
+
         {!loading && activeTab === 'database' && <DatabaseSection />}
       </main>
 

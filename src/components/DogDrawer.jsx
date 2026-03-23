@@ -796,8 +796,8 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* Contact & Instagram */}
-              {(dog?.contact_method || dog?.ig_handle) && (
+              {/* Contact & Instagram — admin only */}
+              {isAdmin && (dog?.contact_method || dog?.ig_handle) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-sm flex-shrink-0 mt-0.5">📱</span>

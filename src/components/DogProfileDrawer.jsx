@@ -612,8 +612,8 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                 </div>
               )}
 
-              {/* Owner info */}
-              {(dog.owner_first || dog.owner_last) && (
+              {/* Owner info — admin only */}
+              {canEdit && (dog.owner_first || dog.owner_last) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
@@ -639,8 +639,8 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                 </div>
               )}
 
-              {/* Contact & Instagram */}
-              {(dog.contact_method || dog.ig_handle) && (
+              {/* Contact & Instagram — admin only */}
+              {canEdit && (dog.contact_method || dog.ig_handle) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-sm flex-shrink-0 mt-0.5">📱</span>
