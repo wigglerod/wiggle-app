@@ -52,18 +52,17 @@ export default function Header({ date }) {
                 )}
               </button>
             )}
-            {profile?.role && (
+            {permissions.canAccessAdmin ? (
+              <button
+                onClick={() => navigate('/admin')}
+                className="text-xs px-2.5 py-1 rounded-full bg-[#E8634A] text-white font-semibold min-h-[32px] flex items-center active:bg-[#d4552d]"
+              >
+                Chief Pup
+              </button>
+            ) : profile?.role && (
               <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${roleColor(profile.role)}`}>
                 {roleLabel(profile.role)}
               </span>
-            )}
-            {permissions.canAccessAdmin && (
-              <button
-                onClick={() => navigate('/admin')}
-                className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-medium min-h-[32px] flex items-center active:bg-gray-200"
-              >
-                Admin
-              </button>
             )}
             <button
               onClick={signOut}

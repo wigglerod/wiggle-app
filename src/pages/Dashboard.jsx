@@ -54,13 +54,17 @@ export default function Dashboard() {
   const [allEvents, setAllEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
-  const [activeTab, setActiveTab] = useState('organizer')
+  const [activeTab, setActiveTab] = useState(() => {
+    try { return localStorage.getItem('wiggle_activeTab') || 'organizer' } catch { return 'organizer' }
+  })
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDay, setSelectedDay] = useState('today')
-  const [customDate, setCustomDate] = useState(null) // for week view day selection
-  const [viewMode, setViewMode] = useState('today') // 'today' | 'week'
+  const [customDate, setCustomDate] = useState(null)
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('wiggle_viewMode') || 'today' } catch { return 'today' }
+  })
   const [sectorFilter, setSectorFilter] = useState(null)
   const [anyGroupLocked, setAnyGroupLocked] = useState(false)
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
@@ -82,6 +86,10 @@ export default function Dashboard() {
   const activeDate = customDate || (selectedDay === 'today' ? today : tomorrow)
   const profileSector = profile?.sector || 'both'
   const sector = sectorFilter || profileSector
+
+  // Persist view state to localStorage
+  useEffect(() => { try { localStorage.setItem('wiggle_viewMode', viewMode) } catch {} }, [viewMode])
+  useEffect(() => { try { localStorage.setItem('wiggle_activeTab', activeTab) } catch {} }, [activeTab])
 
   // Owl notes
   const { notes: owlNotes, dogNotes: getOwlDogNotes, sectorNotes: getOwlSectorNotes, acknowledgeNote } = useOwlNotes(sector)

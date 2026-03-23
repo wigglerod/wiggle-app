@@ -1245,6 +1245,58 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     }
   }
 
+  // ── Collapsed locked group (other walker's group) ───────────────
+  function CollapsedLockedGroup({ num, gName, lockInfo, dogIds, eventsMap: em, wp, pickups: pk, onDogClick }) {
+    const [expanded, setExpanded] = useState(false)
+    const pickedCount = dogIds.filter(id => { const ev = em.get(id); return ev?.dog?.id && pk[ev.dog.id] }).length
+    return (
+      <div key={num} className="rounded-[14px] border border-gray-200 overflow-hidden" style={{ opacity: 0.7 }}>
+        <button
+          onClick={() => setExpanded(p => !p)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-left active:bg-gray-50"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[12px]">&#128274;</span>
+            <span className="text-[12px] font-medium text-gray-700 truncate">{gName}</span>
+            {wp.walkerNames?.map((name, i) => (
+              <span key={wp.walkerIds[i]} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 font-semibold">{name}</span>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] text-gray-400">{pickedCount}/{dogIds.length} dogs</span>
+            <span className="text-[10px] text-gray-300">{expanded ? '\u25B2' : '\u25BC'}</span>
+          </div>
+        </button>
+        {lockInfo?.locked_by_name && (
+          <p className="text-[10px] text-gray-400 px-3 pb-1">locked by {lockInfo.locked_by_name}</p>
+        )}
+        {expanded && (
+          <div className="px-3 pb-2.5 flex flex-col gap-1">
+            {dogIds.map((id, idx) => {
+              const ev = em.get(id)
+              if (!ev) return null
+              const dogPk = ev.dog?.id ? pk[ev.dog.id] : null
+              const timeStr = dogPk?.time ? new Date(dogPk.time).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
+              return (
+                <div key={id} className={`flex items-center gap-2 text-[11px] py-1 ${dogPk ? 'opacity-50' : ''}`}>
+                  <span className="text-gray-400 w-4 text-center">{idx + 1}</span>
+                  <DogPhoto dog={ev.dog} displayName={ev.displayName} size={20} />
+                  <span className={`flex-1 truncate ${dogPk ? 'line-through text-gray-400' : 'text-gray-700'}`}>{ev.displayName}</span>
+                  {timeStr && <span className="text-emerald-600 text-[10px]">{timeStr}</span>}
+                  {ev.dog?.address && (
+                    <span className="text-[10px] text-[#185FA5] truncate max-w-[100px] cursor-pointer" onClick={() => onDogClick(ev)}>
+                      {ev.dog.address.split(',')[0]} &#8250;
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // ── Render a single group (locked or unlocked) ──────────────────
   function renderSingleGroup(num) {
     const isGroupLocked = !!groupLocks[num]
@@ -1254,6 +1306,14 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const gName = groupNames[num] || `Group ${num}`
     const { color, accent } = groupColor(num)
     const wp = walkerProps(num)
+    const wIds = walkerAssignments[num] || []
+    const isOwn = wIds.includes(user?.id) || wIds.length === 0
+    const isOtherLocked = isGroupLocked && !isOwn
+
+    // Other walker's locked group — collapsed with tap-to-expand
+    if (isOtherLocked) {
+      return <CollapsedLockedGroup key={num} num={num} gName={gName} lockInfo={lockInfo} dogIds={dogIds} eventsMap={eventsMap} wp={wp} pickups={pickups} onDogClick={(ev) => enrichDogClick(ev, num)} />
+    }
 
     if (isGroupLocked) {
       const total = dogIds.length
@@ -1314,7 +1374,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
     // Unlocked
     return (
-      <div key={num} className="relative">
+      <div key={num} className="relative" style={!isOwn && wIds.length > 0 ? { opacity: 0.7 } : undefined}>
         {isDone && (
           <div className="absolute inset-0 bg-white/60 rounded-2xl z-20 flex items-center justify-center gap-3">
             <span className="text-emerald-600 font-bold text-sm">&#10003; Done</span>
