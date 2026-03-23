@@ -98,6 +98,7 @@ export default function Login() {
       <p className="text-xs text-gray-400 mt-6 text-center">
         Wiggle Dog Walks · Montréal, QC
       </p>
+      <p className="text-[10px] text-gray-300 mt-1 text-center">v{__APP_VERSION__}</p>
     </div>
   )
 }
