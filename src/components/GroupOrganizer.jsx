@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import DogChip, { DogPhoto } from './DogChip'
+import GroupCreationSheet from './GroupCreationSheet'
 import { useWalkGroups } from '../lib/useWalkGroups'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -837,6 +838,10 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const touchStartY = useRef(0)
   const isScrolling = useRef(false)
 
+  // ── Group creation sheet state ────────────────────────────────
+  const [creationSheetOpen, setCreationSheetOpen] = useState(false)
+  const [pendingMoveDog, setPendingMoveDog] = useState(null) // { dogId, fromGroup } when triggered from long-press
+
   function findGroup(id) {
     const strId = String(id)
     if ((groups.unassigned || []).includes(strId)) return 'unassigned'
@@ -919,17 +924,23 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   function handleLongPressNewGroup() {
     if (!longPressMenu) return
-    const { dogId, fromGroup } = longPressMenu
-    // Add new group and move dog there
-    const nextNum = Math.max(...groupNums, 0) + 1
-    addGroup()
-    // Small delay to let state update, then move
-    setTimeout(() => {
-      moveEvent(dogId, fromGroup, nextNum)
-      const ev = eventsMap.get(dogId)
-      toast(`Moved ${ev?.displayName || 'dog'} to Group ${nextNum}`)
-    }, 100)
+    setPendingMoveDog({ dogId: longPressMenu.dogId, fromGroup: longPressMenu.fromGroup })
     setLongPressMenu(null)
+    setCreationSheetOpen(true)
+  }
+
+  function handleCreateGroup(name, walkerIds) {
+    const newNum = addGroup(name, walkerIds)
+    // If triggered from long-press, auto-move the dog
+    if (pendingMoveDog) {
+      const { dogId, fromGroup } = pendingMoveDog
+      setTimeout(() => {
+        moveEvent(dogId, fromGroup, newNum)
+        const ev = eventsMap.get(dogId)
+        toast(`Moved ${ev?.displayName || 'dog'} to ${name || `Group ${newNum}`}`)
+      }, 100)
+      setPendingMoveDog(null)
+    }
   }
 
   // Deselect on background tap
@@ -1180,8 +1191,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
       {canEdit && !isLocked && (
         <button
-          onClick={addGroup}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#E8634A]/40 py-3 text-sm font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors min-h-[48px]"
+          onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
+          className="flex items-center justify-center gap-2 rounded-[14px] border-2 border-dashed border-[#E8634A]/40 py-3 text-[13px] font-semibold text-[#E8634A] active:bg-[#E8634A]/5 transition-colors min-h-[48px]"
         >
           <span className="w-6 h-6 rounded-full bg-[#E8634A] text-white flex items-center justify-center text-base leading-none">+</span>
           Add Group
@@ -1208,6 +1219,19 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             onMove={handleLongPressMove}
             onNewGroup={handleLongPressNewGroup}
             onClose={() => setLongPressMenu(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Group creation sheet */}
+      <AnimatePresence>
+        {creationSheetOpen && (
+          <GroupCreationSheet
+            open={creationSheetOpen}
+            onClose={() => { setCreationSheetOpen(false); setPendingMoveDog(null) }}
+            onCreate={handleCreateGroup}
+            availableWalkers={availableWalkers}
+            nextGroupNum={Math.max(...groupNums, 0) + 1}
           />
         )}
       </AnimatePresence>

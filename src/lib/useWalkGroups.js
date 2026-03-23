@@ -230,12 +230,14 @@ export function useWalkGroups(events, date, sector) {
   )
 
   // Add a new group beyond the current max
-  const addGroup = useCallback(() => {
+  const addGroup = useCallback((name, walkerIds) => {
     const nextNum = Math.max(...groupNumsRef.current) + 1
     setGroupNums((prev) => [...prev, nextNum])
     setGroups((prev) => ({ ...prev, [nextNum]: [] }))
+    if (name) setGroupNames((prev) => ({ ...prev, [nextNum]: name }))
+    if (walkerIds?.length) setWalkerAssignments((prev) => ({ ...prev, [nextNum]: walkerIds }))
 
-    // Persist the empty group row so the name can be saved against it
+    // Persist the group row with optional name + walkers
     if (date && sector && user) {
       supabase.from('walk_groups').upsert(
         {
@@ -243,7 +245,9 @@ export function useWalkGroups(events, date, sector) {
           group_num: nextNum,
           sector,
           dog_ids: [],
-          group_name: null,
+          group_name: name || null,
+          walker_id: walkerIds?.[0] ?? null,
+          walker_ids: walkerIds?.length ? walkerIds : null,
           updated_by: user.id,
           updated_at: new Date().toISOString(),
         },
@@ -252,6 +256,8 @@ export function useWalkGroups(events, date, sector) {
         if (error) toast.error('Failed to add group')
       })
     }
+
+    return nextNum
   }, [date, sector, user])
 
   // Rename a group and persist
