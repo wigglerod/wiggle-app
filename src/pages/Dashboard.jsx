@@ -311,16 +311,25 @@ export default function Dashboard() {
         </button>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={profileSector === 'both' ? handleSectorCycle : undefined}
-            className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-opacity ${
+          {permissions.canSeeAllSectors ? (
+            <button
+              onClick={handleSectorCycle}
+              className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-opacity active:opacity-60 cursor-pointer ${
+                sector === 'Plateau' ? 'bg-amber-100 text-amber-700'
+                : sector === 'Laurier' ? 'bg-blue-100 text-blue-700'
+                : 'bg-purple-100 text-purple-700'
+              }`}
+            >
+              {sectorEmoji} {sectorLabel}
+            </button>
+          ) : (
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
               sector === 'Plateau' ? 'bg-amber-100 text-amber-700'
-              : sector === 'Laurier' ? 'bg-blue-100 text-blue-700'
-              : 'bg-purple-100 text-purple-700'
-            } ${profileSector === 'both' ? 'active:opacity-60 cursor-pointer' : ''}`}
-          >
-            {sectorEmoji} {sectorLabel}
-          </button>
+              : 'bg-blue-100 text-blue-700'
+            }`}>
+              {sectorEmoji} {sectorLabel}
+            </span>
+          )}
 
           {!loading && (filteredEvents.length > 0 || scheduleLocked) && (
             <button

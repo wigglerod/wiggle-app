@@ -2,30 +2,33 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { useOwlNotes } from '../lib/useOwlNotes'
+import { useAuth } from '../context/AuthContext'
 
 const CORAL = '#E8634A'
 const SECTORS = ['Plateau', 'Laurier']
 
 export default function OwlQuickDrawer({ open, onClose }) {
   const { notes, createNote, loading } = useOwlNotes()
+  const { permissions, sector: userSector } = useAuth()
 
-  // Dog list for autocomplete — fetch once and cache
+  // Dog list for autocomplete — fetch once and cache, scoped by sector for walkers
   const [dogs, setDogs] = useState([])
   const dogsFetched = useRef(false)
   useEffect(() => {
     if (!open || dogsFetched.current) return
     async function fetchDogs() {
-      const { data } = await supabase
-        .from('dogs')
-        .select('id, dog_name')
-        .order('dog_name')
+      let query = supabase.from('dogs').select('id, dog_name').order('dog_name')
+      if (!permissions.canSeeAllSectors && userSector && userSector !== 'both') {
+        query = query.eq('sector', userSector)
+      }
+      const { data } = await query
       if (data) {
         setDogs(data)
         dogsFetched.current = true
       }
     }
     fetchDogs()
-  }, [open])
+  }, [open, permissions.canSeeAllSectors, userSector])
 
   // Form state
   const [text, setText] = useState('')

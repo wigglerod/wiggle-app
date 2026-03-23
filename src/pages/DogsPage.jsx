@@ -7,6 +7,7 @@ import BottomTabs from '../components/BottomTabs'
 import LoadingDog from '../components/LoadingDog'
 import DogProfileDrawer from '../components/DogProfileDrawer'
 import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
+import { useAuth } from '../context/AuthContext'
 
 // ── Friend check component for Dogs page ─────────────────────────────
 function FriendCheckSection({ allDogs }) {
@@ -188,6 +189,7 @@ function SkeletonCard() {
 }
 
 export default function DogsPage() {
+  const { permissions, sector: userSector } = useAuth()
   const [dogs, setDogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -203,10 +205,11 @@ export default function DogsPage() {
 
   async function fetchDogs() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('dogs')
-      .select('*')
-      .order('dog_name')
+    let query = supabase.from('dogs').select('*').order('dog_name')
+    if (!permissions.canSeeAllSectors && userSector && userSector !== 'both') {
+      query = query.eq('sector', userSector)
+    }
+    const { data, error } = await query
     if (error) {
       toast.error('Failed to load dogs')
     } else {
@@ -303,27 +306,29 @@ export default function DogsPage() {
         {/* Check for friends */}
         <FriendCheckSection allDogs={dogs} />
 
-        {/* Sector filter with animated pill */}
-        <div className="relative flex gap-1 mb-4 bg-white rounded-xl p-1 border border-gray-200">
-          {SECTOR_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSector(s)}
-              className="relative flex-1 py-2 rounded-lg text-sm font-semibold z-[1]"
-            >
-              {sector === s && (
-                <motion.div
-                  layoutId="sector-pill"
-                  className="absolute inset-0 bg-[#E8634A] rounded-lg shadow-sm"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-              <span className={`relative z-[2] ${sector === s ? 'text-white' : 'text-gray-500'}`}>
-                {s}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* Sector filter with animated pill — admins only */}
+        {permissions.canSeeAllSectors && (
+          <div className="relative flex gap-1 mb-4 bg-white rounded-xl p-1 border border-gray-200">
+            {SECTOR_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSector(s)}
+                className="relative flex-1 py-2 rounded-lg text-sm font-semibold z-[1]"
+              >
+                {sector === s && (
+                  <motion.div
+                    layoutId="sector-pill"
+                    className="absolute inset-0 bg-[#E8634A] rounded-lg shadow-sm"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-[2] ${sector === s ? 'text-white' : 'text-gray-500'}`}>
+                  {s}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Skeleton loading */}
         {loading && (
@@ -375,14 +380,16 @@ export default function DogsPage() {
                   )}
                 </div>
 
-                {/* Sector badge */}
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
-                  dog.sector === 'Plateau'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-[#FDEBE7] text-[#E8634A]'
-                }`}>
-                  {dog.sector}
-                </span>
+                {/* Sector badge — only when viewing all sectors */}
+                {permissions.canSeeAllSectors && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${
+                    dog.sector === 'Plateau'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-[#FDEBE7] text-[#E8634A]'
+                  }`}>
+                    {dog.sector}
+                  </span>
+                )}
               </motion.button>
             ))}
           </div>
