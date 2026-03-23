@@ -22,14 +22,17 @@ export function useWalkGroups(events, date, sector) {
   const [loaded, setLoaded] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
   const [isLocked, setIsLocked] = useState(false)
+  const [walkerAssignments, setWalkerAssignments] = useState({}) // { groupNum: walkerId }
 
   // Refs to avoid stale closures in callbacks
   const groupsRef = useRef(groups)
   const groupNamesRef = useRef(groupNames)
   const groupNumsRef = useRef(groupNums)
+  const walkerAssignmentsRef = useRef(walkerAssignments)
   useEffect(() => { groupsRef.current = groups }, [groups])
   useEffect(() => { groupNamesRef.current = groupNames }, [groupNames])
   useEffect(() => { groupNumsRef.current = groupNums }, [groupNums])
+  useEffect(() => { walkerAssignmentsRef.current = walkerAssignments }, [walkerAssignments])
 
   const allEventIds = events.map((ev) => ev._id?.toString?.() || String(ev._id))
 
@@ -50,6 +53,7 @@ export function useWalkGroups(events, date, sector) {
 
       const saved = {}
       const names = {}
+      const walkers = {}
       const assignedSet = new Set()
       const nums = new Set([1, 2, 3])
 
@@ -60,6 +64,7 @@ export function useWalkGroups(events, date, sector) {
           saved[row.group_num] = ids
           ids.forEach((id) => assignedSet.add(id))
           if (row.group_name) names[row.group_num] = row.group_name
+          if (row.walker_id) walkers[row.group_num] = row.walker_id
           nums.add(row.group_num)
         }
       }
@@ -77,6 +82,7 @@ export function useWalkGroups(events, date, sector) {
 
       setGroupNums(sortedNums)
       setGroupNames(names)
+      setWalkerAssignments(walkers)
       setGroups({ unassigned, ...saved })
       setIsLocked(locked)
       setLoaded(true)
@@ -121,6 +127,14 @@ export function useWalkGroups(events, date, sector) {
             setIsLocked(row.locked)
           }
 
+          // Sync walker assignment from realtime
+          setWalkerAssignments((prev) => {
+            if (row.walker_id) return { ...prev, [row.group_num]: row.walker_id }
+            const next = { ...prev }
+            delete next[row.group_num]
+            return next
+          })
+
           setGroups((prev) => {
             const ids = [...new Set(row.dog_ids || [])].filter((id) => allEventIds.includes(id))
             const next = { ...prev, [row.group_num]: ids }
@@ -155,6 +169,7 @@ export function useWalkGroups(events, date, sector) {
           sector,
           dog_ids: dogIds,
           group_name: groupNamesRef.current[groupNum] ?? null,
+          walker_id: walkerAssignmentsRef.current[groupNum] ?? null,
           updated_by: user.id,
           updated_at: new Date().toISOString(),
         },
@@ -298,5 +313,39 @@ export function useWalkGroups(events, date, sector) {
     }
   }, [date, sector, user])
 
-  return { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule }
+  // Assign a walker to a group
+  const assignWalker = useCallback(
+    async (groupNum, walkerId) => {
+      setWalkerAssignments((prev) => {
+        if (walkerId) return { ...prev, [groupNum]: walkerId }
+        const next = { ...prev }
+        delete next[groupNum]
+        return next
+      })
+
+      if (!date || !sector || !user) return
+
+      const { error } = await supabase.from('walk_groups').upsert(
+        {
+          walk_date: date,
+          group_num: groupNum,
+          sector,
+          dog_ids: groupsRef.current[groupNum] || [],
+          group_name: groupNamesRef.current[groupNum] ?? null,
+          walker_id: walkerId || null,
+          updated_by: user.id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'walk_date,group_num,sector' }
+      )
+      if (error) {
+        toast.error('Failed to assign walker')
+      } else {
+        toast.success('Walker assigned')
+      }
+    },
+    [date, sector, user]
+  )
+
+  return { groups, groupNums, groupNames, walkerAssignments, moveEvent, addGroup, renameGroup, reorderGroup, assignWalker, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule }
 }

@@ -206,9 +206,13 @@ function ReorderableSortableItem({ id, children, canEdit }) {
 }
 
 // ── Shared group header (long-press to rename) ─────────────────────
-function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked }) {
+function GroupHeader({
+  groupKey, groupName, count, onRename, isTarget, onTargetTap, selectedDogName, isLocked,
+  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
+}) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [showWalkerPicker, setShowWalkerPicker] = useState(false)
   const isUnassigned = groupKey === 'unassigned'
   const lpTimer = useRef(null)
 
@@ -239,7 +243,7 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
   }
 
   return (
-    <div className="flex items-center justify-between mb-2">
+    <div className="relative flex items-center justify-between mb-2">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {!isUnassigned && editing ? (
           <input
@@ -261,6 +265,30 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
           </span>
         )}
 
+        {/* Walker name badge */}
+        {!isUnassigned && walkerName && (
+          <span
+            onClick={canAssign ? () => setShowWalkerPicker(true) : undefined}
+            className={`text-[11px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${
+              isOwnGroup
+                ? 'bg-[#E8634A]/15 text-[#E8634A]'
+                : 'bg-gray-200 text-gray-600'
+            } ${canAssign ? 'cursor-pointer active:opacity-70' : ''}`}
+          >
+            {walkerName}
+          </span>
+        )}
+
+        {/* Assign walker button (admin only, no walker assigned yet) */}
+        {!isUnassigned && !walkerName && canAssign && (
+          <button
+            onClick={() => setShowWalkerPicker(true)}
+            className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 font-medium flex-shrink-0 active:bg-gray-200"
+          >
+            + walker
+          </button>
+        )}
+
         {isLocked && !isUnassigned && <span className="text-xs flex-shrink-0">🔒</span>}
 
         <span className="text-xs text-gray-400 bg-white/70 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -275,6 +303,40 @@ function GroupHeader({ groupKey, groupName, count, onRename, isTarget, onTargetT
         >
           + Add here
         </button>
+      )}
+
+      {/* Walker picker dropdown */}
+      {showWalkerPicker && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowWalkerPicker(false)} />
+          <div className="absolute right-2 top-8 z-50 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[140px] max-h-[200px] overflow-y-auto">
+            {availableWalkers?.map((w) => (
+              <button
+                key={w.id}
+                onClick={() => {
+                  onAssignWalker?.(Number(groupKey), w.id)
+                  setShowWalkerPicker(false)
+                }}
+                className={`w-full text-left px-3 py-2 text-sm active:bg-gray-50 transition-colors ${
+                  walkerId === w.id ? 'font-bold text-[#E8634A]' : 'text-gray-700'
+                }`}
+              >
+                {w.full_name}
+              </button>
+            ))}
+            {walkerId && (
+              <button
+                onClick={() => {
+                  onAssignWalker?.(Number(groupKey), null)
+                  setShowWalkerPicker(false)
+                }}
+                className="w-full text-left px-3 py-2 text-xs text-gray-400 active:bg-gray-50 border-t border-gray-100"
+              >
+                Remove walker
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   )
@@ -335,6 +397,7 @@ function MobileGroup({
   groupKey, eventIds, eventsMap, onDogClick, selectedId, onDogTap,
   onLongPress, groupName, onRename, isTarget, onTargetTap, canEdit,
   isAdmin, onReorder, owlDogIdSet, isLocked, conflictDogIds, hasConflict,
+  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
 }) {
   const isUnassigned = groupKey === 'unassigned'
   const { color, accent } = isUnassigned
@@ -385,6 +448,7 @@ function MobileGroup({
       className={`rounded-2xl border-2 border-dashed p-3 transition-all min-h-[80px]
         ${hasConflict ? 'sos-flash' : `${accent} ${color}`}
         ${isTarget ? 'ring-2 ring-[#E8634A]/40 border-[#E8634A] scale-[1.01]' : ''}
+        ${isOwnGroup && !isTarget ? 'ring-2 ring-[#E8634A]/20' : ''}
       `}
     >
       <GroupHeader
@@ -396,6 +460,12 @@ function MobileGroup({
         onTargetTap={onTargetTap}
         selectedDogName={selectedDogName}
         isLocked={isLocked}
+        walkerName={walkerName}
+        walkerId={walkerId}
+        isOwnGroup={isOwnGroup}
+        canAssign={canAssign}
+        availableWalkers={availableWalkers}
+        onAssignWalker={onAssignWalker}
       />
 
       {isUnassigned ? (
@@ -546,6 +616,7 @@ function DesktopGroup({
   groupKey, eventIds, eventsMap, onDogClick, activeId, groupName,
   onRename, canEdit, isAdmin, onReorder, owlDogIdSet, isLocked,
   conflictDogIds, hasConflict,
+  walkerName, walkerId, isOwnGroup, canAssign, availableWalkers, onAssignWalker,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(groupKey) })
   const isUnassigned = groupKey === 'unassigned'
@@ -573,6 +644,7 @@ function DesktopGroup({
       className={`rounded-2xl border-2 border-dashed p-3 transition-all min-h-[80px]
         ${hasConflict ? 'sos-flash' : `${accent} ${color}`}
         ${isOver ? 'ring-2 ring-[#E8634A]/40 border-[#E8634A] scale-[1.01]' : ''}
+        ${isOwnGroup && !isOver ? 'ring-2 ring-[#E8634A]/20' : ''}
       `}
     >
       <GroupHeader
@@ -581,6 +653,12 @@ function DesktopGroup({
         count={sortedItems.length}
         onRename={isLocked ? null : onRename}
         isLocked={isLocked}
+        walkerName={walkerName}
+        walkerId={walkerId}
+        isOwnGroup={isOwnGroup}
+        canAssign={canAssign}
+        availableWalkers={availableWalkers}
+        onAssignWalker={onAssignWalker}
       />
 
       <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
@@ -719,10 +797,45 @@ function LongPressMenu({ position, groupNums, groupNames, currentGroup, onMove, 
 
 // ── Main export ─────────────────────────────────────────────────────
 export default function GroupOrganizer({ events, date, sector, onDogClick, owlDogNotes = [], onLocked }) {
-  const { canEdit, isAdmin } = useAuth()
+  const { canEdit, isAdmin, permissions, user } = useAuth()
   const isMobile = useIsMobile()
-  const { groups, groupNums, groupNames, moveEvent, addGroup, renameGroup, reorderGroup, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule } =
+  const { groups, groupNums, groupNames, walkerAssignments, moveEvent, addGroup, renameGroup, reorderGroup, assignWalker, loaded, lastSaved, isLocked, lockSchedule, unlockSchedule } =
     useWalkGroups(events, date, sector)
+
+  // Available walkers for this sector + today
+  const [availableWalkers, setAvailableWalkers] = useState([])
+  useEffect(() => {
+    if (!sector) return
+    async function fetchWalkers() {
+      let query = supabase
+        .from('profiles')
+        .select('id, full_name, sector, schedule')
+        .in('role', ['senior_walker', 'admin'])
+        .order('full_name')
+      if (sector !== 'both') {
+        query = query.or(`sector.eq.${sector},sector.eq.both`)
+      }
+      const { data } = await query
+      if (!data) return
+
+      // Filter to walkers working today
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      const todayDay = dayNames[new Date().getDay()]
+      const working = data.filter((w) => {
+        if (!w.schedule) return true // admins with no schedule are always available
+        return w.schedule.includes(todayDay)
+      })
+      setAvailableWalkers(working)
+    }
+    fetchWalkers()
+  }, [sector])
+
+  // Walker name lookup map
+  const walkerNameMap = useMemo(() => {
+    const map = {}
+    for (const w of availableWalkers) map[w.id] = w.full_name
+    return map
+  }, [availableWalkers])
 
   // Done groups state (localStorage-backed)
   const [doneGroupNums, setDoneGroupNums] = useState(new Set())
@@ -1106,6 +1219,19 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     </div>
   )
 
+  // Walker props helper for group cards
+  function walkerProps(num) {
+    const wId = walkerAssignments[num] || null
+    return {
+      walkerName: wId ? (walkerNameMap[wId] || null) : null,
+      walkerId: wId,
+      isOwnGroup: wId === user?.id,
+      canAssign: permissions.canEditGroups && !isLocked,
+      availableWalkers,
+      onAssignWalker: assignWalker,
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────
   if (isMobile) {
     return (
@@ -1172,6 +1298,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                   isLocked={isLocked}
                   conflictDogIds={conflictDogIds}
                   hasConflict={conflictGroupNums.has(num)}
+                  {...walkerProps(num)}
                 />
               </SwipeableGroup>
             )
@@ -1211,6 +1338,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                   isLocked={isLocked}
                   conflictDogIds={conflictDogIds}
                   hasConflict={conflictGroupNums.has(num)}
+                  {...walkerProps(num)}
                 />
               </div>
             </div>
@@ -1330,6 +1458,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                   isLocked={isLocked}
                   conflictDogIds={conflictDogIds}
                   hasConflict={conflictGroupNums.has(num)}
+                  {...walkerProps(num)}
                 />
               </div>
               {isLocked && !isDone && (
