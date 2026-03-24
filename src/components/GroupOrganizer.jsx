@@ -328,6 +328,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const [creationSheetOpen, setCreationSheetOpen] = useState(false)
   const [pendingMoveDog, setPendingMoveDog] = useState(null)
 
+  // ── Link picker ─────────────────────────────────────────────────
+  const [linkPickerNum, setLinkPickerNum] = useState(null) // group num being linked
+
   function findGroup(id) {
     const strId = String(id)
     if ((groups.unassigned || []).includes(strId)) return 'unassigned'
@@ -591,6 +594,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           onTargetTap={() => handleGroupTap(num)}
           onRename={(name) => !isGroupLocked && renameGroup(num, name)}
           onToggleLock={() => isGroupLocked ? unlockGroup(num) : (total > 0 && lockGroup(num))}
+          isLinked={!!groupLinks.find(l => l.group_a_key === `${date}_${sector}_${num}` || l.group_b_key === `${date}_${sector}_${num}`)}
+          onLinkTap={() => setLinkPickerNum(num)}
         />
 
         {/* Swipe hint (first locked group only) */}
@@ -654,6 +659,15 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     <div className="flex flex-col gap-3" onClick={handleBackgroundTap}>
       {sosBanner}
 
+      {/* Collapsible map */}
+      <CollapsibleMap
+        events={events}
+        groups={groups}
+        groupNums={groupNums}
+        groupNames={groupNames}
+        eventsMap={eventsMap}
+      />
+
       {/* Unassigned pool */}
       <UnassignedPool
         eventIds={groups.unassigned || []}
@@ -683,10 +697,39 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         />
       )}
 
-      {/* Groups */}
-      {groupNums
-        .filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null)
-        .map((num, idx) => renderGroup(num, idx))}
+      {/* Groups (with linked pair support) */}
+      {(() => {
+        const renderedNums = new Set()
+        const visibleNums = groupNums.filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null)
+        return visibleNums.map((num, idx) => {
+          if (renderedNums.has(num)) return null
+          // Check if linked
+          const groupKey = `${date}_${sector}_${num}`
+          const link = groupLinks.find(l => l.group_a_key === groupKey || l.group_b_key === groupKey)
+          const partnerNum = link ? Number((link.group_a_key === groupKey ? link.group_b_key : link.group_a_key).split('_').pop()) : null
+
+          if (partnerNum && visibleNums.includes(partnerNum) && !renderedNums.has(partnerNum)) {
+            renderedNums.add(num)
+            renderedNums.add(partnerNum)
+            const isGroupA = link.group_a_key === groupKey
+            const groupA = isGroupA ? num : partnerNum
+            const groupB = isGroupA ? partnerNum : num
+            const syncPos = link.sync_position ?? 0
+            const offsetPx = syncPos > 0 ? syncPos * 45 : 0
+
+            return (
+              <div key={`link-${num}-${partnerNum}`} style={{ display: 'flex', gap: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>{renderGroup(groupA, visibleNums.indexOf(groupA))}</div>
+                <div style={{ width: 3, background: '#185FA5', borderRadius: 2, margin: '20px 0', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0, marginTop: offsetPx }}>{renderGroup(groupB, visibleNums.indexOf(groupB))}</div>
+              </div>
+            )
+          }
+
+          renderedNums.add(num)
+          return renderGroup(num, idx)
+        })
+      })()}
 
       {/* End of day celebration */}
       <EndOfDayCelebration
@@ -739,6 +782,26 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         )}
       </AnimatePresence>
 
+      {/* Link picker */}
+      <AnimatePresence>
+        {linkPickerNum !== null && (
+          <LinkPicker
+            sourceNum={linkPickerNum}
+            sourceName={groupNames[linkPickerNum] || `Group ${linkPickerNum}`}
+            groupNums={groupNums}
+            groupNames={groupNames}
+            groupLinks={groupLinks}
+            groups={groups}
+            eventsMap={eventsMap}
+            date={date}
+            sector={sector}
+            onLink={(targetNum, syncPos) => { linkGroups(linkPickerNum, targetNum, syncPos); setLinkPickerNum(null) }}
+            onUnlink={(linkId) => { unlinkGroups(linkId); setLinkPickerNum(null) }}
+            onClose={() => setLinkPickerNum(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Group creation sheet */}
       <AnimatePresence>
         {creationSheetOpen && (
@@ -775,7 +838,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, onToggleLock }) {
+function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, onToggleLock, isLinked, onLinkTap }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -838,6 +901,13 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             locked by {lockInfo.locked_by_name}
           </span>
         )}
+
+        {/* Linked badge */}
+        {isLinked && (
+          <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 6, fontWeight: 600, background: '#E6F1FB', color: '#185FA5', whiteSpace: 'nowrap' }}>
+            linked
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
@@ -847,6 +917,11 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         <span style={{ fontSize: 10, color: '#aaa' }}>
           {isLocked ? `${pickedCount}/${dogCount}` : dogCount}
         </span>
+        {!isLocked && onLinkTap && (
+          <button onClick={(e) => { e.stopPropagation(); onLinkTap() }} style={{ fontSize: 12, padding: 2, background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.4 }}>
+            {'\u{1F517}'}
+          </button>
+        )}
         {dogCount > 0 && <LockButton isLocked={isLocked} onToggle={onToggleLock} />}
       </div>
     </div>
@@ -1183,5 +1258,158 @@ function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, events
         <span style={{ color: '#aaa', fontSize: 13 }}>See you tomorrow!</span>
       </div>
     </div>
+  )
+}
+
+// ── Collapsible map ───────────────────────────────────────────────
+function CollapsibleMap({ events, groups, groupNums, groupNames, eventsMap }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const pinCount = useMemo(() => {
+    let count = 0
+    for (const ev of events || []) {
+      if (ev.dog?.address) count++
+    }
+    return count
+  }, [events])
+
+  if (pinCount === 0) return null
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          width: '100%', background: '#f0ece8', borderRadius: 12, border: '0.5px solid #e0dcd8',
+          padding: expanded ? '6px 10px' : '0 10px',
+          height: expanded ? 'auto' : 50,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: expanded ? 'flex-start' : 'center',
+          cursor: 'pointer', overflow: 'hidden', transition: 'height 0.3s ease',
+        }}
+      >
+        {!expanded && (
+          <span style={{ fontSize: 10, color: '#bbb' }}>
+            Map: {pinCount} pin{pinCount !== 1 ? 's' : ''} {'\u00b7'} tap to expand
+          </span>
+        )}
+      </button>
+      {expanded && (
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: '0.5px solid #e0dcd8', marginTop: -1 }}>
+          <div style={{ height: 200, background: '#e8e5e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 11, color: '#aaa' }}>Map loads in the Map tab</span>
+          </div>
+          {/* Group legend */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '6px 8px', background: '#fff' }}>
+            {groupNums.slice(0, 5).map((num, idx) => {
+              const color = groupColors[idx % groupColors.length]
+              return (
+                <span key={num} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#888' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: color.border, flexShrink: 0 }} />
+                  {groupNames[num] || `Group ${num}`}
+                </span>
+              )
+            })}
+          </div>
+          <button onClick={() => setExpanded(false)} style={{ width: '100%', padding: 4, background: '#f8f6f4', border: 'none', cursor: 'pointer', fontSize: 9, color: '#aaa' }}>
+            collapse
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Link picker ───────────────────────────────────────────────────
+function LinkPicker({ sourceNum, sourceName, groupNums, groupNames, groupLinks, groups, eventsMap, date, sector, onLink, onUnlink, onClose }) {
+  const [step, setStep] = useState('group') // 'group' | 'mode' | 'stagger'
+  const [targetNum, setTargetNum] = useState(null)
+
+  // Check if already linked
+  const sourceKey = `${date}_${sector}_${sourceNum}`
+  const existingLink = groupLinks.find(l => l.group_a_key === sourceKey || l.group_b_key === sourceKey)
+
+  function handleSelectGroup(n) {
+    setTargetNum(n)
+    setStep('mode')
+  }
+
+  function handleSideBySide() {
+    onLink(targetNum, 0)
+  }
+
+  function handleStaggerAt(dogIndex) {
+    onLink(targetNum, dogIndex)
+  }
+
+  const sourceDogIds = (groups[sourceNum] || []).map(String)
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100]" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={onClose} />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-[101] bg-white shadow-2xl pb-[env(safe-area-inset-bottom)]"
+        style={{ borderRadius: '16px 16px 0 0', padding: 16, maxHeight: '60vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2 }} />
+        </div>
+
+        {existingLink ? (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{sourceName} is linked</p>
+            <button
+              onClick={() => onUnlink(existingLink.id)}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Unlink groups
+            </button>
+          </>
+        ) : step === 'group' ? (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Link {sourceName} with...</p>
+            {groupNums.filter(n => n !== sourceNum).map(n => {
+              const color = groupColors[(n - 1) % groupColors.length]
+              return (
+                <button key={n} onClick={() => handleSelectGroup(n)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, color: '#1a1a1a' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: color.border, flexShrink: 0 }} />
+                  {groupNames[n] || `Group ${n}`}
+                </button>
+              )
+            })}
+          </>
+        ) : step === 'mode' ? (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Link mode</p>
+            <button onClick={handleSideBySide}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#f5f9fd', border: '1px solid #85B7EB', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginBottom: 8 }}>
+              Side by side
+            </button>
+            <button onClick={() => setStep('stagger')}
+              style={{ width: '100%', padding: 12, borderRadius: 10, background: '#f5f9fd', border: '1px solid #85B7EB', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              Staggered
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Start at which dog?</p>
+            {sourceDogIds.map((id, idx) => {
+              const ev = eventsMap.get(id)
+              if (!ev) return null
+              return (
+                <button key={id} onClick={() => handleStaggerAt(idx + 1)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}>
+                  <span style={{ fontSize: 10, color: '#aaa', width: 16 }}>{idx + 1}</span>
+                  {ev.displayName}
+                </button>
+              )
+            })}
+          </>
+        )}
+      </motion.div>
+    </>
   )
 }
