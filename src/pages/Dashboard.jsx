@@ -1,40 +1,20 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense, Component } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
 import GroupOrganizer from '../components/GroupOrganizer'
 import DogDrawer from '../components/DogDrawer'
-import QuickNoteSheet from '../components/QuickNoteSheet'
 import WeeklyView from '../components/WeeklyView'
 
 import { useOwlNotes } from '../lib/useOwlNotes'
 import { getCachedDogs, setCachedDogs } from '../lib/useOffline'
 
-const MapView = lazy(() => import('../components/MapView'))
-
-class MapTabBoundary extends Component {
-  state = { hasError: false }
-  static getDerivedStateFromError() { return { hasError: true } }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex flex-col items-center justify-center py-10 gap-3 text-center px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <span className="text-4xl">🗺️</span>
-          <p className="text-sm font-semibold text-gray-600">Map coming soon!</p>
-          <p className="text-xs text-gray-400">Use the organizer to plan your route.</p>
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
-import { toast } from 'sonner'
 
 let _idCounter = 0
 function uid() { return String(++_idCounter) }
@@ -44,8 +24,6 @@ function formatDayLabel(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-const SECTOR_CYCLE = ['both', 'Plateau', 'Laurier']
-
 export default function Dashboard() {
   const { profile, permissions } = useAuth()
   const [dogs, setDogs] = useState([])
@@ -54,9 +32,6 @@ export default function Dashboard() {
   const [allEvents, setAllEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState(null)
-  const [activeTab, setActiveTab] = useState(() => {
-    try { return localStorage.getItem('wiggle_activeTab') || 'organizer' } catch { return 'organizer' }
-  })
   const [refreshKey, setRefreshKey] = useState(0)
   const [pullY, setPullY] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -67,7 +42,6 @@ export default function Dashboard() {
   })
   const [sectorFilter, setSectorFilter] = useState(null)
   const [anyGroupLocked, setAnyGroupLocked] = useState(false)
-  const [quickNoteOpen, setQuickNoteOpen] = useState(false)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
@@ -87,19 +61,16 @@ export default function Dashboard() {
   const profileSector = profile?.sector || 'both'
   const sector = sectorFilter || profileSector
 
-  // Persist view state to localStorage
+  // Persist view state
   useEffect(() => { try { localStorage.setItem('wiggle_viewMode', viewMode) } catch {} }, [viewMode])
-  useEffect(() => { try { localStorage.setItem('wiggle_activeTab', activeTab) } catch {} }, [activeTab])
 
   // Owl notes
-  const { notes: owlNotes, dogNotes: getOwlDogNotes, sectorNotes: getOwlSectorNotes, acknowledgeNote } = useOwlNotes(sector)
+  const { notes: owlNotes, sectorNotes: getOwlSectorNotes, acknowledgeNote } = useOwlNotes(sector)
 
   // Load cached dogs instantly, then refresh from Supabase
   useEffect(() => {
     const cached = getCachedDogs()
-    if (cached && dogs.length === 0) {
-      setDogs(cached)
-    }
+    if (cached && dogs.length === 0) setDogs(cached)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -122,26 +93,19 @@ export default function Dashboard() {
   // Fetch schedule from Acuity
   useEffect(() => {
     if (!dogsReady) return
-
     setLoading(true)
 
     async function buildSchedule() {
       let rawEvents = []
-
       try {
         const res = await fetch(`/api/acuity?date=${activeDate}`)
         if (res.ok) {
           const acuityEvents = await res.json()
-          rawEvents = acuityEvents
-            .map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
+          rawEvents = acuityEvents.map((ev) => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) }))
         }
-      } catch {
-        // Acuity unavailable
-      }
+      } catch {}
 
       _idCounter = 0
-
-      // Match ALL events first, then filter by effective sector (dogs.sector overrides Acuity calendar)
       const allMatched = matchEvents(rawEvents, dogs, nameMap)
       const matched = profileSector === 'both'
         ? allMatched
@@ -158,7 +122,6 @@ export default function Dashboard() {
         calendarDoorCode: extractDoorCode(event.description),
       }))
 
-      // Deduplicate: same dog.id → keep first occurrence only, hide TBD placeholders
       const seen = new Set()
       const deduped = enriched.filter((ev) => {
         if (ev.displayName && /TBD/i.test(ev.displayName)) return false
@@ -175,7 +138,7 @@ export default function Dashboard() {
     buildSchedule()
   }, [dogsReady, dogs, nameMap, activeDate, profileSector])
 
-  // Filter by local sector selection
+  // Filter by sector
   const filteredEvents = useMemo(() => {
     if (sector === 'both') return allEvents
     return allEvents.filter((ev) => (ev.sector || 'Plateau') === sector)
@@ -195,27 +158,22 @@ export default function Dashboard() {
     return map
   }, [filteredEvents, sector])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync derived UI flag
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (!loading) setRefreshing(false) }, [loading])
 
+  // Pull-to-refresh
   function handleTouchStart(e) {
     if (window.scrollY === 0) {
       touchStartY.current = e.touches[0].clientY
       isPulling.current = true
     }
   }
-
   function handleTouchMove(e) {
     if (!isPulling.current) return
     const delta = e.touches[0].clientY - touchStartY.current
-    if (delta > 0) {
-      setPullY(Math.min(delta * 0.45, PULL_MAX))
-    } else {
-      isPulling.current = false
-      setPullY(0)
-    }
+    if (delta > 0) setPullY(Math.min(delta * 0.45, PULL_MAX))
+    else { isPulling.current = false; setPullY(0) }
   }
-
   function handleTouchEnd() {
     if (!isPulling.current) return
     isPulling.current = false
@@ -231,14 +189,8 @@ export default function Dashboard() {
 
   function handleDogUpdated(updatedDog) {
     setDogs((prev) => prev.map((d) => (d.id === updatedDog.id ? updatedDog : d)))
-    setAllEvents((prev) =>
-      prev.map((ev) =>
-        ev.dog?.id === updatedDog.id ? { ...ev, dog: updatedDog } : ev
-      )
-    )
-    setSelectedEvent((prev) =>
-      prev?.dog?.id === updatedDog.id ? { ...prev, dog: updatedDog } : prev
-    )
+    setAllEvents((prev) => prev.map((ev) => ev.dog?.id === updatedDog.id ? { ...ev, dog: updatedDog } : ev))
+    setSelectedEvent((prev) => prev?.dog?.id === updatedDog.id ? { ...prev, dog: updatedDog } : prev)
   }
 
   function handleDayToggle() {
@@ -255,30 +207,31 @@ export default function Dashboard() {
 
   function handleSectorCycle() {
     if (profileSector !== 'both') return
+    const cycle = ['both', 'Plateau', 'Laurier']
     setSectorFilter((prev) => {
-      const current = prev || 'both'
-      const idx = SECTOR_CYCLE.indexOf(current)
-      return SECTOR_CYCLE[(idx + 1) % SECTOR_CYCLE.length]
+      const idx = cycle.indexOf(prev || 'both')
+      return cycle[(idx + 1) % cycle.length]
     })
   }
 
-  const sectorEmoji = sector === 'Plateau' ? '🟡' : sector === 'Laurier' ? '🔵' : ''
+  const sectorEmoji = sector === 'Plateau' ? '\u{1F7E1}' : sector === 'Laurier' ? '\u{1F535}' : ''
   const sectorLabel = sector === 'both' ? 'All Sectors' : sector
 
   return (
     <div
-      className="min-h-screen bg-[#FFF5F0] pb-20"
+      className="min-h-screen pb-20"
+      style={{ background: '#FFF5F0' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       <Header />
 
-      {/* Date line: date toggle · Today/Week pills · sector badge · map icon */}
+      {/* Date + Sector + View toggle */}
       <div className="px-4 pt-2 pb-1 max-w-lg mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { if (viewMode === 'week') { setViewMode('today'); } else { handleDayToggle(); } }}
+            onClick={() => { if (viewMode === 'week') setViewMode('today'); else handleDayToggle() }}
             className="text-[13px] font-semibold text-gray-700 active:opacity-60 transition-opacity"
           >
             {viewMode === 'week' ? 'This Week' : customDate && customDate !== today
@@ -288,60 +241,54 @@ export default function Dashboard() {
           </button>
 
           {/* Today / Week pills */}
-          <div className="flex rounded-full bg-gray-100 p-0.5">
+          <div style={{ display: 'flex', gap: 2 }}>
             <button
               onClick={() => { setViewMode('today'); setCustomDate(null); setSelectedDay('today') }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
-                viewMode === 'today' ? 'bg-[#E8634A] text-white shadow-sm' : 'text-gray-500'
-              }`}
+              style={{
+                padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                background: viewMode === 'today' ? '#E8634A' : 'transparent',
+                color: viewMode === 'today' ? '#fff' : '#888',
+                border: viewMode === 'today' ? 'none' : '0.5px solid #ddd',
+              }}
             >
               Today
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
-                viewMode === 'week' ? 'bg-[#E8634A] text-white shadow-sm' : 'text-gray-500'
-              }`}
+              style={{
+                padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                background: viewMode === 'week' ? '#E8634A' : 'transparent',
+                color: viewMode === 'week' ? '#fff' : '#888',
+                border: viewMode === 'week' ? 'none' : '0.5px solid #ddd',
+              }}
             >
               Week
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {permissions.canSeeAllSectors ? (
-            <button
-              onClick={handleSectorCycle}
-              className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-opacity active:opacity-60 cursor-pointer ${
-                sector === 'Plateau' ? 'bg-amber-100 text-amber-700'
-                : sector === 'Laurier' ? 'bg-blue-100 text-blue-700'
-                : 'bg-purple-100 text-purple-700'
-              }`}
-            >
-              {sectorEmoji} {sectorLabel}
-            </button>
-          ) : (
-            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-              sector === 'Plateau' ? 'bg-amber-100 text-amber-700'
-              : 'bg-blue-100 text-blue-700'
-            }`}>
-              {sectorEmoji} {sectorLabel}
-            </span>
-          )}
-
-          {!loading && filteredEvents.length > 0 && (
-            <button
-              onClick={() => setActiveTab((t) => (t === 'map' ? 'organizer' : 'map'))}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all ${
-                activeTab === 'map'
-                  ? 'bg-[#E8634A] text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-500 active:bg-gray-200'
-              }`}
-            >
-              🗺️
-            </button>
-          )}
-        </div>
+        {/* Sector badge */}
+        {permissions.canViewAllSectors ? (
+          <button
+            onClick={handleSectorCycle}
+            style={{
+              fontSize: 12, padding: '2px 8px', borderRadius: 10, fontWeight: 600, cursor: 'pointer',
+              background: sector === 'Plateau' ? '#fef3c7' : sector === 'Laurier' ? '#dbeafe' : '#ede9fe',
+              color: sector === 'Plateau' ? '#92400e' : sector === 'Laurier' ? '#1e40af' : '#5b21b6',
+              border: 'none',
+            }}
+          >
+            {sectorEmoji} {sectorLabel}
+          </button>
+        ) : (
+          <span style={{
+            fontSize: 12, padding: '2px 8px', borderRadius: 10, fontWeight: 600,
+            background: sector === 'Plateau' ? '#fef3c7' : '#dbeafe',
+            color: sector === 'Plateau' ? '#92400e' : '#1e40af',
+          }}>
+            {sectorEmoji} {sectorLabel}
+          </span>
+        )}
       </div>
 
       {/* Pull-to-refresh indicator */}
@@ -355,57 +302,55 @@ export default function Dashboard() {
       </div>
 
       <main className="px-4 py-2 max-w-lg mx-auto">
-        {/* Roster summary */}
+        {/* Stats line */}
         {!loading && filteredEvents.length > 0 && (
-          <p className="text-xs text-gray-400 font-medium mb-3">
-            {filteredEvents.length} {filteredEvents.length === 1 ? 'dog' : 'dogs'}
-            {timeGroups.length > 0 && ` \u00b7 ${timeGroups.length} time slots`}
+          <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, marginBottom: 8 }}>
+            {filteredEvents.length} dog{filteredEvents.length !== 1 ? 's' : ''}
+            {timeGroups.length > 0 && ` \u00b7 ${timeGroups.length} time slot${timeGroups.length !== 1 ? 's' : ''}`}
           </p>
         )}
 
         {viewMode === 'today' && loading && !refreshing && (
-          <div className="flex justify-center py-20">
-            <LoadingDog />
-          </div>
+          <div className="flex justify-center py-20"><LoadingDog /></div>
         )}
 
         {viewMode === 'today' && !loading && filteredEvents.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <span className="text-5xl">🐾</span>
-            <p className="text-lg font-semibold text-gray-600">
+          <div style={{ textAlign: 'center', padding: '60px 16px' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{'\u{1F43E}'}</div>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#555', marginBottom: 4 }}>
               No walks {selectedDay === 'today' ? 'today' : 'tomorrow'}
             </p>
-            <p className="text-sm text-gray-400">
+            <p style={{ fontSize: 13, color: '#aaa' }}>
               {selectedDay === 'today' ? 'Enjoy your day off!' : 'Nothing scheduled yet.'}
             </p>
           </div>
         )}
 
-        {/* Owl note banners (sector + all) */}
+        {/* Owl note banners */}
         {!loading && (() => {
           const bannerNotes = sector === 'both'
             ? owlNotes.filter(n => n.target_type === 'sector' || n.target_type === 'all')
             : getOwlSectorNotes(sector)
           return bannerNotes.length > 0 && (
-            <div className="flex flex-col gap-2 mb-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
               {bannerNotes.map(note => (
-                <div key={note.id} className="bg-[#E8634A]/10 border border-[#E8634A]/30 rounded-xl px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-lg flex-shrink-0">🦉</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#E8634A] leading-snug">{note.note_text}</p>
+                <div key={note.id} style={{ background: 'rgba(232,99,74,0.1)', border: '1px solid rgba(232,99,74,0.3)', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{'\u{1F989}'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#E8634A', lineHeight: 1.4 }}>{note.note_text}</p>
                       {note.expires_at && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Daily reminder · Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <p style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                          Daily reminder {'\u00b7'} Expires {new Date(note.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       )}
                     </div>
                   </div>
                   <button
                     onClick={() => acknowledgeNote(note.id)}
-                    className="mt-2 w-full py-2 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] min-h-[40px]"
+                    style={{ marginTop: 8, width: '100%', padding: 8, borderRadius: 20, background: '#E8634A', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                   >
-                    Got it ✓
+                    Got it {'\u2713'}
                   </button>
                 </div>
               ))}
@@ -413,107 +358,37 @@ export default function Dashboard() {
           )
         })()}
 
-        {/* View-only indicator for non-admin users */}
-        {!loading && !permissions.canEditGroups && filteredEvents.length > 0 && (
-          <div className="mb-2 flex justify-center">
-            <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-500 font-medium">
-              {permissions.canLogWalks ? '🐕 Your walks today' : '👀 View only'}
-            </span>
-          </div>
-        )}
-
         {/* Weekly view */}
         {viewMode === 'week' && (
           <WeeklyView sector={sector} today={today} onSelectDay={handleWeekDaySelect} />
         )}
 
-        {/* Organizer / Map with slide transition */}
+        {/* Organizer */}
         {viewMode === 'today' && !loading && (filteredEvents.length > 0 || anyGroupLocked) && (
-          <AnimatePresence mode="wait" initial={false}>
-            {activeTab === 'organizer' ? (
-              <motion.div
-                key="organizer"
-                initial={{ x: -40, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -40, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-col gap-4"
-              >
-                {Object.entries(sectorEvents).map(([sectorName, events]) => (
-                  <div key={sectorName}>
-                    {sector === 'both' && (
-                      <h2 className="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${sectorName === 'Plateau' ? 'bg-amber-400' : 'bg-blue-400'}`} />
-                        {sectorName}
-                      </h2>
-                    )}
-                    <GroupOrganizer
-                      events={events}
-                      date={activeDate}
-                      sector={sectorName}
-                      onDogClick={setSelectedEvent}
-                      owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
-                      onAnyGroupLocked={setAnyGroupLocked}
-                    />
-                  </div>
-                ))}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="map"
-                initial={{ x: 40, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 40, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <MapTabBoundary>
-                  <Suspense fallback={<div className="flex justify-center py-12"><LoadingDog /></div>}>
-                    <MapView
-                      events={anyGroupLocked ? allEvents : filteredEvents}
-                      date={activeDate}
-                      sector={anyGroupLocked ? 'both' : sector}
-                      onDogClick={setSelectedEvent}
-                      lockedView={anyGroupLocked}
-                    />
-                  </Suspense>
-                </MapTabBoundary>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="flex flex-col gap-4">
+            {Object.entries(sectorEvents).map(([sectorName, events]) => (
+              <div key={sectorName}>
+                {sector === 'both' && (
+                  <h2 style={{ fontSize: 13, fontWeight: 700, color: '#555', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: sectorName === 'Plateau' ? '#f59e0b' : '#3b82f6' }} />
+                    {sectorName}
+                  </h2>
+                )}
+                <GroupOrganizer
+                  events={events}
+                  date={activeDate}
+                  sector={sectorName}
+                  onDogClick={setSelectedEvent}
+                  owlDogNotes={owlNotes.filter(n => n.target_type === 'dog')}
+                  onAnyGroupLocked={setAnyGroupLocked}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </main>
 
       <BottomTabs />
-
-      {/* Quick-Note FAB — visible in locked/walking mode */}
-      {anyGroupLocked && permissions.canLogWalks && (
-        <button
-          onClick={() => setQuickNoteOpen(true)}
-          className="fixed bottom-20 right-4 z-20 w-14 h-14 rounded-full bg-[#E8634A] text-white shadow-lg flex items-center justify-center text-xl active:scale-95 transition-transform"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          📝
-        </button>
-      )}
-
-      {/* Quick-Note bottom sheet */}
-      <AnimatePresence>
-        {quickNoteOpen && (
-          <QuickNoteSheet
-            open={quickNoteOpen}
-            onClose={() => setQuickNoteOpen(false)}
-            walkingDogs={allEvents.map(ev => ({
-              _id: ev._id,
-              displayName: ev.displayName,
-              dog_name: ev.dog?.dog_name,
-              dogId: ev.dog?.id || null,
-              photo_url: ev.dog?.photo_url || null,
-              groupNum: null,
-            }))}
-            date={activeDate}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Dog profile drawer */}
       {selectedEvent && (
@@ -521,7 +396,7 @@ export default function Dashboard() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onDogUpdated={handleDogUpdated}
-          owlNotes={selectedEvent.dog?.id ? getOwlDogNotes(selectedEvent.dog.id) : []}
+          owlNotes={selectedEvent.dog?.id ? owlNotes.filter(n => n.target_type === 'dog' && n.target_dog_id === selectedEvent.dog.id) : []}
           onAcknowledgeNote={acknowledgeNote}
         />
       )}

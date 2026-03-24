@@ -22,5 +22,16 @@ export function getPermissions(role) {
 
     // WALKERS see only their sector
     canViewOwnSectorOnly: isWalker,
+
+    // Backward-compat aliases (used by pages not yet migrated to V3 names)
+    canEditGroups: true,
+    canLogWalks: true,
+    canAccessAdmin: isAdmin,
+    canAccessSettings: isAdmin,
+    canSeeAllSectors: isAdmin,
+    canAddOwlNotes: isAdmin,
+    canLockSchedule: true,
+    canViewMap: true,
+    canViewDogProfile: true,
   };
 }

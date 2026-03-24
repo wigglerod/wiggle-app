@@ -39,7 +39,7 @@ export default function Header({ date }) {
             className="h-8 w-auto object-contain"
           />
           <div className="flex items-center gap-2">
-            {permissions.canAddOwlNotes && (
+            {permissions.canCreateOwlNotes && (
               <button
                 onClick={() => setOwlOpen(true)}
                 className="relative text-base px-2 py-1 rounded-full bg-gray-100 active:bg-gray-200 min-h-[32px] flex items-center"
@@ -52,7 +52,7 @@ export default function Header({ date }) {
                 )}
               </button>
             )}
-            {permissions.canAccessAdmin ? (
+            {profile?.role === 'admin' ? (
               <button
                 onClick={() => navigate('/admin')}
                 className="text-xs px-2.5 py-1 rounded-full bg-[#E8634A] text-white font-semibold min-h-[32px] flex items-center active:bg-[#d4552d]"
@@ -83,7 +83,7 @@ export default function Header({ date }) {
         )}
       </header>
 
-      {permissions.canAddOwlNotes && <OwlQuickDrawer open={owlOpen} onClose={() => setOwlOpen(false)} />}
+      {permissions.canCreateOwlNotes && <OwlQuickDrawer open={owlOpen} onClose={() => setOwlOpen(false)} />}
     </>
   )
 }
