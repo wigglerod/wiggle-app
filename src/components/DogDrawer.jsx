@@ -775,7 +775,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
               )}
 
               {/* Owner info — admin only */}
-              {isAdmin && (dog?.owner_first || dog?.owner_last || dog?.phone) && (
+              {permissions.canViewClientInfo && (dog?.owner_first || dog?.owner_last || dog?.phone) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5">
@@ -797,7 +797,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
               )}
 
               {/* Contact & Instagram — admin only */}
-              {isAdmin && (dog?.contact_method || dog?.ig_handle) && (
+              {permissions.canViewClientInfo && (dog?.contact_method || dog?.ig_handle) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-sm flex-shrink-0 mt-0.5">📱</span>
@@ -859,7 +859,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
               {dog?.id && <WalkerNotesSection dogId={dog.id} />}
 
               {/* Acuity booking info (no profile) */}
-              {!dog && (isAdmin ? (event.email || event.ownerName) : false) && (
+              {!dog && (permissions.canViewClientInfo ? (event.email || event.ownerName) : false) && (
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-1">Booking Info</p>
                   {event.ownerName && <p className="text-sm text-gray-700">{event.ownerName}</p>}

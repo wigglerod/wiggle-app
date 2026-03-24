@@ -1,15 +1,26 @@
 export function getPermissions(role) {
+  const isAdmin = role === 'admin';
+  const isWalker = role === 'senior_walker' || role === 'junior_walker';
+
   return {
-    canEditGroups: role === 'admin' || role === 'senior_walker' || role === 'junior_walker',
-    canLogWalks: role === 'admin' || role === 'senior_walker',
-    canAccessAdmin: role === 'admin',
-    canAccessSettings: role === 'admin',
-    canSyncAcuity: role === 'admin',
-    canAddOwlNotes: role === 'admin' || role === 'senior_walker',
-    canSeeAllSectors: role === 'admin',
-    canEditDogProfiles: role === 'admin',
-    canLockSchedule: role === 'admin',
-    canViewMap: true,
-    canViewDogProfile: true,
-  }
+    // EVERYONE can do these
+    canCreateGroups: true,
+    canMoveDogsToGroups: true,
+    canLockGroups: true,
+    canUnlockGroups: true,
+    canReorderWithinGroup: true,
+    canLogPickups: true,
+    canLogWalkerNotes: true,
+    canViewSchedule: true,
+
+    // ADMIN ONLY
+    canEditDogProfiles: isAdmin,
+    canViewClientInfo: isAdmin,
+    canViewAllSectors: isAdmin,
+    canCreateOwlNotes: isAdmin,
+    canSwitchSectors: isAdmin,
+
+    // WALKERS see only their sector
+    canViewOwnSectorOnly: isWalker,
+  };
 }
