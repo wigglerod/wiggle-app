@@ -95,11 +95,11 @@ function LockButton({ isLocked, onToggle }) {
       onTouchStart={handlePointerDown}
       onTouchEnd={handlePointerUp}
       onTouchCancel={handlePointerUp}
-      className="relative w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 text-gray-500 text-sm overflow-hidden flex-shrink-0 active:bg-gray-200"
+      className="relative w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 text-sm overflow-hidden flex-shrink-0 active:bg-gray-200"
       title="Hold 1s to toggle lock"
     >
       {filling && <span className="absolute inset-0 bg-[#E8634A] origin-left animate-lock-fill" />}
-      <span className="relative z-10 text-[16px]">{isLocked ? '\u{1F513}' : '\u{1F512}'}</span>
+      <span className="relative z-10 text-[18px]">{isLocked ? '\u{1F513}' : '\u{1F512}'}</span>
     </button>
   )
 }
@@ -642,7 +642,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
         {/* Swipe hint (first locked group only) */}
         {isGroupLocked && groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
-          <p style={{ fontSize: 9, color: '#aaa', textAlign: 'center', marginBottom: 4 }}>
+          <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginBottom: 4, padding: '10px 14px' }}>
             {'\u2190'} swipe = picked up | swipe {'\u2192'} = note
           </p>
         )}
@@ -693,7 +693,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
               if (url) window.open(url, '_blank')
               else toast('No addresses found for this group')
             }}
-            style={{ width: '100%', padding: 7, borderRadius: 8, background: '#E8634A', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, marginTop: 6, cursor: 'pointer' }}
+            style={{ width: '100%', padding: 12, borderRadius: 10, background: '#E8634A', color: '#fff', border: 'none', borderBottom: '3px solid #c45d1a', fontSize: 14, fontWeight: 700, marginTop: 6, cursor: 'pointer', minHeight: 48, boxShadow: '0 2px 8px rgba(232,99,74,0.3)' }}
+            className="active:translate-y-[2px] active:shadow-none"
           >
             {pickedCount === 0 ? 'Start Route' : `Continue route (${total - pickedCount} left)`}
           </button>
@@ -742,22 +743,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           })
         }}
       />
-
-      {/* Progress bar (when any group is locked) */}
-      {anyGroupLocked && (
-        <ProgressBar
-          groupNums={groupNums}
-          groupNames={groupNames}
-          groupLocks={groupLocks}
-          groups={groups}
-          eventsMap={eventsMap}
-          pickups={pickups}
-          doneGroupNums={doneGroupNums}
-          walkerAssignments={walkerAssignments}
-          userId={user?.id}
-          isAdmin={isAdmin}
-        />
-      )}
 
       {/* Groups (with linked pair support) */}
       {(() => {
@@ -811,13 +796,13 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       <button
         onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
         style={{
-          border: '2px dashed rgba(232,99,74,0.25)', borderRadius: 14, padding: 10,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          border: '2px dashed rgba(232,99,74,0.25)', borderRadius: 14, padding: 14, minHeight: 52,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           background: 'transparent', cursor: 'pointer',
         }}
       >
-        <span style={{ width: 20, height: 20, borderRadius: '50%', background: '#E8634A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>+</span>
-        <span style={{ fontSize: 11, color: '#E8634A', fontWeight: 700 }}>Add group</span>
+        <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#E8634A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
+        <span style={{ fontSize: 13, color: '#E8634A', fontWeight: 700 }}>Add group</span>
       </button>
 
       {lastSaved && (
@@ -929,7 +914,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             onChange={(e) => setNameInput(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditing(false) }}
-            style={{ fontSize: 13, fontWeight: 600, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
+            style={{ fontSize: 14, fontWeight: 700, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
           />
         ) : (
           <span
@@ -941,7 +926,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             }}
             onPointerUp={() => clearTimeout(lpTimer.current)}
             onPointerLeave={() => clearTimeout(lpTimer.current)}
-            style={{ fontSize: 13, fontWeight: 600, color: isTarget ? '#E8634A' : '#1a1a1a', cursor: isLocked ? 'default' : 'pointer' }}
+            style={{ fontSize: 14, fontWeight: 700, color: isTarget ? '#E8634A' : '#1a1a1a', cursor: isLocked ? 'default' : 'pointer' }}
           >
             {gName}
           </span>
@@ -951,7 +936,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {wNames.map((name, i) => {
           const bc = walkerBadgeColor(name)
           return (
-            <span key={wIds[i]} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
+            <span key={wIds[i]} style={{ fontSize: 10, padding: '4px 10px', borderRadius: 10, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap', minHeight: 28, display: 'inline-flex', alignItems: 'center', borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
               {name.split(' ')[0]}
             </span>
           )
@@ -985,7 +970,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {statusBadge === 'upnext' && (
           <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
         )}
-        <span style={{ fontSize: 10, color: '#aaa' }}>
+        <span style={{ fontSize: 12, color: '#aaa' }}>
           {isLocked ? `${pickedCount}/${dogCount}` : `${dogCount} dogs`}
         </span>
         {!isLocked && onLinkTap && (
@@ -1057,26 +1042,26 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
                 onTouchEnd={() => clearTimeout(pillHoldTimer)}
                 onTouchMove={() => clearTimeout(pillHoldTimer)}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  fontSize: 10, padding: '4px 8px', borderRadius: 8,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: 12, padding: '6px 12px', borderRadius: 12, minHeight: 36,
                   background: isSelected ? '#E8634A' : '#fff',
                   color: isSelected ? '#fff' : '#1a1a1a',
                   border: isSelected ? '2px solid #E8634A' : '0.5px solid #e0dcd8',
-                  borderBottom: isSelected ? '2px solid #d4552d' : '2px solid #d5d2cc',
+                  borderBottom: isSelected ? '2.5px solid #d4552d' : '2.5px solid #d5d2cc',
                   cursor: 'pointer', fontWeight: 500,
                   transition: 'all 0.15s',
                 }}
               >
-                {hasOwl && <span style={{ fontSize: 8 }}>{'\u{1F989}'}</span>}
+                {hasOwl && <span style={{ fontSize: 10 }}>{'\u{1F989}'}</span>}
                 <div style={{
-                  width: 16, height: 16, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
                   background: photoUrl ? '#f5f5f5' : bgColor,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {photoUrl ? (
                     <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
+                    <span style={{ color: '#fff', fontSize: 9, fontWeight: 700 }}>{initial}</span>
                   )}
                 </div>
                 {ev.displayName}
@@ -1205,61 +1190,6 @@ function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, picku
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-// ── Progress bar ──────────────────────────────────────────────────
-function ProgressBar({ groupNums, groupNames, groupLocks, groups, eventsMap, pickups, doneGroupNums, walkerAssignments, userId, isAdmin }) {
-  // Only show groups that are relevant to the current user
-  const relevantNums = groupNums.filter(n => {
-    const wIds = walkerAssignments[n] || []
-    return isAdmin || wIds.includes(userId) || wIds.length === 0
-  })
-  if (relevantNums.length === 0) return null
-
-  function isGroupDone(num) {
-    if (doneGroupNums.has(num)) return true
-    const ids = (groups[num] || []).map(String)
-    if (ids.length === 0) return false
-    return ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] })
-  }
-
-  // Find active group: first locked group that isn't done
-  let activeNum = null
-  for (const n of relevantNums) {
-    if (groupLocks[n] && !isGroupDone(n)) { activeNum = n; break }
-  }
-
-  return (
-    <div style={{
-      background: '#f0ece8', borderRadius: 8, height: 28,
-      display: 'flex', alignItems: 'center', padding: 3, gap: 3,
-      border: '0.5px solid #e0dcd8', margin: '0 0 8px',
-    }}>
-      {relevantNums.map((num, idx) => {
-        const done = isGroupDone(num) && !!groupLocks[num]
-        const active = num === activeNum
-        const bgColor = done ? '#E1F5EE' : active ? '#E8634A' : 'transparent'
-        const textColor = done ? '#0F6E56' : active ? '#fff' : '#aaa'
-
-        return (
-          <React.Fragment key={num}>
-            {idx > 0 && (
-              <div style={{
-                flex: 1, height: 3, borderRadius: 1,
-                background: (isGroupDone(relevantNums[idx - 1]) && !!groupLocks[relevantNums[idx - 1]]) ? '#5DCAA5' : '#e0dcd8',
-              }} />
-            )}
-            <div style={{
-              width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: bgColor, fontSize: 9, fontWeight: 600, color: textColor, flexShrink: 0,
-            }}>
-              {done ? '\u2713' : num}
-            </div>
-          </React.Fragment>
-        )
-      })}
     </div>
   )
 }

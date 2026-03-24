@@ -108,24 +108,24 @@ export default function DogCard({
   const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : isCurrent ? '1.5px solid #E8634A' : '0.5px solid #e8e5e0';
 
   return (
-    <div style={{ position: 'relative', marginBottom: 3 }}>
+    <div style={{ position: 'relative', marginBottom: 4 }}>
       {/* Swipe backdrops */}
       {swiping && swipeX < 0 && (
         <div style={{
-          position: 'absolute', inset: 0, borderRadius: 10,
+          position: 'absolute', inset: 0, borderRadius: 12,
           background: '#22c55e', display: 'flex', alignItems: 'center',
           justifyContent: 'flex-end', paddingRight: 14,
-          color: '#fff', fontSize: 11, fontWeight: 600,
+          color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           {'\u2713'} Done
         </div>
       )}
       {swiping && swipeX > 0 && (
         <div style={{
-          position: 'absolute', inset: 0, borderRadius: 10,
+          position: 'absolute', inset: 0, borderRadius: 12,
           background: '#E8634A', display: 'flex', alignItems: 'center',
           paddingLeft: 14,
-          color: '#fff', fontSize: 11, fontWeight: 600,
+          color: '#fff', fontSize: 13, fontWeight: 600,
         }}>
           Note {'\u270E'}
         </div>
@@ -138,12 +138,14 @@ export default function DogCard({
           position: 'relative',
           background: containerBg,
           border: containerBorder,
-          borderBottom: isPickedUp ? containerBorder : '2px solid #d5d2cc',
-          borderRadius: 10,
-          padding: '5px 7px',
+          borderBottom: isPickedUp ? containerBorder : '2.5px solid #d5d2cc',
+          borderRadius: 12,
+          padding: '10px 12px',
+          minHeight: 48,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 6,
           transform: swiping ? `translateX(${swipeX}px)` : 'translateX(0)',
           transition: swiping ? 'none' : 'transform 0.2s ease-out',
           touchAction: 'pan-y',
@@ -151,41 +153,41 @@ export default function DogCard({
       >
         {/* Drag handle */}
         {showDragHandle && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, width: 12, flexShrink: 0, alignItems: 'center', cursor: 'grab' }}>
-            <div style={{ width: 10, height: 1.5, background: '#ccc', borderRadius: 1 }} />
-            <div style={{ width: 10, height: 1.5, background: '#ccc', borderRadius: 1 }} />
-            <div style={{ width: 10, height: 1.5, background: '#ccc', borderRadius: 1 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: 16, flexShrink: 0, alignItems: 'center', cursor: 'grab' }}>
+            <div style={{ width: 14, height: 2, background: '#ccc', borderRadius: 1 }} />
+            <div style={{ width: 14, height: 2, background: '#ccc', borderRadius: 1 }} />
+            <div style={{ width: 14, height: 2, background: '#ccc', borderRadius: 1 }} />
           </div>
         )}
 
         {/* Route number */}
         {routeNumber != null && (
-          <div style={{ width: 12, fontSize: 10, color: isPickedUp ? '#22c55e' : isCurrent ? '#E8634A' : '#aaa', textAlign: 'center', flexShrink: 0, fontWeight: 600 }}>
+          <div style={{ width: 16, fontSize: isPickedUp ? 14 : 12, color: isPickedUp ? '#0F6E56' : isCurrent ? '#E8634A' : '#aaa', textAlign: 'center', flexShrink: 0, fontWeight: isPickedUp ? 700 : 600 }}>
             {isPickedUp ? '\u2713' : routeNumber}
           </div>
         )}
 
         {/* Dog photo / initial */}
         <div style={{
-          width: 22, height: 22, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+          width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
           background: photoUrl ? '#f5f5f5' : bgColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {photoUrl ? (
             <img src={photoUrl} alt={dog.dog_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1 }}>{initial}</span>
+            <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{initial}</span>
           )}
         </div>
 
         {/* Level dot */}
-        <div style={{ width: 5, height: 5, borderRadius: '50%', background: levelDot, flexShrink: 0 }} />
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: levelDot, flexShrink: 0 }} />
 
         {/* Dog name */}
         <div
           onClick={onTapName || undefined}
           style={{
-            fontSize: 11, fontWeight: 500, flex: 1, minWidth: 0,
+            fontSize: 13, fontWeight: 600, flex: 1, minWidth: 0,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: onTapName ? 'pointer' : 'default',
             textDecoration: isPickedUp ? 'line-through' : 'none',
@@ -197,7 +199,7 @@ export default function DogCard({
 
         {/* Pickup time */}
         {isPickedUp && pickupTime && (
-          <span style={{ fontSize: 9, fontWeight: 600, color: '#0F6E56', flexShrink: 0 }}>{pickupTime}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#0F6E56', flexShrink: 0 }}>{pickupTime}</span>
         )}
 
         {/* Address */}
@@ -205,7 +207,7 @@ export default function DogCard({
           <div
             onClick={onTapAddress || undefined}
             style={{
-              fontSize: 9, color: '#185FA5', fontWeight: 500, flexShrink: 0,
+              fontSize: 11, color: '#185FA5', fontWeight: 500, flexShrink: 0,
               cursor: onTapAddress ? 'pointer' : 'default',
             }}
           >
@@ -216,8 +218,9 @@ export default function DogCard({
         {/* Door code badge */}
         {dog.door_code && (
           <span style={{
-            fontSize: 9, background: '#E6F1FB', color: '#185FA5', fontWeight: 600,
-            padding: '2px 5px', borderRadius: 4, flexShrink: 0, whiteSpace: 'nowrap',
+            fontSize: 11, background: '#E6F1FB', color: '#185FA5', fontWeight: 600,
+            padding: '3px 8px', borderRadius: 6, flexShrink: 0, whiteSpace: 'nowrap',
+            boxShadow: '0 1px 2px rgba(24,95,165,0.15)',
           }}>
             #{dog.door_code}
           </span>
@@ -228,10 +231,10 @@ export default function DogCard({
           <div
             onClick={(e) => { e.stopPropagation(); setOwlExpanded(v => !v); }}
             style={{
-              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+              width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
               background: '#FAEEDA', border: '0.5px solid #FAC775',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 8, lineHeight: 1,
+              cursor: 'pointer', fontSize: 10, lineHeight: 1,
             }}
           >
             {'\u{1F989}'}

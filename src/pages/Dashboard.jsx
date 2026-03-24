@@ -244,10 +244,11 @@ export default function Dashboard() {
             <button
               onClick={() => { setViewMode('today'); setCustomDate(null); setSelectedDay('today') }}
               style={{
-                padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', minHeight: 32,
                 background: viewMode === 'today' ? '#E8634A' : 'transparent',
                 color: viewMode === 'today' ? '#fff' : '#888',
                 border: viewMode === 'today' ? 'none' : '0.5px solid #ddd',
+                borderBottom: viewMode === 'today' ? '2px solid #c45d1a' : '0.5px solid #ddd',
               }}
             >
               Today
@@ -255,10 +256,11 @@ export default function Dashboard() {
             <button
               onClick={() => setViewMode('week')}
               style={{
-                padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                padding: '4px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', minHeight: 32,
                 background: viewMode === 'week' ? '#E8634A' : 'transparent',
                 color: viewMode === 'week' ? '#fff' : '#888',
                 border: viewMode === 'week' ? 'none' : '0.5px solid #ddd',
+                borderBottom: viewMode === 'week' ? '2px solid #c45d1a' : '0.5px solid #ddd',
               }}
             >
               Week
@@ -271,7 +273,7 @@ export default function Dashboard() {
           <button
             onClick={handleSectorCycle}
             style={{
-              fontSize: 12, padding: '2px 8px', borderRadius: 10, fontWeight: 600, cursor: 'pointer',
+              fontSize: 12, padding: '4px 12px', borderRadius: 10, fontWeight: 600, cursor: 'pointer', minHeight: 32,
               background: sector === 'Plateau' ? '#fef3c7' : sector === 'Laurier' ? '#dbeafe' : '#ede9fe',
               color: sector === 'Plateau' ? '#92400e' : sector === 'Laurier' ? '#1e40af' : '#5b21b6',
               border: 'none',
@@ -281,7 +283,7 @@ export default function Dashboard() {
           </button>
         ) : (
           <span style={{
-            fontSize: 12, padding: '2px 8px', borderRadius: 10, fontWeight: 600,
+            fontSize: 12, padding: '4px 12px', borderRadius: 10, fontWeight: 600, minHeight: 32,
             background: sector === 'Plateau' ? '#fef3c7' : '#dbeafe',
             color: sector === 'Plateau' ? '#92400e' : '#1e40af',
           }}>
