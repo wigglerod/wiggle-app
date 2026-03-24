@@ -372,8 +372,6 @@ a{color:inherit;text-decoration:none}
 // ── CONFIG ────────────────────────────────────────────────────
 const SB_URL  = 'https://ifhniwjdrsswgemmqddn.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaG5pd2pkcnNzd2dlbW1xZGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTY1OTEsImV4cCI6MjA4Nzc5MjU5MX0.uMcr2oM77jJ26sVUXrQ8eGW7ZUwiniAAv3hgMv00Lxs';
-const ANTHROPIC_KEY = 'REPLACE_WITH_VITE_ANTHROPIC_API_KEY'; // from Vercel env
-
 const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri'];
 
@@ -657,7 +655,7 @@ Flags: ${flags.length > 0 ? flags.map(f=>f.title).join('; ') : 'None'}.
 Active owl notes: ${owlNotes.map(o=>o.target_dog_name+': '+o.note_text).join('; ') || 'None'}.
 You confirm before acting. Keep responses short and friendly. Use 🦍 emoji.`;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('/api/beast',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
