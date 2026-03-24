@@ -387,19 +387,48 @@ async function sb(table, params='') {
 }
 
 // ── STATE ─────────────────────────────────────────────────────
-let allDogs = [], schedule = [], owlNotes = [], flags = [];
+let allDogs = [], schedule = [], owlNotes = [], flags = [], walkerProfiles = [];
 const today = new Date();
-const todayDay = DAYS[today.getDay()]; // 'monday' etc.
-const todayIdx = [1,2,3,4,5].indexOf(today.getDay()); // 0-4 = Mon-Fri
+const todayDay = DAYS[today.getDay()];
+const todayIdx = [1,2,3,4,5].indexOf(today.getDay());
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   setDates();
-  await Promise.all([loadDogs(), loadSchedule(), loadOwlNotes()]);
+  await Promise.all([loadDogs(), loadSchedule(), loadOwlNotes(), loadWalkers()]);
   buildDashboard();
   buildWeeklyBoard();
   buildDogsTab();
   buildScheduleTab();
+}
+
+async function loadWalkers() {
+  const raw = await sb('profiles','?select=full_name,role,sector,schedule&full_name=not.is.null');
+  const skip = ['Gen','Pup Walker','Wiggle Pro',null,''];
+  walkerProfiles = raw.filter(w => w.full_name && !skip.includes(w.full_name));
+  walkerProfiles.forEach(w => {
+    const s = w.schedule || '';
+    w.days = {
+      monday:    /mon/i.test(s),
+      tuesday:   /tue/i.test(s),
+      wednesday: /wed/i.test(s),
+      thursday:  /thu/i.test(s),
+      friday:    /fri/i.test(s)
+    };
+  });
+}
+
+function buildWalkerMap() {
+  const map = { Plateau:{}, Laurier:{} };
+  ['monday','tuesday','wednesday','thursday','friday'].forEach(day => {
+    map.Plateau[day] = walkerProfiles
+      .filter(w => w.days[day] && (w.sector==='Plateau'||w.sector==='both'||w.role==='admin') && w.full_name!=='Gen')
+      .map(w => w.full_name);
+    map.Laurier[day] = walkerProfiles
+      .filter(w => w.days[day] && (w.sector==='Laurier'||w.sector==='both') && w.full_name!=='Gen')
+      .map(w => w.full_name);
+  });
+  return map;
 }
 
 function setDates() {
@@ -521,10 +550,8 @@ function buildWeeklyBoard() {
   const days = ['monday','tuesday','wednesday','thursday','friday'];
   const labels = ['Mon','Tue','Wed','Thu','Fri'];
   const todayDayFull = DAYS[today.getDay()];
-  const walkersByDay = {
-    monday:['Alex','Sam'],tuesday:['Alex','Sam'],wednesday:['Alex','Sam','Megan'],
-    thursday:['Alex','Sam'],friday:['Alex','Sam']
-  };
+  // Dynamic from Supabase — no manual updates needed!
+  const walkersByDay = buildWalkerMap();
 
   let html = `<div class="wboard-head">
     <div class="wh label" style="font-size:10px"></div>
@@ -542,10 +569,14 @@ function buildWeeklyBoard() {
           const s = schedMap[d.dog_name.toLowerCase()];
           return s && s[day];
         });
-        const walkers = walkersByDay[day] || [];
+        const walkers = (walkersByDay[sector] && walkersByDay[sector][day]) || [];
         const chips = dogsToday.map(d => {
-          const cls2 = isReactive(d)?'react':isMissingAddress(d)?'unm':'';
-          return `<span class="wcell-chip ${cls2}">${d.dog_name}</span>`;
+          const reactive = isReactive(d);
+          const missing = isMissingAddress(d);
+          const cls2 = reactive?'react':missing?'unm':'';
+          const reason = reactive ? '⚠️ Reactive dog' : missing ? '🔴 Missing address' : '';
+          const tip = reason ? ` title="${reason}"` : '';
+          return `<span class="wcell-chip ${cls2}"${tip}>${d.dog_name}</span>`;
         }).join('');
         const wTags = walkers.map(w=>`<span class="walker-tag">${w}</span>`).join('');
         return `<div class="wcell">${chips}${dogsToday.length?`<span class="pm-sep">🕐 PM</span>`:''}${wTags}</div>`;
