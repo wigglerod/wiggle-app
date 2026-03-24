@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle Tower Control V4</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#faf9f7; --surface:#fff; --surface-alt:#f5f3f0; --border:#e8e4df;
+  --text:#2d2a26; --muted:#8a8580; --light:#b5b0aa;
+  --orange:#e8762b; --orange-bg:#fef5ed; --orange-dark:#c45d1a;
+  --plateau:#2c5f8a; --plateau-bg:#edf4fa;
+  --laurier:#2a7a4b; --laurier-bg:#edf7f1;
+  --red:#d94f3d; --red-bg:#fef2f0;
+  --yellow:#d4850a; --yellow-bg:#fef9ed;
+  --green:#3d9970; --green-bg:#f0faf5;
+  --blue:#4a90d9; --blue-bg:#f0f5fc;
+  --r:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.05);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* ── LAYOUT ─────────────────────────────── */
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.main{flex:1;overflow-y:auto;background:var(--bg)}
+
+/* ── SIDEBAR ─────────────────────────────── */
+.sb-head{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.sb-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--orange-dark),var(--orange));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.sb-title{font-size:14px;font-weight:700;letter-spacing:-.3px}
+.sb-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.sb-live{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;color:var(--green)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.sb-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.nav-item:hover{background:var(--surface-alt);color:var(--text)}
+.nav-item.active{background:var(--orange-bg);color:var(--orange)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--red-bg);color:var(--red)}
+
+.sb-actions{padding:12px 8px;border-top:1px solid var(--border)}
+.action-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--orange);background:var(--orange-bg);color:var(--orange);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-bottom:6px}
+.action-btn:hover{background:var(--orange);color:#fff}
+.action-btn.secondary{border-color:var(--border);background:var(--surface);color:var(--muted)}
+.action-btn.secondary:hover{background:var(--surface-alt);color:var(--text)}
+
+/* ── PAGE HEADER ─────────────────────────── */
+.page-head{padding:24px 28px 0;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.head-chips{display:flex;gap:6px}
+.chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all .2s;font-family:inherit}
+.chip:hover{border-color:var(--light)}
+.chip.plat{background:var(--plateau-bg);border-color:var(--plateau);color:var(--plateau)}
+.chip.laur{background:var(--laurier-bg);border-color:var(--laurier);color:var(--laurier)}
+
+/* ── CONTENT AREAS ───────────────────────── */
+.pad{padding:0 28px 28px}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--light);margin-bottom:10px;margin-top:24px}
+.section-label:first-child{margin-top:0}
+
+/* ── STAT ROW ────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.stat-n{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1}
+.stat-l{font-size:11px;color:var(--muted);margin-top:4px}
+.stat-n.ora{color:var(--orange)}
+.stat-n.red{color:var(--red)}
+.stat-n.yel{color:var(--yellow)}
+.stat-n.grn{color:var(--green)}
+
+/* ── FLAGS ───────────────────────────────── */
+.flags{display:flex;flex-direction:column;gap:6px}
+.flag{display:flex;gap:10px;padding:11px 14px;border-radius:var(--r);border:1px solid;position:relative;overflow:hidden}
+.flag::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.flag.crit{background:var(--red-bg);border-color:#f5c0bb}.flag.crit::before{background:var(--red)}
+.flag.warn{background:var(--yellow-bg);border-color:#f0d9a0}.flag.warn::before{background:var(--yellow)}
+.flag.info{background:var(--blue-bg);border-color:#b5d0e8}.flag.info::before{background:var(--blue)}
+.flag.ok{background:var(--green-bg);border-color:#a8d5bc}.flag.ok::before{background:var(--green)}
+.flag-body{flex:1}
+.flag-title{font-size:13px;font-weight:600}
+.flag-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+
+/* ── CARDS GRID ──────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.card-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--surface-alt);color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--surface-alt);font-size:12px}
+.row:last-child{border-bottom:none}
+.row-name{font-weight:500}
+.row-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:8px}
+.tag-red{background:var(--red-bg);color:var(--red)}
+.tag-yel{background:var(--yellow-bg);color:var(--yellow)}
+.tag-grn{background:var(--green-bg);color:var(--green)}
+.tag-plat{background:var(--plateau-bg);color:var(--plateau)}
+.tag-laur{background:var(--laurier-bg);color:var(--laurier)}
+.tag-gray{background:var(--surface-alt);color:var(--muted)}
+
+/* ── DOG CHIP ────────────────────────────── */
+.chips-wrap{display:flex;flex-wrap:wrap;gap:5px}
+.dchip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface-alt);cursor:pointer;transition:all .15s}
+.dchip:hover{border-color:var(--muted)}
+.dchip.reactive{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.dchip.must-ask{border-color:var(--yellow);background:var(--yellow-bg);color:var(--yellow)}
+.dchip.missing{border-color:var(--red);background:var(--red-bg);color:var(--red);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+.dchip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-p{background:var(--plateau)}.dot-l{background:var(--laurier)}
+
+/* ── WEEKLY BOARD ────────────────────────── */
+.wboard{border:1.5px solid var(--orange);border-radius:var(--r);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-md)}
+.wboard-head{display:grid;grid-template-columns:100px repeat(5,1fr);background:var(--orange)}
+.wh{padding:12px 8px;font-size:12px;font-weight:700;color:#fff;text-align:center}
+.wh.today{background:var(--orange-dark)}
+.wh.label{background:var(--text);font-size:11px;font-weight:600}
+.wrow{display:grid;grid-template-columns:100px repeat(5,1fr)}
+.wrow-label{padding:10px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.wrow-label.plat{background:var(--plateau-bg);color:var(--plateau)}
+.wrow-label.laur{background:var(--laurier-bg);color:var(--laurier)}
+.wcell{padding:8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:70px}
+.wcell-chip{display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:600;margin:1px;background:var(--surface-alt);border:1px solid var(--border)}
+.wcell-chip.lpk{background:var(--yellow-bg);border-color:#f0d9a0;color:var(--yellow)}
+.wcell-chip.unm{background:var(--red-bg);border-color:#f5c0bb;color:var(--red)}
+.wcell-chip.react{background:var(--red-bg);border-color:#f5c0bb;color:var(--red)}
+.pm-sep{display:block;font-size:9px;color:var(--light);letter-spacing:.5px;font-weight:600;padding:3px 0 2px;margin:3px 0 2px;border-top:1px dashed var(--border)}
+.walker-tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin:2px 1px;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue)}
+
+/* ── DOGS TABLE ──────────────────────────── */
+.dog-table{width:100%;border-collapse:collapse;font-size:12px}
+.dog-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 12px;border-bottom:2px solid var(--border)}
+.dog-table td{padding:8px 12px;border-bottom:1px solid var(--surface-alt)}
+.dog-table tr:hover td{background:var(--surface-alt)}
+.sector-row td{font-weight:700;font-size:11px;padding:5px 12px}
+.sector-row.plat td{background:var(--plateau-bg);color:var(--plateau)}
+.sector-row.laur td{background:var(--laurier-bg);color:var(--laurier)}
+.dog-name-cell{font-weight:600;font-size:13px}
+.code-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--blue-bg);color:var(--blue);font-family:'DM Mono',monospace}
+.notes-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+
+/* ── OWL NOTES ───────────────────────────── */
+.owl{padding:10px 14px;border-radius:var(--r);border-left:3px solid var(--orange);background:var(--orange-bg);margin-bottom:8px}
+.owl-target{font-size:11px;font-weight:600;color:var(--orange);margin-bottom:3px}
+.owl-msg{font-size:13px}
+.owl-meta{font-size:10px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace}
+
+/* ── BEAST ───────────────────────────────── */
+.beast-wrap{border:1.5px solid var(--orange);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.beast-bar{background:linear-gradient(135deg,var(--orange-dark),var(--orange));padding:10px 16px;display:flex;align-items:center;gap:8px;color:#fff}
+.beast-title{font-size:13px;font-weight:700;flex:1}
+.beast-lock{font-size:10px;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:10px;font-weight:600}
+.beast-body{padding:16px;background:var(--surface)}
+.beast-hist{max-height:200px;overflow-y:auto;margin-bottom:12px}
+.bmsg{font-size:13px;padding:9px 13px;border-radius:8px;margin-bottom:6px;max-width:85%;line-height:1.5}
+.bmsg.u{background:var(--blue-bg);margin-left:auto;text-align:right;color:var(--blue);font-weight:500}
+.bmsg.b{background:var(--orange-bg);color:var(--text);border:1px solid #f0d4bc}
+.beast-loading{color:var(--muted);font-size:12px;font-style:italic;padding:4px 0}
+.beast-row{display:flex;gap:8px}
+.beast-input{flex:1;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;resize:none;min-height:80px;background:var(--surface)}
+.beast-input:focus{border-color:var(--orange)}
+.beast-send{padding:10px 18px;background:var(--orange);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-end}
+.beast-send:hover{background:var(--orange-dark)}
+.beast-send:disabled{opacity:.5;cursor:default}
+
+/* ── LOADING ─────────────────────────────── */
+.loading{display:flex;align-items:center;gap:8px;padding:20px 0;color:var(--muted);font-size:13px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+
+/* ── TABS ────────────────────────────────── */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── SCROLLBAR ───────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">
+        <div class="sb-icon">🐕</div>
+        <div>
+          <div class="sb-title">Tower Control</div>
+          <div class="sb-sub">Wiggle Dog Walks</div>
+        </div>
+      </div>
+      <div class="sb-live"><div class="pulse"></div> Live · Supabase</div>
+    </div>
+
+    <nav class="sb-nav">
+      <button class="nav-item active" onclick="showTab('dash',this)"><span class="nav-icon">📊</span> Dashboard <span class="nav-badge" id="flag-badge" style="display:none"></span></button>
+      <button class="nav-item" onclick="showTab('week',this)"><span class="nav-icon">📅</span> Weekly Board</button>
+      <button class="nav-item" onclick="showTab('dogs',this)"><span class="nav-icon">🐕</span> Dogs</button>
+      <button class="nav-item" onclick="showTab('schedule',this)"><span class="nav-icon">📋</span> Schedule</button>
+      <button class="nav-item" onclick="showTab('billing',this)"><span class="nav-icon">💰</span> Billing</button>
+      <button class="nav-item" onclick="showTab('staff',this)"><span class="nav-icon">👥</span> Staff</button>
+    </nav>
+
+    <div class="sb-actions">
+      <button class="action-btn" onclick="runMorningCheck()">☀️ Run Morning Check</button>
+      <button class="action-btn secondary" onclick="refreshAll()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="tab-content active" id="tab-dash">
+      <div class="page-head">
+        <div>
+          <div class="page-title" id="dash-title">Gen's Dashboard</div>
+          <div class="page-sub" id="dash-date">Loading…</div>
+        </div>
+        <div class="head-chips">
+          <span class="chip plat" id="plat-count">Plateau —</span>
+          <span class="chip laur" id="laur-count">Laurier —</span>
+        </div>
+      </div>
+      <div class="pad">
+        <div class="stats">
+          <div class="stat"><div class="stat-n ora" id="stat-total">—</div><div class="stat-l">Dogs today</div></div>
+          <div class="stat"><div class="stat-n red" id="stat-flags">—</div><div class="stat-l">Flags</div></div>
+          <div class="stat"><div class="stat-n yel" id="stat-mustask">—</div><div class="stat-l">Must-ask</div></div>
+          <div class="stat"><div class="stat-n grn" id="stat-owls">—</div><div class="stat-l">Owl notes active</div></div>
+        </div>
+
+        <div class="section-label">🚨 Flags — needs attention</div>
+        <div class="flags" id="flags-list"><div class="loading"><div class="spin"></div> Checking today…</div></div>
+
+        <div class="section-label">🐾 Today's dogs</div>
+        <div class="chips-wrap" id="dogs-chips"><div class="loading"><div class="spin"></div> Loading roster…</div></div>
+
+        <div class="grid-2" style="margin-top:20px">
+          <div>
+            <div class="section-label">🦉 Owl notes</div>
+            <div id="owl-list"><div class="loading"><div class="spin"></div></div></div>
+          </div>
+          <div>
+            <div class="section-label">📋 Must-ask today</div>
+            <div class="card" id="must-ask-list"><div class="loading"><div class="spin"></div></div></div>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:24px">🦍 The Beast</div>
+        <div class="beast-wrap">
+          <div class="beast-bar">
+            <span style="font-size:20px">🦍</span>
+            <span class="beast-title">The Beast — Wiggle's AI</span>
+            <span class="beast-lock">🔒 Confirms before acting</span>
+          </div>
+          <div class="beast-body">
+            <div class="beast-hist" id="beast-hist">
+              <div class="bmsg b">🦍 Ready. Tell me what to do — vacations, tasks, nudges. I confirm before acting.</div>
+            </div>
+            <div class="beast-row">
+              <textarea class="beast-input" id="beast-input" rows="3" placeholder="'Mochi vacation April 14-18'&#10;'Send nudge to Raku'&#10;'@gen task: call Cynthia'"></textarea>
+              <button class="beast-send" id="beast-send-btn" onclick="sendToBeast()">🦍 Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEEKLY BOARD -->
+    <div class="tab-content" id="tab-week">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Weekly Board</div>
+          <div class="page-sub" id="week-range">Loading week…</div>
+        </div>
+      </div>
+      <div class="pad">
+        <div class="wboard" id="weekly-board"><div class="loading" style="padding:20px"><div class="spin"></div> Building weekly board…</div></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red-bg);border:1px solid var(--red);border-radius:50%;margin-right:4px;vertical-align:middle"></span>Reactive dog</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:50%;margin-right:4px;vertical-align:middle"></span>Must-ask</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--blue-bg);border:1.5px solid var(--blue);border-radius:50%;margin-right:4px;vertical-align:middle"></span>Walker</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOGS -->
+    <div class="tab-content" id="tab-dogs">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Dog Roster</div>
+          <div class="page-sub" id="dogs-sub">Loading…</div>
+        </div>
+        <div class="head-chips">
+          <span class="chip plat" id="dogs-plat-count">Plateau —</span>
+          <span class="chip laur" id="dogs-laur-count">Laurier —</span>
+        </div>
+      </div>
+      <div class="pad">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)">
+          <table class="dog-table" id="dog-table">
+            <thead><tr><th>Dog</th><th>Owner</th><th>Sector</th><th>Address</th><th>Door Code</th><th>Notes</th><th>Schedule</th></tr></thead>
+            <tbody id="dog-tbody"><tr><td colspan="7"><div class="loading" style="padding:16px"><div class="spin"></div> Loading 95 dogs…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="tab-content" id="tab-schedule">
+      <div class="page-head"><div><div class="page-title">Schedule Ecosystem</div><div class="page-sub">Rules, owl notes, overrides</div></div></div>
+      <div class="pad">
+        <div class="section-label">🦉 Active owl notes</div>
+        <div id="sched-owls"><div class="loading"><div class="spin"></div></div></div>
+        <div class="section-label">⚡ Conflict rules</div>
+        <div class="card"><div class="row"><span class="row-name">Mochi + Chaska</span><span class="row-tag tag-red">Never same group</span></div></div>
+        <div class="section-label">📍 Sector overrides</div>
+        <div class="card"><div class="row"><span class="row-name">Paloma</span><span class="row-tag tag-plat">Always Plateau</span></div></div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div class="tab-content" id="tab-billing">
+      <div class="page-head"><div><div class="page-title">Billing</div><div class="page-sub">Packages · renewals · predictions</div></div></div>
+      <div class="pad">
+        <div class="flag warn"><div class="flag-body"><div class="flag-title">Billing reads live from Acuity certificates</div><div class="flag-sub">Coming next session — Acuity API connection needed</div></div></div>
+      </div>
+    </div>
+
+    <!-- STAFF -->
+    <div class="tab-content" id="tab-staff">
+      <div class="page-head"><div><div class="page-title">Staff</div><div class="page-sub">Walkers · schedule · coverage</div></div></div>
+      <div class="pad">
+        <div class="section-label">👟 Walker schedule</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+          <table class="dog-table">
+            <thead><tr><th>Walker</th><th>Role</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th></tr></thead>
+            <tbody>
+              <tr><td class="dog-name-cell">Megan</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td><span class="row-tag tag-plat">Plateau</span></td><td>—</td><td>—</td><td><span class="row-tag tag-plat">Plateau</span></td><td>—</td></tr>
+              <tr><td class="dog-name-cell">Solene</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td>—</td><td><span class="row-tag tag-plat">Plateau</span></td><td><span class="row-tag tag-plat">Plateau</span></td><td><span class="row-tag tag-plat">Plateau</span></td><td>—</td></tr>
+              <tr><td class="dog-name-cell">Chloe</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td><span class="row-tag tag-plat">Plateau</span></td><td><span class="row-tag tag-plat">Plateau</span></td><td>—</td><td>—</td><td><span class="row-tag tag-plat">Plateau</span></td></tr>
+              <tr><td class="dog-name-cell">Amanda</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td>—</td></tr>
+              <tr><td class="dog-name-cell">Belen</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td>—</td><td>—</td><td><span class="row-tag tag-laur">Laurier</span></td><td><span class="row-tag tag-laur">Laurier</span></td></tr>
+              <tr><td class="dog-name-cell">Amelie</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td>—</td><td><span class="row-tag tag-laur">Laurier</span></td><td><span class="row-tag tag-laur">Laurier</span></td><td>—</td><td>—</td></tr>
+              <tr><td class="dog-name-cell">Maeva</td><td><span class="row-tag tag-gray">Wiggle Pro</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="row-tag tag-laur">Laurier</span></td></tr>
+              <tr><td class="dog-name-cell">Rodrigo</td><td><span class="row-tag" style="background:var(--orange-bg);color:var(--orange)">Chief Pup</span></td><td>—</td><td>—</td><td><span class="row-tag tag-plat">Plateau</span></td><td>—</td><td><span class="row-tag tag-plat">Plateau</span></td></tr>
+              <tr><td class="dog-name-cell">Gen</td><td><span class="row-tag" style="background:var(--orange-bg);color:var(--orange)">Chief Pup</span></td><td>Admin</td><td>Admin</td><td>Admin</td><td>Admin</td><td>Admin</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const SB_URL  = 'https://ifhniwjdrsswgemmqddn.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmaG5pd2pkcnNzd2dlbW1xZGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTY1OTEsImV4cCI6MjA4Nzc5MjU5MX0.uMcr2oM77jJ26sVUXrQ8eGW7ZUwiniAAv3hgMv00Lxs';
+const ANTHROPIC_KEY = 'REPLACE_WITH_VITE_ANTHROPIC_API_KEY'; // from Vercel env
+
+const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri'];
+
+// ── SUPABASE HELPER ───────────────────────────────────────────
+async function sb(table, params='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, {
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ── STATE ─────────────────────────────────────────────────────
+let allDogs = [], schedule = [], owlNotes = [], flags = [];
+const today = new Date();
+const todayDay = DAYS[today.getDay()]; // 'monday' etc.
+const todayIdx = [1,2,3,4,5].indexOf(today.getDay()); // 0-4 = Mon-Fri
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  setDates();
+  await Promise.all([loadDogs(), loadSchedule(), loadOwlNotes()]);
+  buildDashboard();
+  buildWeeklyBoard();
+  buildDogsTab();
+  buildScheduleTab();
+}
+
+function setDates() {
+  const opts = {weekday:'long',month:'long',day:'numeric',year:'numeric'};
+  document.getElementById('dash-date').textContent = today.toLocaleDateString('en-CA',opts);
+  // Week range
+  const mon = new Date(today);
+  mon.setDate(today.getDate() - (today.getDay()||7) + 1);
+  const fri = new Date(mon); fri.setDate(mon.getDate()+4);
+  const fmt = d => d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  document.getElementById('week-range').textContent = `${fmt(mon)} – ${fmt(fri)}, ${today.getFullYear()}`;
+}
+
+async function loadDogs() {
+  allDogs = await sb('dogs','?select=dog_name,sector,owner_first,owner_last,address,door_code,notes&order=sector,dog_name');
+}
+
+async function loadSchedule() {
+  schedule = await sb('expected_schedule','?select=dog_name,type,monday,tuesday,wednesday,thursday,friday');
+}
+
+async function loadOwlNotes() {
+  owlNotes = await sb('owl_notes','?select=note_text,target_dog_name,target_sector,created_by_name,expires_at,scheduled_date&order=created_at.desc&limit=10');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function getScheduleMap() {
+  const map = {};
+  schedule.forEach(s => { map[s.dog_name.toLowerCase()] = s; });
+  return map;
+}
+
+function isScheduledToday(sched) {
+  if (!sched) return false;
+  const col = todayDay;
+  return !!sched[col];
+}
+
+function isReactive(dog) {
+  return dog.notes && /reactive/i.test(dog.notes);
+}
+
+function isMissingAddress(dog) {
+  return !dog.address || dog.notes && /need actual address/i.test(dog.notes);
+}
+
+function initials(n) { return n ? n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() : '??'; }
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function buildDashboard() {
+  const schedMap = getScheduleMap();
+  const todayDogs = allDogs.filter(d => isScheduledToday(schedMap[d.dog_name.toLowerCase()]));
+  const plateau = todayDogs.filter(d => d.sector === 'Plateau');
+  const laurier = todayDogs.filter(d => d.sector === 'Laurier');
+  const mustAsk = todayDogs.filter(d => schedMap[d.dog_name.toLowerCase()]?.type === 'must_ask');
+  flags = [];
+
+  // Build flags
+  todayDogs.forEach(d => {
+    if (isMissingAddress(d)) flags.push({type:'crit', title:`${d.dog_name} — missing address`, sub:`${d.sector} · ${d.owner_first} ${d.owner_last} · ${d.notes||'No notes'}`});
+    if (isReactive(d)) flags.push({type:'warn', title:`${d.dog_name} — reactive dog`, sub:`${d.sector} · ${d.owner_first} ${d.owner_last} · ${d.notes}`});
+  });
+
+  // Stats
+  document.getElementById('stat-total').textContent = todayDogs.length;
+  document.getElementById('stat-flags').textContent = flags.length;
+  document.getElementById('stat-mustask').textContent = mustAsk.length;
+  document.getElementById('stat-owls').textContent = owlNotes.length;
+  document.getElementById('plat-count').textContent = `Plateau ${plateau.length}`;
+  document.getElementById('laur-count').textContent = `Laurier ${laurier.length}`;
+
+  // Flag badge
+  const fb = document.getElementById('flag-badge');
+  if (flags.length > 0) { fb.style.display=''; fb.textContent = flags.length; }
+
+  // Flags list
+  const fl = document.getElementById('flags-list');
+  if (flags.length === 0) {
+    fl.innerHTML = '<div class="flag ok"><div class="flag-body"><div class="flag-title">All clear — no flags today</div></div></div>';
+  } else {
+    fl.innerHTML = flags.map(f => `
+      <div class="flag ${f.type}">
+        <div class="flag-body">
+          <div class="flag-title">${f.title}</div>
+          <div class="flag-sub">${f.sub}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Dog chips
+  const dc = document.getElementById('dogs-chips');
+  if (todayDogs.length === 0) { dc.innerHTML = '<div class="empty">No dogs scheduled today</div>'; return; }
+  dc.innerHTML = todayDogs.map(d => {
+    const cls = isMissingAddress(d) ? 'missing' : isReactive(d) ? 'reactive' : schedMap[d.dog_name.toLowerCase()]?.type === 'must_ask' ? 'must-ask' : '';
+    const dot = d.sector==='Plateau' ? 'dot-p' : 'dot-l';
+    return `<span class="dchip ${cls}"><span class="dot ${dot}"></span>${d.dog_name}</span>`;
+  }).join('');
+
+  // Owl notes
+  const ol = document.getElementById('owl-list');
+  if (owlNotes.length === 0) { ol.innerHTML = '<div class="empty">No active owl notes</div>'; }
+  else ol.innerHTML = owlNotes.map(o => `
+    <div class="owl">
+      <div class="owl-target">${o.target_dog_name||'All walkers'} · ${o.target_sector||''}</div>
+      <div class="owl-msg">${o.note_text}</div>
+      <div class="owl-meta">${o.created_by_name||'Gen'} · ${o.scheduled_date||'No expiry'}</div>
+    </div>`).join('');
+
+  // Must-ask
+  const mal = document.getElementById('must-ask-list');
+  if (mustAsk.length === 0) { mal.innerHTML = '<div class="empty">No must-ask dogs today</div>'; return; }
+  mal.innerHTML = '<div class="card-head"><span class="card-title">Must confirm before walking</span><span class="card-badge">'+mustAsk.length+'</span></div>' +
+    mustAsk.map(d => `<div class="row"><span class="row-name">${d.dog_name}</span><span class="row-tag ${d.sector==='Plateau'?'tag-plat':'tag-laur'}">${d.sector}</span></div>`).join('');
+}
+
+// ── WEEKLY BOARD ──────────────────────────────────────────────
+function buildWeeklyBoard() {
+  const schedMap = getScheduleMap();
+  const days = ['monday','tuesday','wednesday','thursday','friday'];
+  const labels = ['Mon','Tue','Wed','Thu','Fri'];
+  const todayDayFull = DAYS[today.getDay()];
+  const walkersByDay = {
+    monday:['Alex','Sam'],tuesday:['Alex','Sam'],wednesday:['Alex','Sam','Megan'],
+    thursday:['Alex','Sam'],friday:['Alex','Sam']
+  };
+
+  let html = `<div class="wboard-head">
+    <div class="wh label" style="font-size:10px"></div>
+    ${labels.map((l,i)=>`<div class="wh${days[i]===todayDayFull?' today':''}">${l}</div>`).join('')}
+  </div>`;
+
+  ['Plateau','Laurier'].forEach(sector => {
+    const sectorDogs = allDogs.filter(d => d.sector === sector);
+    const cls = sector==='Plateau'?'plat':'laur';
+    const icon = sector==='Plateau'?'🏔️':'🌳';
+    html += `<div class="wrow">
+      <div class="wrow-label ${cls}">${icon} ${sector}</div>
+      ${days.map((day,di) => {
+        const dogsToday = sectorDogs.filter(d => {
+          const s = schedMap[d.dog_name.toLowerCase()];
+          return s && s[day];
+        });
+        const walkers = walkersByDay[day] || [];
+        const chips = dogsToday.map(d => {
+          const cls2 = isReactive(d)?'react':isMissingAddress(d)?'unm':'';
+          return `<span class="wcell-chip ${cls2}">${d.dog_name}</span>`;
+        }).join('');
+        const wTags = walkers.map(w=>`<span class="walker-tag">${w}</span>`).join('');
+        return `<div class="wcell">${chips}${dogsToday.length?`<span class="pm-sep">🕐 PM</span>`:''}${wTags}</div>`;
+      }).join('')}
+    </div>`;
+  });
+
+  document.getElementById('weekly-board').innerHTML = html;
+}
+
+// ── DOGS TAB ──────────────────────────────────────────────────
+function buildDogsTab() {
+  const schedMap = getScheduleMap();
+  const plateau = allDogs.filter(d=>d.sector==='Plateau');
+  const laurier = allDogs.filter(d=>d.sector==='Laurier');
+  document.getElementById('dogs-sub').textContent = `${allDogs.length} active dogs`;
+  document.getElementById('dogs-plat-count').textContent = `Plateau ${plateau.length}`;
+  document.getElementById('dogs-laur-count').textContent = `Laurier ${laurier.length}`;
+
+  function renderRows(dogs, sectorCls) {
+    let html = `<tr class="sector-row ${sectorCls}"><td colspan="7">${dogs[0]?.sector==='Plateau'?'🏔️ PLATEAU':'🌳 LAURIER'}</td></tr>`;
+    dogs.forEach(d => {
+      const s = schedMap[d.dog_name.toLowerCase()];
+      const days = s ? ['M','T','W','T','F'].map((l,i)=>['monday','tuesday','wednesday','thursday','friday'].map(day=>s[day])[i]?`<b>${l}</b>`:l).join(' ') : '—';
+      const warn = isMissingAddress(d) ? ' style="color:var(--red)"' : '';
+      html += `<tr>
+        <td class="dog-name-cell"${warn}>${d.dog_name}${isReactive(d)?` <span class="row-tag tag-red" style="font-size:9px">reactive</span>`:''}</td>
+        <td>${d.owner_first||''} ${d.owner_last||''}</td>
+        <td><span class="row-tag ${d.sector==='Plateau'?'tag-plat':'tag-laur'}">${d.sector}</span></td>
+        <td style="font-size:11px;color:${isMissingAddress(d)?'var(--red)':'var(--muted)'}">${d.address||'⚠️ MISSING'}</td>
+        <td>${d.door_code?`<span class="code-badge">${d.door_code}</span>`:'—'}</td>
+        <td class="notes-cell">${d.notes||''}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${days}</td>
+      </tr>`;
+    });
+    return html;
+  }
+
+  document.getElementById('dog-tbody').innerHTML = renderRows(plateau,'plat') + renderRows(laurier,'laur');
+}
+
+// ── SCHEDULE TAB ──────────────────────────────────────────────
+function buildScheduleTab() {
+  const so = document.getElementById('sched-owls');
+  if (owlNotes.length===0) { so.innerHTML='<div class="empty">No active notes</div>'; return; }
+  so.innerHTML = owlNotes.map(o=>`
+    <div class="owl">
+      <div class="owl-target">${o.target_dog_name||'All'} · ${o.target_sector||''}</div>
+      <div class="owl-msg">${o.note_text}</div>
+      <div class="owl-meta">${o.created_by_name} · Scheduled ${o.scheduled_date||'—'}</div>
+    </div>`).join('');
+}
+
+// ── MORNING CHECK ─────────────────────────────────────────────
+async function runMorningCheck() {
+  document.getElementById('flags-list').innerHTML = '<div class="loading"><div class="spin"></div> Running check…</div>';
+  await loadDogs(); await loadSchedule(); await loadOwlNotes();
+  buildDashboard();
+}
+
+// ── BEAST ─────────────────────────────────────────────────────
+async function sendToBeast() {
+  const input = document.getElementById('beast-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const hist = document.getElementById('beast-hist');
+  hist.innerHTML += `<div class="bmsg u">${msg}</div>`;
+  hist.innerHTML += `<div class="bmsg b beast-loading">🦍 Thinking…</div>`;
+  hist.scrollTop = 999;
+  document.getElementById('beast-send-btn').disabled = true;
+
+  try {
+    const context = `You are The Beast — Wiggle Dog Walks' AI assistant. 
+Today: ${new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'})}.
+Dogs today (${allDogs.filter(d=>{const s=getScheduleMap()[d.dog_name.toLowerCase()];return s&&s[DAYS[today.getDay()]];}).length}): ${allDogs.filter(d=>{const s=getScheduleMap()[d.dog_name.toLowerCase()];return s&&s[DAYS[today.getDay()]];}).map(d=>d.dog_name).join(', ')}.
+Flags: ${flags.length > 0 ? flags.map(f=>f.title).join('; ') : 'None'}.
+Active owl notes: ${owlNotes.map(o=>o.target_dog_name+': '+o.note_text).join('; ') || 'None'}.
+You confirm before acting. Keep responses short and friendly. Use 🦍 emoji.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        system: context,
+        messages:[{role:'user',content:msg}]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '🦍 Something went wrong.';
+    hist.querySelectorAll('.beast-loading').forEach(el=>el.remove());
+    hist.innerHTML += `<div class="bmsg b">${reply.replace(/\n/g,'<br>')}</div>`;
+  } catch(e) {
+    hist.querySelectorAll('.beast-loading').forEach(el=>el.remove());
+    hist.innerHTML += `<div class="bmsg b">🦍 Error: ${e.message}</div>`;
+  }
+  hist.scrollTop = 999;
+  document.getElementById('beast-send-btn').disabled = false;
+}
+
+// Enter key sends
+document.getElementById('beast-input').addEventListener('keydown', e => {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendToBeast(); }
+});
+
+// ── TAB SWITCHER ──────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function refreshAll() { runMorningCheck(); buildWeeklyBoard(); }
+
+// ── BOOT ──────────────────────────────────────────────────────
+init().catch(e => console.error('Init error:', e));
+</script>
+</body>
+</html>
