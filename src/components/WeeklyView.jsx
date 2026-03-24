@@ -11,7 +11,7 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
   // Compute the 7 days of the current week (Sun → Sat)
   const weekDays = useMemo(() => {
     const now = new Date(today + 'T12:00:00')
-    const dayOfWeek = now.getDay() // 0=Sun
+    const dayOfWeek = now.getDay()
     const sunday = new Date(now)
     sunday.setDate(now.getDate() - dayOfWeek)
 
@@ -42,11 +42,10 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
         supabase
           .from('profiles')
           .select('id, full_name, sector, schedule, role')
-          .in('role', ['admin', 'senior_walker'])
+          .in('role', ['admin', 'senior_walker', 'junior_walker'])
           .order('full_name'),
       ])
 
-      // Build per-date data
       const dataMap = {}
       if (groupsRes.data) {
         for (const row of groupsRes.data) {
@@ -59,7 +58,6 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
       }
       setWeekData(dataMap)
 
-      // Filter walkers by sector
       const filtered = (walkersRes.data || []).filter(w => {
         if (sector === 'both') return true
         return w.sector === sector || w.sector === 'both'
@@ -69,14 +67,12 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
     load()
   }, [weekDays, sector])
 
-  // Walker name lookup
   const walkerMap = useMemo(() => {
     const m = {}
     for (const w of walkers) m[w.id] = w.full_name?.split(' ')[0]
     return m
   }, [walkers])
 
-  // Who works each day
   function workersForDay(dayName) {
     return walkers
       .filter(w => !w.schedule || w.schedule.includes(dayName))
@@ -84,7 +80,7 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {weekDays.map(day => {
         const data = weekData[day.date]
         const isOff = !day.isWorkDay
@@ -99,33 +95,34 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
             key={day.date}
             onClick={() => !isOff && onSelectDay(day.date)}
             disabled={isOff}
-            className={`flex items-center gap-3 rounded-[12px] px-3 py-3 text-left transition-all min-h-[56px] ${
-              isOff
-                ? 'bg-gray-50 opacity-35'
-                : day.isToday
-                  ? 'bg-white border-2 border-[#E8634A] shadow-sm'
-                  : 'bg-white border border-gray-200/80 active:bg-gray-50'
-            }`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: '#fff', borderRadius: 12, padding: '10px 12px',
+              border: day.isToday ? '2px solid #E8634A' : '0.5px solid #e8e5e0',
+              opacity: isOff ? 0.5 : 1,
+              cursor: isOff ? 'default' : 'pointer',
+              textAlign: 'left', minHeight: 52,
+            }}
           >
             {/* Left accent bar */}
-            <div
-              className="w-[3px] h-8 rounded-full flex-shrink-0"
-              style={{ backgroundColor: isOff ? 'transparent' : day.isToday ? '#E8634A' : '#d1d5db' }}
-            />
+            <div style={{
+              width: 4, height: 32, borderRadius: 2, flexShrink: 0,
+              background: isOff ? 'transparent' : day.isToday ? '#E8634A' : '#d1d5db',
+            }} />
 
             {/* Day info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-medium text-gray-700">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                   {day.dayName} {day.dayNum}
                 </span>
                 {day.isToday && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#E8634A] text-white font-semibold">
+                  <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: '#E8634A', color: '#fff', fontWeight: 600 }}>
                     today
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400 truncate mt-0.5">
+              <p style={{ fontSize: 11, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {isOff
                   ? 'No walks'
                   : walkerNames.length > 0
@@ -136,13 +133,12 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
             </div>
 
             {/* Dog count circle */}
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${
-              isOff
-                ? 'bg-gray-100 text-gray-300'
-                : dogCount > 0
-                  ? 'bg-[#E8634A]/10 text-[#E8634A]'
-                  : 'bg-gray-100 text-gray-400'
-            }`}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, flexShrink: 0,
+              background: isOff ? '#f0ece8' : dogCount > 0 ? '#E8634A' : '#f0ece8',
+              color: isOff ? '#ccc' : dogCount > 0 ? '#fff' : '#aaa',
+            }}>
               {isOff ? '\u2014' : dogCount || '\u2014'}
             </div>
           </button>

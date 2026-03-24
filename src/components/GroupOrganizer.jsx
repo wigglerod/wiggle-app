@@ -667,28 +667,40 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         anyGroupLocked={anyGroupLocked}
       />
 
+      {/* Progress bar (when any group is locked) */}
+      {anyGroupLocked && (
+        <ProgressBar
+          groupNums={groupNums}
+          groupNames={groupNames}
+          groupLocks={groupLocks}
+          groups={groups}
+          eventsMap={eventsMap}
+          pickups={pickups}
+          doneGroupNums={doneGroupNums}
+          walkerAssignments={walkerAssignments}
+          userId={user?.id}
+          isAdmin={isAdmin}
+        />
+      )}
+
       {/* Groups */}
       {groupNums
         .filter(num => num <= 3 || (groups[num] || []).length > 0 || selectedId !== null)
         .map((num, idx) => renderGroup(num, idx))}
 
       {/* End of day celebration */}
-      {(() => {
-        const myLockedNums = groupNums.filter(n => groupLocks[n] && ((walkerAssignments[n] || []).includes(user?.id) || (walkerAssignments[n] || []).length === 0))
-        if (myLockedNums.length === 0) return null
-        const allDone = myLockedNums.every(n => {
-          const ids = (groups[n] || []).map(String)
-          return (ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] })) || doneGroupNums.has(n)
-        })
-        if (!allDone) return null
-        const totalDogs = myLockedNums.reduce((s, n) => s + (groups[n] || []).length, 0)
-        return (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <p className="text-lg font-bold text-gray-800">All walks done!</p>
-            <p className="text-[13px] text-gray-500">{myLockedNums.length} group{myLockedNums.length > 1 ? 's' : ''} {'\u00b7'} {totalDogs} dog{totalDogs > 1 ? 's' : ''}</p>
-          </div>
-        )
-      })()}
+      <EndOfDayCelebration
+        groupNums={groupNums}
+        groupNames={groupNames}
+        groupLocks={groupLocks}
+        groups={groups}
+        eventsMap={eventsMap}
+        pickups={pickups}
+        doneGroupNums={doneGroupNums}
+        walkerAssignments={walkerAssignments}
+        userId={user?.id}
+        date={date}
+      />
 
       {/* + Add Group button */}
       <button
@@ -1038,6 +1050,138 @@ function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, picku
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Progress bar ──────────────────────────────────────────────────
+function ProgressBar({ groupNums, groupNames, groupLocks, groups, eventsMap, pickups, doneGroupNums, walkerAssignments, userId, isAdmin }) {
+  // Only show groups that are relevant to the current user
+  const relevantNums = groupNums.filter(n => {
+    const wIds = walkerAssignments[n] || []
+    return isAdmin || wIds.includes(userId) || wIds.length === 0
+  })
+  if (relevantNums.length === 0) return null
+
+  function isGroupDone(num) {
+    if (doneGroupNums.has(num)) return true
+    const ids = (groups[num] || []).map(String)
+    if (ids.length === 0) return false
+    return ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] })
+  }
+
+  // Find active group: first locked group that isn't done
+  let activeNum = null
+  for (const n of relevantNums) {
+    if (groupLocks[n] && !isGroupDone(n)) { activeNum = n; break }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 10 }}>
+      {relevantNums.map((num, idx) => {
+        const done = isGroupDone(num) && !!groupLocks[num]
+        const active = num === activeNum
+        const bgColor = done ? '#E1F5EE' : active ? '#E8634A' : '#f0ece8'
+        const textColor = done ? '#0F6E56' : active ? '#fff' : '#aaa'
+
+        return (
+          <React.Fragment key={num}>
+            {idx > 0 && (
+              <div style={{
+                width: 16, height: 2, borderRadius: 1,
+                background: (isGroupDone(relevantNums[idx - 1]) && !!groupLocks[relevantNums[idx - 1]]) ? '#5DCAA5' : '#e0dcd8',
+              }} />
+            )}
+            <div style={{
+              width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: bgColor, fontSize: 9, fontWeight: 600, color: textColor, flexShrink: 0,
+            }}>
+              {done ? '\u2713' : num}
+            </div>
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── End of day celebration ─────────────────────────────────────────
+function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, eventsMap, pickups, doneGroupNums, walkerAssignments, userId, date }) {
+  const [noteCount, setNoteCount] = useState(0)
+  const [issueCount, setIssueCount] = useState(0)
+
+  const myLockedNums = groupNums.filter(n => {
+    const wIds = walkerAssignments[n] || []
+    return groupLocks[n] && (wIds.includes(userId) || wIds.length === 0)
+  })
+
+  const allDone = myLockedNums.length > 0 && myLockedNums.every(n => {
+    const ids = (groups[n] || []).map(String)
+    return (ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] })) || doneGroupNums.has(n)
+  })
+
+  // Fetch note/issue counts
+  useEffect(() => {
+    if (!allDone || !date) return
+    async function fetchCounts() {
+      const { data } = await supabase
+        .from('walker_notes')
+        .select('note_type, tags')
+        .eq('walk_date', date)
+        .eq('walker_id', userId)
+      if (!data) return
+      const redTags = ['Seems off', 'Reactive', 'Limping', 'Refuse to walk', 'Wounded', 'Soft stool / diarrhea', 'DM Me']
+      let notes = 0, issues = 0
+      for (const row of data) {
+        if (row.note_type === 'note') notes++
+        if (row.tags && row.tags.some(t => redTags.includes(t))) issues++
+      }
+      setNoteCount(notes)
+      setIssueCount(issues)
+    }
+    fetchCounts()
+  }, [allDone, date, userId])
+
+  if (!allDone) return null
+
+  const totalDogs = myLockedNums.reduce((s, n) => s + (groups[n] || []).length, 0)
+
+  // Per-group durations + total time
+  const groupStats = myLockedNums.map(n => {
+    const ids = (groups[n] || []).map(String)
+    const times = ids.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
+    const duration = times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 60000) : 0
+    return { num: n, name: groupNames[n] || `Group ${n}`, duration, times }
+  })
+
+  const allTimes = groupStats.flatMap(g => g.times)
+  const totalTime = allTimes.length > 1 ? Math.round((Math.max(...allTimes) - Math.min(...allTimes)) / 60000) : 0
+
+  return (
+    <div style={{ textAlign: 'center', padding: '30px 14px' }}>
+      <div style={{ fontSize: 36, letterSpacing: 8, marginBottom: 12 }}>{'\u{1F43E}'} {'\u{1F43E}'} {'\u{1F43E}'}</div>
+      <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>All walks done!</div>
+      <div style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>
+        {myLockedNums.length} group{myLockedNums.length > 1 ? 's' : ''} {'\u00b7'} {totalDogs} dog{totalDogs > 1 ? 's' : ''} {'\u00b7'} {totalTime} min
+      </div>
+
+      {/* Per-group stats */}
+      <div style={{ background: '#fff', borderRadius: 14, padding: 12, border: '0.5px solid #e8e5e0', textAlign: 'left', marginBottom: 8 }}>
+        {groupStats.map(g => (
+          <div key={g.num} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
+            <span>{'\u2713'} {g.name}</span>
+            <span style={{ color: '#aaa' }}>{g.duration} min</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>
+        {noteCount} note{noteCount !== 1 ? 's' : ''} logged {'\u00b7'} {issueCount} issue{issueCount !== 1 ? 's' : ''} flagged
+      </div>
+
+      <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '0.5px solid #e8e5e0' }}>
+        <span style={{ color: '#aaa', fontSize: 13 }}>See you tomorrow!</span>
+      </div>
     </div>
   )
 }
