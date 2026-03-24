@@ -16,6 +16,7 @@ export default function DogCard({
   isLocked = false,
   isPickedUp = false,
   isCurrent = false,
+  isCompact = false,
   pickupTime = null,
   onSwipeLeft,
   onSwipeRight,
@@ -107,6 +108,54 @@ export default function DogCard({
   const containerBg = isPickedUp ? '#f0fdf4' : isCurrent ? '#FFF4F1' : '#ffffff';
   const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : isCurrent ? '1.5px solid #E8634A' : '0.5px solid #e8e5e0';
 
+  // ── COMPACT MODE (for interlock zones) ──────────────────────
+  if (isCompact) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        padding: '6px 8px', borderRadius: 8,
+        background: containerBg, border: containerBorder,
+        borderBottom: isPickedUp ? containerBorder : '2px solid #d5d2cc',
+        marginBottom: 3, fontSize: 11,
+      }}>
+        {routeNumber != null && (
+          <span style={{ fontSize: 9, color: isPickedUp ? '#0F6E56' : isCurrent ? '#E8634A' : '#aaa', width: 12, textAlign: 'center', fontWeight: 600 }}>
+            {isPickedUp ? '\u2713' : routeNumber}
+          </span>
+        )}
+        <div style={{
+          width: 20, height: 20, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+          background: photoUrl ? '#f5f5f5' : bgColor,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {photoUrl ? (
+            <img src={photoUrl} alt={dog.dog_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
+          )}
+        </div>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: levelDot, flexShrink: 0 }} />
+        <span style={{
+          flex: 1, fontWeight: 500, fontSize: 11, overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          textDecoration: isPickedUp ? 'line-through' : 'none',
+          color: isPickedUp ? '#aaa' : '#1a1a1a',
+        }}>
+          {dog.dog_name}
+        </span>
+        {dog.door_code && (
+          <span style={{ fontSize: 8, color: '#185FA5', fontWeight: 600, background: '#E6F1FB', padding: '1px 4px', borderRadius: 3 }}>
+            #{dog.door_code}
+          </span>
+        )}
+        {isPickedUp && pickupTime && (
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#0F6E56', flexShrink: 0 }}>{pickupTime}</span>
+        )}
+      </div>
+    );
+  }
+
+  // ── NORMAL MODE ─────────────────────────────────────────────
   return (
     <div style={{ position: 'relative', marginBottom: 4 }}>
       {/* Swipe backdrops */}

@@ -473,7 +473,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   }
 
   // ── Render a DogCard for an event ──────────────────────────────
-  function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false) {
+  function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false, isCompact = false) {
     const dog = ev.dog || {}
     const dogId = dog.id
     const dogPickup = dogId ? pickups[dogId] : null
@@ -483,9 +483,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
     return (
       <div
-        onTouchStart={(e) => !isLocked && handleTouchStartOnCard(e, ev)}
-        onTouchMove={!isLocked ? handleTouchMoveOnCard : undefined}
-        onTouchEnd={!isLocked ? handleTouchEndOnCard : undefined}
+        onTouchStart={(e) => !isLocked && !isCompact && handleTouchStartOnCard(e, ev)}
+        onTouchMove={!isLocked && !isCompact ? handleTouchMoveOnCard : undefined}
+        onTouchEnd={!isLocked && !isCompact ? handleTouchEndOnCard : undefined}
       >
         <DogCard
           dog={{ id: dogId, dog_name: ev.displayName, photo_url: dog.photo_url, address: dog.address, door_code: dog.door_code, level: dog.level }}
@@ -495,6 +495,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           isLocked={isLocked}
           isPickedUp={!!dogPickup}
           isCurrent={isCurrent}
+          isCompact={isCompact}
           pickupTime={formatPickupTime(dogPickup?.time)}
           onSwipeLeft={() => markPickup(dogId, ev.displayName)}
           onSwipeRight={() => {
@@ -503,7 +504,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           }}
           onTapName={!isLocked ? () => handleDogTap(ev) : undefined}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
-          showDragHandle={!isLocked}
+          showDragHandle={!isLocked && !isCompact}
         />
       </div>
     )
@@ -537,7 +538,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   )
 
   // ── Render a group card ────────────────────────────────────────
-  function renderGroup(num, groupIndex) {
+  function renderGroup(num, groupIndex, isCompactMode = false) {
     const isGroupLocked = !!groupLocks[num]
     const lockInfo = groupLocks[num]
     const dogIds = (groups[num] || []).map(String)
@@ -559,11 +560,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       const times = dogIds.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
       const elapsed = times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 60000) : 0
       return (
-        <div key={num} style={{ opacity: 0.5, background: '#f0ece8', border: '0.5px solid #e0dcd8', borderRadius: 14, padding: '8px 10px' }}
+        <div key={num} style={{ opacity: 0.45, background: '#f0ece8', border: '0.5px solid #e0dcd8', borderRadius: 14, padding: '8px 10px' }}
           className="flex items-center justify-between"
         >
           <span style={{ fontSize: 12, fontWeight: 500, color: '#0F6E56' }}>{'\u2713'} {gName} {'\u00b7'} {elapsed} min</span>
-          <span style={{ fontSize: 10, color: '#aaa' }}>{total} dogs</span>
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56' }}>Done</span>
         </div>
       )
     }
@@ -606,9 +607,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       <div
         key={num}
         style={{
-          border: `${isGroupLocked ? '2px' : '1.5px'} ${borderStyle} ${color.border}`,
-          borderRadius: 14,
-          padding: 12,
+          border: `2px ${borderStyle} ${color.border}`,
+          borderRadius: 16,
+          padding: 10,
           background: color.bg,
           opacity: !isOwn && wIds.length > 0 && !isAdmin ? 0.7 : 1,
           transition: 'all 0.2s',
@@ -629,7 +630,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           selectedDogName={selectedDogName}
           onTargetTap={() => handleGroupTap(num)}
           onRename={(name) => !isGroupLocked && renameGroup(num, name)}
-          onToggleLock={() => isGroupLocked ? unlockGroup(num) : (total > 0 && lockGroup(num))}
           isLinked={!!groupLinks.find(l => l.group_a_key === `${date}_${sector}_${num}` || l.group_b_key === `${date}_${sector}_${num}`)}
           onLinkTap={() => setLinkPickerNum(num)}
           statusBadge={
@@ -660,7 +660,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
                 {dogIds.map((id, idx) => {
                   const ev = eventsMap.get(id)
                   if (!ev) return null
-                  return <div key={id}>{renderDogCard(ev, id, num, idx, true, idx === firstUnpickedIdx)}</div>
+                  return <div key={id}>{renderDogCard(ev, id, num, idx, true, idx === firstUnpickedIdx, isCompactMode)}</div>
                 })}
               </div>
             )
@@ -680,8 +680,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
         {/* Route summary */}
         {dogIds.length > 1 && (
-          <p style={{ fontSize: 9, color: '#aaa', marginTop: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Route: {dogIds.map(id => eventsMap.get(id)?.displayName).filter(Boolean).join(' \u203A ')}
+          <p style={{ fontSize: 9, color: '#aaa', padding: '4px 0 0', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Route: {dogIds.map(id => eventsMap.get(id)?.displayName).filter(Boolean).join(' > ')}
           </p>
         )}
 
@@ -693,7 +693,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
               if (url) window.open(url, '_blank')
               else toast('No addresses found for this group')
             }}
-            style={{ width: '100%', padding: '14px 16px', borderRadius: 12, background: 'linear-gradient(180deg, #E8634A 0%, #d4552d 100%)', color: '#fff', border: 'none', borderBottom: '3px solid #b8461f', fontSize: 14, fontWeight: 700, letterSpacing: '0.02em', marginTop: 8, cursor: 'pointer', minHeight: 48, boxShadow: '0 4px 12px rgba(232,99,74,0.35), 0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center' }}
+            style={{ width: '100%', padding: 7, borderRadius: 8, background: 'linear-gradient(180deg, #E8634A 0%, #d4552d 100%)', color: '#fff', border: 'none', borderBottom: '3px solid #b8461f', fontSize: 11, fontWeight: 600, marginTop: 6, cursor: 'pointer', boxShadow: '0 4px 12px rgba(232,99,74,0.35)', textAlign: 'center' }}
             className="active:translate-y-[2px] active:shadow-none"
           >
             {pickedCount === 0 ? 'Start Route' : `Continue route (${total - pickedCount} left)`}
@@ -706,9 +706,61 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   // ══════════════════════════════════════════════════════════════
   //   RENDER
   // ══════════════════════════════════════════════════════════════
+  // ── Lock all / Unlock all handlers ──────────────────────────
+  const unassignedCount = (groups.unassigned || []).length
+  const groupsWithDogs = groupNums.filter(n => (groups[n] || []).length > 0)
+  const showLockButton = !anyGroupLocked && groupsWithDogs.length > 0
+
+  async function handleLockAll() {
+    if (!user) return
+    for (const num of groupNums) {
+      const dogIds = groups[num] || []
+      if (dogIds.length === 0) continue
+      lockGroup(num)
+    }
+  }
+
+  function handleUnlockAll() {
+    for (const num of groupNums) {
+      if (groupLocks[num]) {
+        unlockGroup(num)
+      }
+    }
+  }
+
+  // Who locked? (first lock info found)
+  const firstLockInfo = Object.values(groupLocks)[0]
+  const lockedByName = firstLockInfo?.locked_by_name || 'Walker'
+
   return (
     <div className="flex flex-col gap-3" onClick={handleBackgroundTap}>
       {sosBanner}
+
+      {/* Walking mode banner (locked state) */}
+      {anyGroupLocked && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px',
+          background: '#E1F5EE',
+          borderRadius: 12,
+          border: '1px solid #bbf7d0',
+          marginBottom: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>{'\u{1F512}'}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#0F6E56' }}>
+              Walking mode — locked by {lockedByName}
+            </span>
+          </div>
+          <button onClick={handleUnlockAll} style={{
+            fontSize: 11, fontWeight: 600, padding: '4px 12px',
+            borderRadius: 8, background: '#fff', color: '#0F6E56',
+            border: '1px solid #bbf7d0', cursor: 'pointer',
+          }}>
+            Unlock
+          </button>
+        </div>
+      )}
 
       {/* Collapsible map */}
       <CollapsibleMap
@@ -766,9 +818,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
             return (
               <div key={`link-${num}-${partnerNum}`} style={{ display: 'flex', gap: 0 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>{renderGroup(groupA, visibleNums.indexOf(groupA))}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>{renderGroup(groupA, visibleNums.indexOf(groupA), true)}</div>
                 <div style={{ width: 3, background: '#185FA5', borderRadius: 2, margin: '20px 0', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0, marginTop: offsetPx }}>{renderGroup(groupB, visibleNums.indexOf(groupB))}</div>
+                <div style={{ flex: 1, minWidth: 0, marginTop: offsetPx }}>{renderGroup(groupB, visibleNums.indexOf(groupB), true)}</div>
               </div>
             )
           }
@@ -777,6 +829,34 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           return renderGroup(num, idx)
         })
       })()}
+
+      {/* Lock All Groups button */}
+      {showLockButton && (
+        <button
+          onClick={unassignedCount > 0 ? undefined : handleLockAll}
+          style={{
+            width: '100%',
+            padding: 16,
+            borderRadius: 12,
+            background: 'linear-gradient(180deg, #E8634A 0%, #d4552d 100%)',
+            color: '#fff',
+            border: 'none',
+            borderBottom: '3px solid #b8461f',
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: unassignedCount > 0 ? 'default' : 'pointer',
+            boxShadow: '0 4px 12px rgba(232,99,74,0.35)',
+            marginTop: 8,
+            marginBottom: 8,
+            opacity: unassignedCount > 0 ? 0.4 : 1,
+            pointerEvents: unassignedCount > 0 ? 'none' : 'auto',
+          }}
+        >
+          {unassignedCount > 0
+            ? `Assign ${unassignedCount} dog${unassignedCount > 1 ? 's' : ''} to lock`
+            : '\u{1F512} Lock All Groups \u2014 Start Walking'}
+        </button>
+      )}
 
       {/* End of day celebration */}
       <EndOfDayCelebration
@@ -792,18 +872,20 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         date={date}
       />
 
-      {/* + Add Group button */}
-      <button
-        onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
-        style={{
-          border: '1.5px dashed rgba(232,99,74,0.3)', borderRadius: 16, padding: '16px 14px', minHeight: 52,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          background: 'rgba(232,99,74,0.02)', cursor: 'pointer', transition: 'all 0.15s',
-        }}
-      >
-        <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#E8634A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-        <span style={{ fontSize: 13, color: '#E8634A', fontWeight: 700 }}>Add group</span>
-      </button>
+      {/* + Add group button */}
+      {!anyGroupLocked && (
+        <button
+          onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
+          style={{
+            border: '2px dashed rgba(232,99,74,0.25)', borderRadius: 14, padding: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: 'transparent', cursor: 'pointer', transition: 'all 0.15s',
+          }}
+        >
+          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#E8634A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>+</span>
+          <span style={{ fontSize: 12, color: '#E8634A', fontWeight: 600 }}>Add group</span>
+        </button>
+      )}
 
       {lastSaved && (
         <p style={{ textAlign: 'center', fontSize: 10, color: '#d1cdc8', paddingTop: 8, letterSpacing: '0.02em' }}>
@@ -885,7 +967,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, onToggleLock, isLinked, onLinkTap, statusBadge }) {
+function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -914,7 +996,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             onChange={(e) => setNameInput(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditing(false) }}
-            style={{ fontSize: 14, fontWeight: 700, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
+            style={{ fontSize: 13, fontWeight: 600, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
           />
         ) : (
           <span
@@ -926,7 +1008,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             }}
             onPointerUp={() => clearTimeout(lpTimer.current)}
             onPointerLeave={() => clearTimeout(lpTimer.current)}
-            style={{ fontSize: 14, fontWeight: 700, color: isTarget ? '#E8634A' : '#1a1a1a', cursor: isLocked ? 'default' : 'pointer' }}
+            style={{ fontSize: 13, fontWeight: 600, color: isTarget ? '#E8634A' : '#333', cursor: isLocked ? 'default' : 'pointer' }}
           >
             {gName}
           </span>
@@ -936,7 +1018,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {wNames.map((name, i) => {
           const bc = walkerBadgeColor(name)
           return (
-            <span key={wIds[i]} style={{ fontSize: 10, padding: '4px 10px', borderRadius: 10, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap', minHeight: 28, display: 'inline-flex', alignItems: 'center', borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
+            <span key={wIds[i]} style={{ fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
               {name.split(' ')[0]}
             </span>
           )
@@ -978,7 +1060,6 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             {'\u{1F517}'}
           </button>
         )}
-        {dogCount > 0 && <LockButton isLocked={isLocked} onToggle={onToggleLock} />}
       </div>
     </div>
   )
@@ -1009,12 +1090,12 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
         </div>
       )}
       <div
-        style={{ border: '1.5px dashed #D3D1C7', borderRadius: 14, padding: 12 }}
+        style={{ border: '2px dashed #D3D1C7', borderRadius: 16, padding: 10, background: '#f8f8f6' }}
         onClick={isTarget ? onTargetTap : undefined}
         className={isTarget ? 'group-target-pulse cursor-pointer' : ''}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#555' }}>Unassigned</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>Unassigned</span>
           <span style={{ fontSize: 11, color: '#aaa' }}>{sortedIds.length}</span>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -1043,11 +1124,11 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
                 onTouchMove={() => clearTimeout(pillHoldTimer)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  fontSize: 12, padding: '6px 12px', borderRadius: 12, minHeight: 36,
+                  fontSize: 11, padding: '4px 8px', borderRadius: 10,
                   background: isSelected ? '#E8634A' : '#fff',
                   color: isSelected ? '#fff' : '#1a1a1a',
                   border: isSelected ? '2px solid #E8634A' : '0.5px solid #e0dcd8',
-                  borderBottom: isSelected ? '2.5px solid #d4552d' : '2.5px solid #d5d2cc',
+                  borderBottom: isSelected ? '2.5px solid #d4552d' : '2px solid #d5d2cc',
                   cursor: 'pointer', fontWeight: 500,
                   transition: 'all 0.15s',
                 }}
