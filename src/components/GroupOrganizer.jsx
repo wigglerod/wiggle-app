@@ -92,6 +92,9 @@ function LockButton({ isLocked, onToggle }) {
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+      onTouchCancel={handlePointerUp}
       className="relative w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 text-gray-500 text-sm overflow-hidden flex-shrink-0 active:bg-gray-200"
       title="Hold 1s to toggle lock"
     >
@@ -260,9 +263,13 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     supabase.from('dog_conflicts').select('*').then(({ data }) => { if (data) setConflicts(data) })
   }, [])
 
+  // Key by dog UUID (matches useWalkGroups allEventIds). Fallback to _id.
   const eventsMap = useMemo(() => {
     const m = new Map()
-    for (const ev of events) m.set(String(ev._id), ev)
+    for (const ev of events) {
+      const key = ev.dog?.id || String(ev._id)
+      m.set(key, ev)
+    }
     return m
   }, [events])
 
@@ -340,8 +347,10 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     return null
   }
 
+  function eventKey(ev) { return ev.dog?.id || String(ev._id) }
+
   function handleDogTap(event) {
-    const id = String(event._id)
+    const id = eventKey(event)
     const dogGroup = findGroup(id)
     if (dogGroup !== 'unassigned' && dogGroup !== null && groupLocks[dogGroup]) return
     setSelectedId(prev => (prev === id ? null : id))
@@ -371,8 +380,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         try { navigator.vibrate?.(10) } catch {}
         setSelectedId(null)
         setLongPressMenu({
-          dogId: String(ev._id), dogName: ev.displayName,
-          fromGroup: findGroup(String(ev._id)),
+          dogId: eventKey(ev), dogName: ev.displayName,
+          fromGroup: findGroup(eventKey(ev)),
           x: Math.min(rect.left + rect.width / 2, window.innerWidth - 120),
           y: rect.bottom + 4,
         })
@@ -666,6 +675,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         groupNums={groupNums}
         groupNames={groupNames}
         eventsMap={eventsMap}
+        date={date}
+        sector={sector}
+        onDogClick={onDogClick}
       />
 
       {/* Unassigned pool */}
@@ -679,6 +691,15 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         isTarget={selectedId !== null && selectedGroup !== 'unassigned'}
         onTargetTap={() => handleGroupTap('unassigned')}
         anyGroupLocked={anyGroupLocked}
+        onLongHold={(ev, pos) => {
+          setSelectedId(null)
+          setLongPressMenu({
+            dogId: eventKey(ev), dogName: ev.displayName,
+            fromGroup: 'unassigned',
+            x: Math.min(pos.x, window.innerWidth - 120),
+            y: pos.y,
+          })
+        }}
       />
 
       {/* Progress bar (when any group is locked) */}
@@ -929,7 +950,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
 }
 
 // ── Unassigned pool ───────────────────────────────────────────────
-function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap, onDogClick, isTarget, onTargetTap, anyGroupLocked }) {
+function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap, onDogClick, isTarget, onTargetTap, anyGroupLocked, onLongHold }) {
   const sortedIds = useMemo(() => {
     return [...eventIds]
       .sort((a, b) => {
@@ -972,10 +993,19 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
             const isSelected = selectedId === id
             const hasOwl = dog.id && owlDogIdSet?.has(dog.id)
 
+            let pillHoldTimer = null
             return (
               <button
                 key={id}
                 onClick={() => onDogTap(ev)}
+                onTouchStart={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  pillHoldTimer = setTimeout(() => {
+                    onLongHold?.(ev, { x: rect.left + rect.width / 2, y: rect.bottom + 4 })
+                  }, 500)
+                }}
+                onTouchEnd={() => clearTimeout(pillHoldTimer)}
+                onTouchMove={() => clearTimeout(pillHoldTimer)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3,
                   fontSize: 10, padding: '4px 8px', borderRadius: 8,
@@ -1262,7 +1292,9 @@ function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, events
 }
 
 // ── Collapsible map ───────────────────────────────────────────────
-function CollapsibleMap({ events, groups, groupNums, groupNames, eventsMap }) {
+const LazyMapView = React.lazy(() => import('./MapView'))
+
+function CollapsibleMap({ events, groups, groupNums, groupNames, eventsMap, date, sector, onDogClick }) {
   const [expanded, setExpanded] = useState(false)
 
   const pinCount = useMemo(() => {
@@ -1277,26 +1309,26 @@ function CollapsibleMap({ events, groups, groupNums, groupNames, eventsMap }) {
 
   return (
     <div style={{ marginBottom: 4 }}>
-      <button
-        onClick={() => setExpanded(v => !v)}
-        style={{
-          width: '100%', background: '#f0ece8', borderRadius: 12, border: '0.5px solid #e0dcd8',
-          padding: expanded ? '6px 10px' : '0 10px',
-          height: expanded ? 'auto' : 50,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: expanded ? 'flex-start' : 'center',
-          cursor: 'pointer', overflow: 'hidden', transition: 'height 0.3s ease',
-        }}
-      >
-        {!expanded && (
+      {!expanded ? (
+        <button
+          onClick={() => setExpanded(true)}
+          style={{
+            width: '100%', background: '#f0ece8', borderRadius: 12, border: '0.5px solid #e0dcd8',
+            padding: '0 10px', height: 50,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
           <span style={{ fontSize: 10, color: '#bbb' }}>
             Map: {pinCount} pin{pinCount !== 1 ? 's' : ''} {'\u00b7'} tap to expand
           </span>
-        )}
-      </button>
-      {expanded && (
-        <div style={{ borderRadius: 12, overflow: 'hidden', border: '0.5px solid #e0dcd8', marginTop: -1 }}>
-          <div style={{ height: 200, background: '#e8e5e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 11, color: '#aaa' }}>Map loads in the Map tab</span>
+        </button>
+      ) : (
+        <div style={{ borderRadius: 12, overflow: 'hidden', border: '0.5px solid #e0dcd8' }}>
+          <div style={{ height: 200 }}>
+            <React.Suspense fallback={<div style={{ height: 200, background: '#e8e5e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 11, color: '#aaa' }}>Loading map...</span></div>}>
+              <LazyMapView events={events} date={date} sector={sector} onDogClick={onDogClick} />
+            </React.Suspense>
           </div>
           {/* Group legend */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '6px 8px', background: '#fff' }}>

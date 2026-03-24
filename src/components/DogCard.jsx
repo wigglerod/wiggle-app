@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 function nameToColor(name) {
   const colors = ['#7F77DD','#378ADD','#BA7517','#1D9E75','#D85A30','#5DCAA5','#534AB7','#993C1D'];
@@ -9,10 +9,8 @@ function nameToColor(name) {
 
 function extractStreet(address) {
   if (!address) return null;
-  // Take the first line / first comma-segment, strip leading number
   const seg = address.split(',')[0].trim();
   const parts = seg.split(/\s+/);
-  // Drop leading house number if it starts with digits
   if (parts.length > 1 && /^\d/.test(parts[0])) parts.shift();
   return parts.join(' ');
 }
@@ -34,46 +32,77 @@ export default function DogCard({
   const [owlExpanded, setOwlExpanded] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
-  const touchRef = useRef({ startX: 0, startY: 0, locked: false });
+  const cardRef = useRef(null);
+  const touchRef = useRef({ x: 0, y: 0, claimed: false });
 
   const THRESHOLD = 60;
 
+  // Use useEffect to attach touchmove with { passive: false } so preventDefault works on iOS
+  const swipeXRef = useRef(0);
+  const swipingRef = useRef(false);
+
   const handleTouchStart = useCallback((e) => {
-    if (!isLocked || isPickedUp) return;
     const t = e.touches[0];
-    touchRef.current = { startX: t.clientX, startY: t.clientY, locked: false };
-    setSwiping(false);
+    touchRef.current = { x: t.clientX, y: t.clientY, claimed: false };
+    swipeXRef.current = 0;
+    swipingRef.current = false;
     setSwipeX(0);
-  }, [isLocked, isPickedUp]);
+    setSwiping(false);
+  }, []);
 
   const handleTouchMove = useCallback((e) => {
-    if (!isLocked || isPickedUp) return;
     const t = e.touches[0];
-    const dx = t.clientX - touchRef.current.startX;
-    const dy = t.clientY - touchRef.current.startY;
+    const dx = t.clientX - touchRef.current.x;
+    const dy = t.clientY - touchRef.current.y;
 
-    // If we haven't committed to a direction yet, check angle
-    if (!touchRef.current.locked) {
-      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) return; // vertical scroll
-      if (Math.abs(dx) > 10) touchRef.current.locked = true;
-      else return;
+    // If vertical scroll wins, bail out
+    if (!touchRef.current.claimed) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) return;
+      if (Math.abs(dx) > 10) {
+        touchRef.current.claimed = true;
+      } else {
+        return;
+      }
     }
 
-    e.preventDefault();
-    setSwiping(true);
+    e.preventDefault(); // claim the gesture, prevent scroll
+    swipeXRef.current = dx;
+    swipingRef.current = true;
     setSwipeX(dx);
-  }, [isLocked, isPickedUp]);
+    setSwiping(true);
+  }, []);
 
   const handleTouchEnd = useCallback(() => {
-    if (!swiping) return;
-    if (swipeX < -THRESHOLD && onSwipeLeft) {
+    if (!swipingRef.current) return;
+    const dx = swipeXRef.current;
+    if (dx < -THRESHOLD && onSwipeLeft) {
+      try { navigator.vibrate?.(10) } catch {}
       onSwipeLeft();
-    } else if (swipeX > THRESHOLD && onSwipeRight) {
+    } else if (dx > THRESHOLD && onSwipeRight) {
+      try { navigator.vibrate?.(10) } catch {}
       onSwipeRight();
     }
+    swipingRef.current = false;
+    swipeXRef.current = 0;
     setSwiping(false);
     setSwipeX(0);
-  }, [swiping, swipeX, onSwipeLeft, onSwipeRight]);
+  }, [onSwipeLeft, onSwipeRight]);
+
+  // Attach listeners with passive:false for iOS Safari
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !isLocked || isPickedUp) return;
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isLocked, isPickedUp, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   const photoUrl = dog.photo_url || null;
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
@@ -81,7 +110,6 @@ export default function DogCard({
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
   const streetName = extractStreet(dog.address);
 
-  // Picked-up state styles
   const containerBg = isPickedUp ? '#f0fdf4' : '#ffffff';
   const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : '0.5px solid #e8e5e0';
 
@@ -95,7 +123,7 @@ export default function DogCard({
           justifyContent: 'flex-end', paddingRight: 14,
           color: '#fff', fontSize: 11, fontWeight: 600,
         }}>
-          Done
+          {'\u2713'} Done
         </div>
       )}
       {swiping && swipeX > 0 && (
@@ -105,15 +133,13 @@ export default function DogCard({
           paddingLeft: 14,
           color: '#fff', fontSize: 11, fontWeight: 600,
         }}>
-          Note
+          Note {'\u270E'}
         </div>
       )}
 
       {/* Card */}
       <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        ref={cardRef}
         style={{
           position: 'relative',
           background: containerBg,
@@ -165,13 +191,8 @@ export default function DogCard({
         <div
           onClick={onTapName || undefined}
           style={{
-            fontSize: 11,
-            fontWeight: 500,
-            flex: 1,
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            fontSize: 11, fontWeight: 500, flex: 1, minWidth: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: onTapName ? 'pointer' : 'default',
             textDecoration: isPickedUp ? 'line-through' : 'none',
             color: isPickedUp ? '#aaa' : '#1a1a1a',
@@ -180,11 +201,9 @@ export default function DogCard({
           {dog.dog_name}
         </div>
 
-        {/* Pickup time (when picked up) */}
+        {/* Pickup time */}
         {isPickedUp && pickupTime && (
-          <span style={{ fontSize: 9, fontWeight: 600, color: '#0F6E56', flexShrink: 0 }}>
-            {pickupTime}
-          </span>
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#0F6E56', flexShrink: 0 }}>{pickupTime}</span>
         )}
 
         {/* Address */}
@@ -197,7 +216,7 @@ export default function DogCard({
               maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
-            {streetName} ›
+            {streetName} {'\u203A'}
           </div>
         )}
 
@@ -222,7 +241,7 @@ export default function DogCard({
               cursor: 'pointer', fontSize: 8, lineHeight: 1,
             }}
           >
-            🦉
+            {'\u{1F989}'}
           </div>
         )}
 
@@ -244,11 +263,11 @@ export default function DogCard({
           borderRadius: '0 0 8px 8px', padding: '6px 8px', marginTop: -3,
           fontSize: 10, color: '#854F0B', lineHeight: 1.4,
         }}>
-          <span style={{ marginRight: 4 }}>🦉</span>
+          <span style={{ marginRight: 4 }}>{'\u{1F989}'}</span>
           {owlNote.note_text}
           {owlNote.created_by_name && (
             <span style={{ color: '#a08050', marginLeft: 6 }}>
-              — {owlNote.created_by_name}
+              {'\u2014'} {owlNote.created_by_name}
               {owlNote.created_at && (' \u00b7 ' + new Date(owlNote.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}
             </span>
           )}
