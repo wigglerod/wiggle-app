@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import Header from '../components/Header'
 import LoadingDog from '../components/LoadingDog'
 import BottomTabs from '../components/BottomTabs'
