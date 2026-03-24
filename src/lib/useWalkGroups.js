@@ -308,25 +308,14 @@ export function useWalkGroups(events, date, sector) {
     const lockerName = profile?.full_name?.split(' ')[0] || 'Walker'
     setGroupLocks((prev) => ({ ...prev, [groupNum]: { locked: true, locked_by: user.id, locked_by_name: lockerName } }))
 
-    const { error } = await supabase.from('walk_groups').upsert(
-      {
-        walk_date: date,
-        group_num: groupNum,
-        sector,
-        dog_ids: groupsRef.current[groupNum] || [],
-        group_name: groupNamesRef.current[groupNum] ?? null,
-        walker_id: (walkerAssignmentsRef.current[groupNum] || [])[0] ?? null,
-        walker_ids: (walkerAssignmentsRef.current[groupNum] || []).length > 0 ? walkerAssignmentsRef.current[groupNum] : null,
-        locked: true,
-        locked_by: user.id,
-        locked_by_name: lockerName,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'walk_date,group_num,sector' }
-    )
+    const { error } = await supabase.from('walk_groups')
+      .update({ locked: true, locked_by: user.id, locked_by_name: lockerName })
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+      .eq('sector', sector)
 
     if (error) {
+      console.error('Lock failed:', error)
       toast.error('Failed to lock group')
       setGroupLocks((prev) => { const next = { ...prev }; delete next[groupNum]; return next })
     }
@@ -337,25 +326,14 @@ export function useWalkGroups(events, date, sector) {
     if (!date || !sector || !user) return
     setGroupLocks((prev) => { const next = { ...prev }; delete next[groupNum]; return next })
 
-    const { error } = await supabase.from('walk_groups').upsert(
-      {
-        walk_date: date,
-        group_num: groupNum,
-        sector,
-        dog_ids: groupsRef.current[groupNum] || [],
-        group_name: groupNamesRef.current[groupNum] ?? null,
-        walker_id: (walkerAssignmentsRef.current[groupNum] || [])[0] ?? null,
-        walker_ids: (walkerAssignmentsRef.current[groupNum] || []).length > 0 ? walkerAssignmentsRef.current[groupNum] : null,
-        locked: false,
-        locked_by: null,
-        locked_by_name: null,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'walk_date,group_num,sector' }
-    )
+    const { error } = await supabase.from('walk_groups')
+      .update({ locked: false, locked_by: null, locked_by_name: null })
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+      .eq('sector', sector)
 
     if (error) {
+      console.error('Unlock failed:', error)
       toast.error('Failed to unlock group')
     }
   }, [date, sector, user])

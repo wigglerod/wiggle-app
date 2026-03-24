@@ -7,13 +7,6 @@ function nameToColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-function extractStreet(address) {
-  if (!address) return null;
-  const seg = address.split(',')[0].trim();
-  const parts = seg.split(/\s+/);
-  if (parts.length > 1 && /^\d/.test(parts[0])) parts.shift();
-  return parts.join(' ');
-}
 
 export default function DogCard({
   dog,
@@ -108,7 +101,7 @@ export default function DogCard({
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
-  const streetName = extractStreet(dog.address);
+  const streetName = dog.address || null;
 
   const containerBg = isPickedUp ? '#f0fdf4' : '#ffffff';
   const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : '0.5px solid #e8e5e0';
@@ -213,7 +206,6 @@ export default function DogCard({
             style={{
               fontSize: 9, color: '#185FA5', fontWeight: 500, flexShrink: 0,
               cursor: onTapAddress ? 'pointer' : 'default',
-              maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
             {streetName} {'\u203A'}
