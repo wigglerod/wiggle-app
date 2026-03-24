@@ -140,9 +140,9 @@ export default function DogCard({
           border: containerBorder,
           borderBottom: isPickedUp ? containerBorder : '2.5px solid #d5d2cc',
           borderRadius: 12,
-          padding: '10px 12px',
+          padding: '10px 12px 10px 16px',
           minHeight: 48,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: 6,
@@ -151,6 +151,13 @@ export default function DogCard({
           touchAction: 'pan-y',
         }}
       >
+        {/* Left accent bar */}
+        <div style={{
+          position: 'absolute', left: 0, top: 4, bottom: 4,
+          width: 3, borderRadius: 2,
+          background: isPickedUp ? '#0F6E56' : isCurrent ? '#E8634A' : '#e0dcd8',
+        }} />
+
         {/* Drag handle */}
         {showDragHandle && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: 16, flexShrink: 0, alignItems: 'center', cursor: 'grab' }}>
@@ -187,7 +194,7 @@ export default function DogCard({
         <div
           onClick={onTapName || undefined}
           style={{
-            fontSize: 13, fontWeight: 600, flex: 1, minWidth: 0,
+            fontSize: 13, fontWeight: 600, flex: 1, minWidth: 0, letterSpacing: '-0.01em',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: onTapName ? 'pointer' : 'default',
             textDecoration: isPickedUp ? 'line-through' : 'none',
@@ -209,6 +216,7 @@ export default function DogCard({
             style={{
               fontSize: 11, color: '#185FA5', fontWeight: 500, flexShrink: 0,
               cursor: onTapAddress ? 'pointer' : 'default',
+              textDecoration: 'none', borderBottom: '1px dotted #185FA5', paddingBottom: 1,
             }}
           >
             {streetName} {'\u203A'}

@@ -227,7 +227,7 @@ export default function Dashboard() {
       <Header />
 
       {/* Date + Sector + View toggle */}
-      <div className="px-4 pt-2 pb-1 max-w-lg mx-auto flex items-center justify-between">
+      <div className="px-4 max-w-lg mx-auto flex items-center justify-between" style={{ paddingTop: 8, paddingBottom: 6 }}>
         <div className="flex items-center gap-2">
           <button
             onClick={() => { if (viewMode === 'week') setViewMode('today'); else handleDayToggle() }}
@@ -305,7 +305,7 @@ export default function Dashboard() {
       <main className="px-4 py-2 max-w-lg mx-auto">
         {/* Stats line */}
         {!loading && filteredEvents.length > 0 && (
-          <p style={{ fontSize: 12, color: '#aaa', fontWeight: 500, marginBottom: 8 }}>
+          <p style={{ fontSize: 12, color: '#bbb', fontWeight: 400, letterSpacing: '0.01em', marginBottom: 8 }}>
             {filteredEvents.length} dog{filteredEvents.length !== 1 ? 's' : ''}
             {timeGroups.length > 0 && ` \u00b7 ${timeGroups.length} time slot${timeGroups.length !== 1 ? 's' : ''}`}
           </p>

@@ -606,9 +606,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       <div
         key={num}
         style={{
-          border: `2px ${borderStyle} ${color.border}`,
+          border: `${isGroupLocked ? '2px' : '1.5px'} ${borderStyle} ${color.border}`,
           borderRadius: 14,
-          padding: 8,
+          padding: 12,
           background: color.bg,
           opacity: !isOwn && wIds.length > 0 && !isAdmin ? 0.7 : 1,
           transition: 'all 0.2s',
@@ -642,7 +642,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
         {/* Swipe hint (first locked group only) */}
         {isGroupLocked && groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
-          <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginBottom: 4, padding: '10px 14px' }}>
+          <p style={{ fontSize: 11, color: '#c5c0bb', textAlign: 'center', marginBottom: 6, padding: '8px 16px', letterSpacing: '0.02em', background: 'rgba(0,0,0,0.015)', borderRadius: 8 }}>
             {'\u2190'} swipe = picked up | swipe {'\u2192'} = note
           </p>
         )}
@@ -656,7 +656,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
               return ev?.dog?.id && !pickups[ev.dog.id]
             })
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {dogIds.map((id, idx) => {
                   const ev = eventsMap.get(id)
                   if (!ev) return null
@@ -693,7 +693,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
               if (url) window.open(url, '_blank')
               else toast('No addresses found for this group')
             }}
-            style={{ width: '100%', padding: 12, borderRadius: 10, background: '#E8634A', color: '#fff', border: 'none', borderBottom: '3px solid #c45d1a', fontSize: 14, fontWeight: 700, marginTop: 6, cursor: 'pointer', minHeight: 48, boxShadow: '0 2px 8px rgba(232,99,74,0.3)' }}
+            style={{ width: '100%', padding: '14px 16px', borderRadius: 12, background: 'linear-gradient(180deg, #E8634A 0%, #d4552d 100%)', color: '#fff', border: 'none', borderBottom: '3px solid #b8461f', fontSize: 14, fontWeight: 700, letterSpacing: '0.02em', marginTop: 8, cursor: 'pointer', minHeight: 48, boxShadow: '0 4px 12px rgba(232,99,74,0.35), 0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center' }}
             className="active:translate-y-[2px] active:shadow-none"
           >
             {pickedCount === 0 ? 'Start Route' : `Continue route (${total - pickedCount} left)`}
@@ -796,9 +796,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       <button
         onClick={() => { setPendingMoveDog(null); setCreationSheetOpen(true) }}
         style={{
-          border: '2px dashed rgba(232,99,74,0.25)', borderRadius: 14, padding: 14, minHeight: 52,
+          border: '1.5px dashed rgba(232,99,74,0.3)', borderRadius: 16, padding: '16px 14px', minHeight: 52,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          background: 'transparent', cursor: 'pointer',
+          background: 'rgba(232,99,74,0.02)', cursor: 'pointer', transition: 'all 0.15s',
         }}
       >
         <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#E8634A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
@@ -806,7 +806,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       </button>
 
       {lastSaved && (
-        <p style={{ textAlign: 'center', fontSize: 10, color: '#ccc', paddingTop: 4 }}>
+        <p style={{ textAlign: 'center', fontSize: 10, color: '#d1cdc8', paddingTop: 8, letterSpacing: '0.02em' }}>
           Last saved {lastSaved.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
         </p>
       )}
@@ -970,7 +970,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {statusBadge === 'upnext' && (
           <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
         )}
-        <span style={{ fontSize: 12, color: '#aaa' }}>
+        <span style={{ fontSize: 11, color: '#bbb' }}>
           {isLocked ? `${pickedCount}/${dogCount}` : `${dogCount} dogs`}
         </span>
         {!isLocked && onLinkTap && (
@@ -998,7 +998,7 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
   }, [eventIds, eventsMap])
 
   if (sortedIds.length === 0) {
-    return <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', padding: '4px 0' }}>{'\u2713'} All dogs assigned</p>
+    return <p style={{ fontSize: 12, textAlign: 'center', padding: '4px 0' }}><span style={{ color: '#0F6E56', marginRight: 4 }}>{'\u2713'}</span><span style={{ color: '#aaa' }}>All dogs assigned</span></p>
   }
 
   return (
@@ -1009,7 +1009,7 @@ function UnassignedPool({ eventIds, eventsMap, selectedId, owlDogIdSet, onDogTap
         </div>
       )}
       <div
-        style={{ border: '2px dashed #D3D1C7', borderRadius: 14, padding: 8 }}
+        style={{ border: '1.5px dashed #D3D1C7', borderRadius: 14, padding: 12 }}
         onClick={isTarget ? onTargetTap : undefined}
         className={isTarget ? 'group-target-pulse cursor-pointer' : ''}
       >
@@ -1103,9 +1103,9 @@ function GroupDndZone({ dogIds, eventsMap, renderDogCard, onReorder, isTarget, s
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {sortedItems.length === 0 && !isTarget && (
-            <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', padding: '8px 0' }}>Drag dogs here</p>
+            <p style={{ fontSize: 12, color: '#bbb', textAlign: 'center', padding: '16px 8px', fontStyle: 'italic' }}>Tap a dog above, then tap here</p>
           )}
           {isTarget && sortedItems.length === 0 && (
             <button onClick={onTargetTap} style={{
@@ -1297,7 +1297,7 @@ function CollapsibleMap({ events, groups, groupNums, groupNames, eventsMap, date
         <button
           onClick={() => setExpanded(true)}
           style={{
-            width: '100%', background: '#f0ece8', borderRadius: 12, border: '0.5px solid #e0dcd8',
+            width: '100%', background: 'linear-gradient(135deg, #f5f0eb 0%, #ede8e3 100%)', borderRadius: 12, border: '0.5px solid #e0dcd8',
             padding: '0 10px', height: 50,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',
