@@ -15,6 +15,7 @@ export default function DogCard({
   altAddress = null,
   isLocked = false,
   isPickedUp = false,
+  isCurrent = false,
   pickupTime = null,
   onSwipeLeft,
   onSwipeRight,
@@ -103,8 +104,8 @@ export default function DogCard({
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
   const streetName = dog.address || null;
 
-  const containerBg = isPickedUp ? '#f0fdf4' : '#ffffff';
-  const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : '0.5px solid #e8e5e0';
+  const containerBg = isPickedUp ? '#f0fdf4' : isCurrent ? '#FFF4F1' : '#ffffff';
+  const containerBorder = isPickedUp ? '0.5px solid #bbf7d0' : isCurrent ? '1.5px solid #E8634A' : '0.5px solid #e8e5e0';
 
   return (
     <div style={{ position: 'relative', marginBottom: 3 }}>
@@ -159,7 +160,7 @@ export default function DogCard({
 
         {/* Route number */}
         {routeNumber != null && (
-          <div style={{ width: 12, fontSize: 10, color: isPickedUp ? '#22c55e' : '#aaa', textAlign: 'center', flexShrink: 0, fontWeight: 600 }}>
+          <div style={{ width: 12, fontSize: 10, color: isPickedUp ? '#22c55e' : isCurrent ? '#E8634A' : '#aaa', textAlign: 'center', flexShrink: 0, fontWeight: 600 }}>
             {isPickedUp ? '\u2713' : routeNumber}
           </div>
         )}
@@ -213,7 +214,7 @@ export default function DogCard({
         )}
 
         {/* Door code badge */}
-        {!isPickedUp && dog.door_code && (
+        {dog.door_code && (
           <span style={{
             fontSize: 9, background: '#E6F1FB', color: '#185FA5', fontWeight: 600,
             padding: '2px 5px', borderRadius: 4, flexShrink: 0, whiteSpace: 'nowrap',

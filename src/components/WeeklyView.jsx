@@ -4,6 +4,16 @@ import { supabase } from '../lib/supabase'
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const WORK_DAYS = new Set(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])
 
+const dayColors = [
+  { accent: 'transparent', count: '#f0ece8', countText: '#aaa' },     // Sun - off
+  { accent: '#E8634A', count: '#FAECE7', countText: '#993C1D' },      // Mon - coral
+  { accent: '#5DCAA5', count: '#E1F5EE', countText: '#0F6E56' },      // Tue - green
+  { accent: '#5DCAA5', count: '#E1F5EE', countText: '#0F6E56' },      // Wed - green
+  { accent: '#85B7EB', count: '#E6F1FB', countText: '#0C447C' },      // Thu - blue
+  { accent: '#AFA9EC', count: '#EEEDFE', countText: '#534AB7' },      // Fri - purple
+  { accent: 'transparent', count: '#f0ece8', countText: '#aaa' },     // Sat - off
+]
+
 export default function WeeklyView({ sector, today, onSelectDay }) {
   const [weekData, setWeekData] = useState({})
   const [walkers, setWalkers] = useState([])
@@ -81,7 +91,7 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {weekDays.map(day => {
+      {weekDays.map((day, dayIdx) => {
         const data = weekData[day.date]
         const isOff = !day.isWorkDay
         const dayWorkers = day.isWorkDay ? workersForDay(day.dayName) : []
@@ -89,6 +99,7 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
           ? [...data.walkerIds].map(id => walkerMap[id]).filter(Boolean)
           : dayWorkers
         const dogCount = data?.dogs || 0
+        const dc = dayColors[dayIdx]
 
         return (
           <button
@@ -107,7 +118,7 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
             {/* Left accent bar */}
             <div style={{
               width: 4, height: 32, borderRadius: 2, flexShrink: 0,
-              background: isOff ? 'transparent' : day.isToday ? '#E8634A' : '#d1d5db',
+              background: day.isToday ? '#E8634A' : dc.accent,
             }} />
 
             {/* Day info */}
@@ -136,8 +147,8 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
             <div style={{
               width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 700, flexShrink: 0,
-              background: isOff ? '#f0ece8' : dogCount > 0 ? '#E8634A' : '#f0ece8',
-              color: isOff ? '#ccc' : dogCount > 0 ? '#fff' : '#aaa',
+              background: isOff ? '#f0ece8' : dogCount > 0 ? dc.count : '#f0ece8',
+              color: isOff ? '#ccc' : dogCount > 0 ? dc.countText : '#aaa',
             }}>
               {isOff ? '\u2014' : dogCount || '\u2014'}
             </div>

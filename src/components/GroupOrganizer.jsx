@@ -99,7 +99,7 @@ function LockButton({ isLocked, onToggle }) {
       title="Hold 1s to toggle lock"
     >
       {filling && <span className="absolute inset-0 bg-[#E8634A] origin-left animate-lock-fill" />}
-      <span className="relative z-10 text-[13px]">{isLocked ? '\u{1F513}' : '\u{1F512}'}</span>
+      <span className="relative z-10 text-[16px]">{isLocked ? '\u{1F513}' : '\u{1F512}'}</span>
     </button>
   )
 }
@@ -473,7 +473,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   }
 
   // ── Render a DogCard for an event ──────────────────────────────
-  function renderDogCard(ev, id, groupNum, idx, isLocked) {
+  function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false) {
     const dog = ev.dog || {}
     const dogId = dog.id
     const dogPickup = dogId ? pickups[dogId] : null
@@ -494,6 +494,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           altAddress={hasAlt ? true : null}
           isLocked={isLocked}
           isPickedUp={!!dogPickup}
+          isCurrent={isCurrent}
           pickupTime={formatPickupTime(dogPickup?.time)}
           onSwipeLeft={() => markPickup(dogId, ev.displayName)}
           onSwipeRight={() => {
@@ -572,6 +573,32 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       return <CollapsedGroup key={num} num={num} gName={gName} lockInfo={lockInfo} dogIds={dogIds} eventsMap={eventsMap} wNames={wNames} pickups={pickups} onDogClick={(ev) => enrichDogClick(ev, num)} />
     }
 
+    // ── UPCOMING group (not locked, another walker's, walking mode) ──
+    if (anyGroupLocked && !isGroupLocked && !isOwn && wIds.length > 0 && !isAdmin) {
+      const dogNames = dogIds.slice(0, 6).map(id => eventsMap.get(id)?.displayName).filter(Boolean).join(', ')
+      return (
+        <div key={num} style={{
+          background: '#fff', border: '2px dashed #ddd', borderRadius: 14,
+          padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>{gName}</span>
+            <span style={{ fontSize: 10, color: '#aaa' }}>{'\u00b7'}</span>
+            <span style={{ fontSize: 10, color: '#aaa' }}>{total} dogs</span>
+            {wNames.map((name, i) => {
+              const bc = walkerBadgeColor(name)
+              return (
+                <span key={wIds[i]} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 6, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
+                  {name.split(' ')[0]}
+                </span>
+              )
+            })}
+          </div>
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
+        </div>
+      )
+    }
+
     // ── NORMAL group (unlocked or own locked) ──────────────────
     const borderStyle = isGroupLocked ? 'solid' : 'dashed'
 
@@ -605,6 +632,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           onToggleLock={() => isGroupLocked ? unlockGroup(num) : (total > 0 && lockGroup(num))}
           isLinked={!!groupLinks.find(l => l.group_a_key === `${date}_${sector}_${num}` || l.group_b_key === `${date}_${sector}_${num}`)}
           onLinkTap={() => setLinkPickerNum(num)}
+          statusBadge={
+            isGroupLocked && allPickedUp ? 'done'
+            : isGroupLocked && !allPickedUp ? 'walking'
+            : !isGroupLocked && anyGroupLocked ? 'upnext'
+            : null
+          }
         />
 
         {/* Swipe hint (first locked group only) */}
@@ -617,13 +650,21 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         {/* Dogs */}
         {isGroupLocked ? (
           // Locked: DogCards with swipe, no DnD
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {dogIds.map((id, idx) => {
+          (() => {
+            const firstUnpickedIdx = dogIds.findIndex(id => {
               const ev = eventsMap.get(id)
-              if (!ev) return null
-              return <div key={id}>{renderDogCard(ev, id, num, idx, true)}</div>
-            })}
-          </div>
+              return ev?.dog?.id && !pickups[ev.dog.id]
+            })
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {dogIds.map((id, idx) => {
+                  const ev = eventsMap.get(id)
+                  if (!ev) return null
+                  return <div key={id}>{renderDogCard(ev, id, num, idx, true, idx === firstUnpickedIdx)}</div>
+                })}
+              </div>
+            )
+          })()
         ) : (
           // Unlocked: DogCards with DnD reorder
           <GroupDndZone
@@ -654,7 +695,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             }}
             style={{ width: '100%', padding: 7, borderRadius: 8, background: '#E8634A', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, marginTop: 6, cursor: 'pointer' }}
           >
-            Start Route
+            {pickedCount === 0 ? 'Start Route' : `Continue route (${total - pickedCount} left)`}
           </button>
         )}
       </div>
@@ -859,7 +900,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, onToggleLock, isLinked, onLinkTap }) {
+function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, onToggleLock, isLinked, onLinkTap, statusBadge }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -888,7 +929,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             onChange={(e) => setNameInput(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditing(false) }}
-            style={{ fontSize: 12, fontWeight: 600, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
+            style={{ fontSize: 13, fontWeight: 600, border: 'none', borderBottom: '1px solid #E8634A', outline: 'none', background: 'transparent', flex: 1, minWidth: 0 }}
           />
         ) : (
           <span
@@ -900,7 +941,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
             }}
             onPointerUp={() => clearTimeout(lpTimer.current)}
             onPointerLeave={() => clearTimeout(lpTimer.current)}
-            style={{ fontSize: 12, fontWeight: 600, color: isTarget ? '#E8634A' : '#1a1a1a', cursor: isLocked ? 'default' : 'pointer' }}
+            style={{ fontSize: 13, fontWeight: 600, color: isTarget ? '#E8634A' : '#1a1a1a', cursor: isLocked ? 'default' : 'pointer' }}
           >
             {gName}
           </span>
@@ -910,7 +951,7 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {wNames.map((name, i) => {
           const bc = walkerBadgeColor(name)
           return (
-            <span key={wIds[i]} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 6, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
+            <span key={wIds[i]} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
               {name.split(' ')[0]}
             </span>
           )
@@ -918,14 +959,14 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
 
         {/* Locked by badge */}
         {isLocked && lockInfo?.locked_by_name && (
-          <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56', whiteSpace: 'nowrap' }}>
             locked by {lockInfo.locked_by_name}
           </span>
         )}
 
         {/* Linked badge */}
         {isLinked && (
-          <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 6, fontWeight: 600, background: '#E6F1FB', color: '#185FA5', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, fontWeight: 600, background: '#E6F1FB', color: '#185FA5', whiteSpace: 'nowrap' }}>
             linked
           </span>
         )}
@@ -935,8 +976,17 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
         {isTarget && selectedDogName && (
           <span style={{ fontSize: 11, color: '#E8634A', fontWeight: 500 }} className="animate-pulse">+ {selectedDogName}</span>
         )}
+        {statusBadge === 'walking' && (
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#FAECE7', color: '#993C1D' }}>Walking</span>
+        )}
+        {statusBadge === 'done' && (
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56' }}>Done</span>
+        )}
+        {statusBadge === 'upnext' && (
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
+        )}
         <span style={{ fontSize: 10, color: '#aaa' }}>
-          {isLocked ? `${pickedCount}/${dogCount}` : dogCount}
+          {isLocked ? `${pickedCount}/${dogCount}` : `${dogCount} dogs`}
         </span>
         {!isLocked && onLinkTap && (
           <button onClick={(e) => { e.stopPropagation(); onLinkTap() }} style={{ fontSize: 12, padding: 2, background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0.4 }}>
@@ -1182,18 +1232,22 @@ function ProgressBar({ groupNums, groupNames, groupLocks, groups, eventsMap, pic
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 10 }}>
+    <div style={{
+      background: '#f0ece8', borderRadius: 8, height: 28,
+      display: 'flex', alignItems: 'center', padding: 3, gap: 3,
+      border: '0.5px solid #e0dcd8', margin: '0 0 8px',
+    }}>
       {relevantNums.map((num, idx) => {
         const done = isGroupDone(num) && !!groupLocks[num]
         const active = num === activeNum
-        const bgColor = done ? '#E1F5EE' : active ? '#E8634A' : '#f0ece8'
+        const bgColor = done ? '#E1F5EE' : active ? '#E8634A' : 'transparent'
         const textColor = done ? '#0F6E56' : active ? '#fff' : '#aaa'
 
         return (
           <React.Fragment key={num}>
             {idx > 0 && (
               <div style={{
-                width: 16, height: 2, borderRadius: 1,
+                flex: 1, height: 3, borderRadius: 1,
                 background: (isGroupDone(relevantNums[idx - 1]) && !!groupLocks[relevantNums[idx - 1]]) ? '#5DCAA5' : '#e0dcd8',
               }} />
             )}
