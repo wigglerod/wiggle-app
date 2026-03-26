@@ -623,20 +623,213 @@ function SystemSection({ dogs }) {
   )
 }
 
+// ── Today Tab — operational command center ─────────────────────────
+const STATUS_CONFIG = {
+  done:     { dot: 'bg-[#0F6E56]', text: 'text-[#0F6E56]', badge: 'bg-[#E1F5EE] text-[#0F6E56]', label: 'Done' },
+  walking:  { dot: 'bg-[#E8634A]', text: 'text-[#E8634A]', badge: 'bg-[#FAECE7] text-[#993C1D]', label: 'Walking' },
+  planning: { dot: 'bg-gray-300',  text: 'text-gray-400',  badge: 'bg-gray-100 text-gray-400',    label: 'Planning' },
+}
+
+function TodayTab({ userSector, isChiefPup }) {
+  const [groups, setGroups] = useState([])
+  const [pickupDogIds, setPickupDogIds] = useState(new Set())
+  const [walkerMap, setWalkerMap] = useState({})
+  const [dogMap, setDogMap] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [expandedGroup, setExpandedGroup] = useState(null)
+  const [beastOpen, setBeastOpen] = useState(false)
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      let groupsQuery = supabase
+        .from('walk_groups')
+        .select('*')
+        .eq('walk_date', today)
+      if (!isChiefPup && userSector && userSector !== 'both') {
+        groupsQuery = groupsQuery.eq('sector', userSector)
+      }
+
+      const [groupsRes, profilesRes, dogsRes, pickupsRes] = await Promise.all([
+        groupsQuery.order('group_num'),
+        supabase.from('profiles').select('id, full_name').in('role', ['admin', 'senior_walker', 'junior_walker']),
+        supabase.from('dogs').select('id, dog_name'),
+        supabase.from('walker_notes').select('dog_id').eq('walk_date', today).eq('note_type', 'pickup'),
+      ])
+
+      setGroups(groupsRes.data || [])
+      const wMap = {}
+      for (const p of (profilesRes.data || [])) wMap[p.id] = p.full_name
+      setWalkerMap(wMap)
+      const dMap = {}
+      for (const d of (dogsRes.data || [])) dMap[d.id] = d.dog_name
+      setDogMap(dMap)
+      setPickupDogIds(new Set((pickupsRes.data || []).map(r => r.dog_id)))
+      setLoading(false)
+    }
+    load()
+  }, [today, userSector, isChiefPup])
+
+  if (loading) return <div className="flex justify-center py-12"><LoadingDog /></div>
+
+  const sectors = isChiefPup ? ['Plateau', 'Laurier'] : [userSector || 'Plateau']
+
+  function groupStatus(g) {
+    const dogIds = g.dog_ids || []
+    const pickedCount = dogIds.filter(id => pickupDogIds.has(id)).length
+    if (dogIds.length > 0 && pickedCount === dogIds.length) return 'done'
+    if (g.locked) return 'walking'
+    return 'planning'
+  }
+
+  // Sector summaries
+  const sectorSummaries = sectors.map(sector => {
+    const sg = groups.filter(g => g.sector === sector)
+    const allDogIds = sg.flatMap(g => g.dog_ids || [])
+    const pickedCount = allDogIds.filter(id => pickupDogIds.has(id)).length
+    const walkerIds = [...new Set(sg.flatMap(g => g.walker_ids || []))]
+    const walkerNames = walkerIds.map(id => walkerMap[id]?.split(' ')[0]).filter(Boolean)
+    const allDone = allDogIds.length > 0 && pickedCount === allDogIds.length
+    const anyLocked = sg.some(g => g.locked)
+    return { sector, dogCount: allDogIds.length, walkerNames, status: allDone ? 'done' : anyLocked ? 'walking' : 'planning' }
+  })
+
+  // Sort groups: walking → planning → done
+  const sortedGroups = groups.slice().sort((a, b) => {
+    const order = { walking: 0, planning: 1, done: 2 }
+    return (order[groupStatus(a)] ?? 1) - (order[groupStatus(b)] ?? 1)
+  })
+
+  // Alerts
+  const alerts = []
+  for (const g of groups) {
+    if ((!g.walker_ids || g.walker_ids.length === 0) && (g.dog_ids?.length > 0)) {
+      alerts.push(`${g.group_name || `Group ${g.group_num}`} (${g.sector}) has no walker assigned`)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Status bar */}
+      {sectorSummaries.map(s => {
+        const cfg = STATUS_CONFIG[s.status]
+        return (
+          <div key={s.sector} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+              <span className="font-semibold text-sm text-[#333]">{s.sector}</span>
+              <span className="text-xs text-gray-400">{s.dogCount} dogs</span>
+              {s.walkerNames.length > 0 && (
+                <span className="text-xs text-gray-400 truncate">{s.walkerNames.join(', ')}</span>
+              )}
+            </div>
+            <span className={`text-xs font-semibold ${cfg.text} flex-shrink-0`}>{cfg.label}</span>
+          </div>
+        )
+      })}
+
+      {/* Alerts — only if something needs attention */}
+      {alerts.length > 0 && (
+        <div className="bg-[#FAEEDA] border border-[#FAC775] rounded-2xl p-3">
+          {alerts.map((msg, i) => (
+            <p key={i} className="text-xs text-[#854F0B] font-medium">{msg}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Groups overview */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-4 pt-3 pb-1">Groups</p>
+        {sortedGroups.length === 0 && (
+          <p className="text-xs text-gray-400 text-center py-6">No groups for today yet</p>
+        )}
+        {sortedGroups.map(g => {
+          const dogIds = g.dog_ids || []
+          const status = groupStatus(g)
+          const cfg = STATUS_CONFIG[status]
+          const pickedCount = dogIds.filter(id => pickupDogIds.has(id)).length
+          const walkerNames = (g.walker_ids || []).map(id => walkerMap[id]?.split(' ')[0]).filter(Boolean)
+          const key = `${g.group_num}_${g.sector}`
+          const isExpanded = expandedGroup === key
+
+          return (
+            <div key={key}>
+              <button
+                onClick={() => setExpandedGroup(isExpanded ? null : key)}
+                className="w-full flex items-center px-4 py-3 border-t border-gray-50 active:bg-gray-50 min-h-[44px]"
+              >
+                <span className={`w-2 h-2 rounded-full ${cfg.dot} flex-shrink-0 mr-3`} />
+                <div className="flex-1 min-w-0 text-left">
+                  <span className="text-sm font-medium text-[#333]">{g.group_name || `Group ${g.group_num}`}</span>
+                  {isChiefPup && <span className="text-[10px] text-gray-300 ml-1.5">{g.sector}</span>}
+                  {walkerNames.length > 0 && (
+                    <span className="text-xs text-gray-400 ml-2">{walkerNames.join(', ')}</span>
+                  )}
+                </div>
+                <span className="text-xs text-gray-400 mr-2">
+                  {g.locked ? `${pickedCount}/${dogIds.length}` : `${dogIds.length}`}
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label}</span>
+                <span className="text-xs text-gray-300 ml-2">{isExpanded ? '\u25B4' : '\u25BE'}</span>
+              </button>
+              {isExpanded && dogIds.length > 0 && (
+                <div className="px-4 pb-3 pl-9">
+                  <div className="flex flex-wrap gap-1">
+                    {dogIds.map(id => (
+                      <span key={id} className={`text-xs px-2 py-0.5 rounded-full ${
+                        pickupDogIds.has(id) ? 'bg-[#E1F5EE] text-[#0F6E56] line-through' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {dogMap[id] || '?'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Owl Notes */}
+      <OwlNotesTab />
+
+      {/* Beast Chat — collapsible */}
+      <button
+        onClick={() => setBeastOpen(!beastOpen)}
+        className="flex items-center justify-between bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 active:bg-gray-50 w-full"
+      >
+        <span>Beast AI Assistant</span>
+        <span className="text-xs">{beastOpen ? '\u25B4' : '\u25BE'}</span>
+      </button>
+      {beastOpen && <BeastChat />}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//   MAIN ADMIN EXPORT
+// ══════════════════════════════════════════════════════════════════════
 export default function Admin() {
-  const { canDelete, signOut } = useAuth()
+  const { permissions, profile, canDelete, signOut } = useAuth()
+  const isChiefPup = profile?.role === 'admin'
+  const userSector = profile?.sector || 'both'
+
+  const [mainTab, setMainTab] = useState('today')
+
+  // ── Manage tab state ──────────────────────────────────────────────
   const [dogs, setDogs] = useState([])
   const [logs, setLogs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [sectorFilter, setSectorFilter] = useState('both')
   const [editingDog, setEditingDog] = useState(null)
   const [showForm, setShowForm] = useState(false)
-  const [activeTab, setActiveTab] = useState('dogs')
+  const [manageTab, setManageTab] = useState('dogs')
   const [syncing, setSyncing] = useState(false)
+  const [manageLoaded, setManageLoaded] = useState(false)
 
-  // Admin access is enforced by AdminRoute in App.jsx
-
-  async function fetchData() {
+  async function fetchManageData() {
     setLoading(true)
     const [{ data: dogsData, error: dogsErr }, { data: logsData, error: logsErr }] = await Promise.all([
       supabase.from('dogs').select('*').order('dog_name'),
@@ -646,23 +839,20 @@ export default function Admin() {
     setDogs(dogsData || [])
     setLogs(logsData || [])
     setLoading(false)
+    setManageLoaded(true)
   }
 
-  /* eslint-disable react-hooks/set-state-in-effect -- fetch from external DB on mount */
+  // Lazy-load manage data only when tab is selected
   useEffect(() => {
-    fetchData()
-  }, [])
-  /* eslint-enable react-hooks/set-state-in-effect */
+    if (mainTab === 'manage' && !manageLoaded) fetchManageData()
+  }, [mainTab, manageLoaded])
 
   async function deleteDog(id) {
     if (!confirm('Delete this dog profile?')) return
     const { error } = await supabase.from('dogs').delete().eq('id', id)
-    if (error) {
-      toast.error('Failed to delete dog profile')
-      return
-    }
+    if (error) { toast.error('Failed to delete dog profile'); return }
     toast.success('Dog profile deleted')
-    fetchData()
+    fetchManageData()
   }
 
   async function handlePhotoUpload(dog, file) {
@@ -674,12 +864,10 @@ export default function Admin() {
     const { error: updateError } = await supabase.from('dogs').update({ photo_url: publicUrl }).eq('id', dog.id)
     if (updateError) { toast.error('Failed to save photo'); return }
     toast.success('Photo uploaded')
-    fetchData()
+    fetchManageData()
   }
 
-  const filteredDogs = sectorFilter === 'both'
-    ? dogs
-    : dogs.filter((d) => d.sector === sectorFilter)
+  const filteredDogs = sectorFilter === 'both' ? dogs : dogs.filter((d) => d.sector === sectorFilter)
 
   const statusColors = {
     completed: 'bg-green-100 text-green-700',
@@ -687,213 +875,183 @@ export default function Admin() {
     incident: 'bg-red-100 text-red-700',
   }
 
+  const showManageTab = isChiefPup
+
   return (
     <div className="min-h-screen bg-[#FFF4F1]">
       {/* Admin header */}
       <header className="bg-white shadow-sm sticky top-0 z-30 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <a href="/" className="text-sm text-gray-400">← Schedule</a>
+            <a href="/" className="text-sm text-gray-400">{'\u2190'} Schedule</a>
             <span className="text-gray-200">/</span>
             <h1 className="text-base font-bold text-[#1A1A1A]">
               <span className="text-[#E8634A]">Admin</span> Dashboard
             </h1>
           </div>
-          <button
-            onClick={signOut}
-            className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 font-medium"
-          >
+          <button onClick={signOut} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 font-medium">
             Sign out
           </button>
         </div>
 
-        {/* Sector filter */}
-        <div className="flex gap-1.5 mt-3">
-          {['both', 'Plateau', 'Laurier'].map((s) => (
-            <button
-              key={s}
-              onClick={() => setSectorFilter(s)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                sectorFilter === s
-                  ? 'bg-[#E8634A] text-white'
-                  : 'bg-gray-100 text-gray-500'
-              }`}
-            >
-              {s === 'both' ? 'All' : s}
-            </button>
-          ))}
-        </div>
+        {/* Today / Manage pill toggle */}
+        {showManageTab && (
+          <div className="flex gap-1.5 mt-3 bg-[#f0ece8] rounded-full p-1">
+            {['today', 'manage'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setMainTab(tab)}
+                className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition-all capitalize ${
+                  mainTab === tab ? 'bg-[#E8634A] text-white shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                {tab === 'today' ? 'Today' : 'Manage'}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
-      {/* Tab bar */}
-      <div className="flex bg-white border-b border-gray-100 sticky top-[88px] z-20">
-        {['dogs', 'logs', 'owl', 'beast', 'system'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-3 text-sm font-semibold capitalize transition-all border-b-2 ${
-              activeTab === tab
-                ? 'border-[#E8634A] text-[#E8634A]'
-                : 'border-transparent text-gray-400'
-            }`}
-          >
-            {tab === 'dogs' ? '🐾 Dogs' : tab === 'logs' ? '📋 Walk Logs' : tab === 'owl' ? '🦉 Owl' : tab === 'beast' ? '🔥 Beast' : '⚙️ System'}
-          </button>
-        ))}
-      </div>
-
       <main className="px-4 py-4 pb-24 max-w-lg mx-auto">
-        {/* Action row */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => { setEditingDog(null); setShowForm(true) }}
-            className="flex-1 py-2.5 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d]"
-          >
-            + Add Dog
-          </button>
-          <button
-            onClick={async () => {
-              setSyncing(true)
-              const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-
-              try {
-                const res = await fetch(`/api/acuity?date=${today}`)
-                if (res.ok) {
-                  const events = await res.json()
-                  setSyncing(false)
-                  toast.success(`Acuity sync OK: ${events.length} appointments today`)
-                } else {
-                  const err = await res.json().catch(() => ({}))
-                  setSyncing(false)
-                  toast.error(`Acuity returned ${res.status}: ${err.error || 'Check ACUITY_USER_ID and ACUITY_API_KEY env vars'}`)
-                }
-              } catch {
-                setSyncing(false)
-                toast.error('Acuity API unreachable. Check ACUITY_USER_ID and ACUITY_API_KEY env vars.')
-              }
-            }}
-            className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-semibold shadow-sm active:bg-gray-50"
-          >
-            {syncing ? '...' : 'Sync'}
-          </button>
-        </div>
-
-        {loading && (
-          <div className="flex justify-center py-12">
-            <LoadingDog />
-          </div>
+        {/* ── TODAY TAB ──────────────────────────────────────────── */}
+        {mainTab === 'today' && (
+          <TodayTab userSector={userSector} isChiefPup={isChiefPup} />
         )}
 
-        {/* Dogs tab */}
-        {!loading && activeTab === 'dogs' && (
-          <div className="flex flex-col gap-3">
-            {filteredDogs.length === 0 && (
-              <p className="text-center text-gray-400 py-8 text-sm">No dogs in this sector yet.</p>
-            )}
-            {filteredDogs.map((dog) => (
-              <div key={dog.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  {/* Photo */}
-                  <label className="w-12 h-12 rounded-xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center cursor-pointer flex-shrink-0 relative group">
-                    {dog.photo_url ? (
-                      <img src={dog.photo_url} alt={dog.dog_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl">🐶</span>
-                    )}
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-all">
-                      <span className="text-white text-xs">📷</span>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => e.target.files[0] && handlePhotoUpload(dog, e.target.files[0])}
-                    />
-                  </label>
+        {/* ── MANAGE TAB (Chief Pup only) ────────────────────────── */}
+        {mainTab === 'manage' && showManageTab && (
+          <>
+            {/* Sector filter */}
+            <div className="flex gap-1.5 mb-3">
+              {['both', 'Plateau', 'Laurier'].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSectorFilter(s)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    sectorFilter === s ? 'bg-[#E8634A] text-white' : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {s === 'both' ? 'All' : s}
+                </button>
+              ))}
+            </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'
-                      }`} />
-                      <h3 className="font-bold text-[#1A1A1A]">{dog.dog_name}</h3>
-                      {dog.sector && (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-                          {dog.sector}
-                        </span>
-                      )}
-                    </div>
-                    {dog.breed && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{dog.breed}</p>
-                    )}
-                  </div>
+            {/* Sub-tab bar */}
+            <div className="flex bg-white rounded-2xl shadow-sm border border-gray-100 mb-3 overflow-hidden">
+              {['dogs', 'logs', 'system'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setManageTab(tab)}
+                  className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-all border-b-2 ${
+                    manageTab === tab ? 'border-[#E8634A] text-[#E8634A]' : 'border-transparent text-gray-400'
+                  }`}
+                >
+                  {tab === 'dogs' ? 'Dogs' : tab === 'logs' ? 'Logs & Conflicts' : 'System'}
+                </button>
+              ))}
+            </div>
 
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => { setEditingDog(dog); setShowForm(true) }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-500 text-sm active:bg-gray-200"
-                    >
-                      ✏️
-                    </button>
-                    {canDelete && (
-                      <button
-                        onClick={() => deleteDog(dog.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 text-sm active:bg-red-100"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {dog.notes && (
-                  <div className="bg-[#E8634A] text-white rounded-lg px-3 py-1.5 text-xs font-medium">
-                    ⚠️ {dog.notes}
-                  </div>
-                )}
+            {/* Action row (Dogs tab only) */}
+            {manageTab === 'dogs' && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => { setEditingDog(null); setShowForm(true) }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#E8634A] text-white text-sm font-bold shadow-sm active:bg-[#d4552d]"
+                >
+                  + Add Dog
+                </button>
+                <button
+                  onClick={async () => {
+                    setSyncing(true)
+                    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
+                    try {
+                      const res = await fetch(`/api/acuity?date=${today}`)
+                      if (res.ok) {
+                        const events = await res.json()
+                        setSyncing(false)
+                        toast.success(`Acuity sync OK: ${events.length} appointments today`)
+                      } else {
+                        const err = await res.json().catch(() => ({}))
+                        setSyncing(false)
+                        toast.error(`Acuity returned ${res.status}: ${err.error || 'Check env vars'}`)
+                      }
+                    } catch {
+                      setSyncing(false)
+                      toast.error('Acuity API unreachable')
+                    }
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm font-semibold shadow-sm active:bg-gray-50"
+                >
+                  {syncing ? '...' : 'Sync'}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Logs tab */}
-        {!loading && activeTab === 'logs' && (
-          <div className="flex flex-col gap-2">
-            <WalkHistorySearch dogs={dogs} />
-            <DogConflictsSection dogs={dogs} />
-
-            <h3 className="text-sm font-bold text-gray-700 mt-2 mb-1">Recent Walk Logs</h3>
-            {logs.length === 0 && (
-              <p className="text-center text-gray-400 py-8 text-sm">No walk logs yet.</p>
             )}
-            {logs.map((log) => (
-              <div key={log.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-sm text-[#1A1A1A]">
-                      {log.dogs?.dog_name || 'Unknown dog'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {log.walk_date} · {log.profiles?.email || 'Unknown walker'}
-                    </p>
-                    {log.notes && (
-                      <p className="text-xs text-gray-500 mt-1.5 italic">{log.notes}</p>
-                    )}
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-semibold capitalize flex-shrink-0 ${statusColors[log.status] || 'bg-gray-100 text-gray-500'}`}>
-                    {log.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* Owl Notes tab */}
-        {!loading && activeTab === 'owl' && <OwlNotesTab />}
-        {/* Database tab */}
-        {activeTab === 'beast' && <BeastChat />}
 
-        {!loading && activeTab === 'system' && <SystemSection dogs={dogs} />}
+            {loading && <div className="flex justify-center py-12"><LoadingDog /></div>}
+
+            {/* Dogs sub-tab */}
+            {!loading && manageTab === 'dogs' && (
+              <div className="flex flex-col gap-3">
+                {filteredDogs.length === 0 && <p className="text-center text-gray-400 py-8 text-sm">No dogs in this sector yet.</p>}
+                {filteredDogs.map((dog) => (
+                  <div key={dog.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <label className="w-12 h-12 rounded-xl overflow-hidden bg-[#FFF4F1] flex items-center justify-center cursor-pointer flex-shrink-0 relative group">
+                        {dog.photo_url ? (
+                          <img src={dog.photo_url} alt={dog.dog_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl">{'\u{1F436}'}</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-all">
+                          <span className="text-white text-xs">{'\u{1F4F7}'}</span>
+                        </div>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && handlePhotoUpload(dog, e.target.files[0])} />
+                      </label>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dog.level === 3 ? 'bg-red-500' : dog.level === 2 ? 'bg-yellow-400' : 'bg-green-500'}`} />
+                          <h3 className="font-bold text-[#1A1A1A]">{dog.dog_name}</h3>
+                          {dog.sector && <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{dog.sector}</span>}
+                        </div>
+                        {dog.breed && <p className="text-xs text-gray-400 truncate mt-0.5">{dog.breed}</p>}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => { setEditingDog(dog); setShowForm(true) }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-500 text-sm active:bg-gray-200">{'\u270F\uFE0F'}</button>
+                        {canDelete && <button onClick={() => deleteDog(dog.id)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 text-sm active:bg-red-100">{'\u{1F5D1}\uFE0F'}</button>}
+                      </div>
+                    </div>
+                    {dog.notes && <div className="bg-[#E8634A] text-white rounded-lg px-3 py-1.5 text-xs font-medium">{dog.notes}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Logs sub-tab */}
+            {!loading && manageTab === 'logs' && (
+              <div className="flex flex-col gap-2">
+                <WalkHistorySearch dogs={dogs} />
+                <DogConflictsSection dogs={dogs} />
+                <h3 className="text-sm font-bold text-gray-700 mt-2 mb-1">Recent Walk Logs</h3>
+                {logs.length === 0 && <p className="text-center text-gray-400 py-8 text-sm">No walk logs yet.</p>}
+                {logs.map((log) => (
+                  <div key={log.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-sm text-[#1A1A1A]">{log.dogs?.dog_name || 'Unknown dog'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{log.walk_date} {'\u00B7'} {log.profiles?.email || 'Unknown walker'}</p>
+                        {log.notes && <p className="text-xs text-gray-500 mt-1.5 italic">{log.notes}</p>}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-semibold capitalize flex-shrink-0 ${statusColors[log.status] || 'bg-gray-100 text-gray-500'}`}>{log.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* System sub-tab */}
+            {!loading && manageTab === 'system' && <SystemSection dogs={dogs} />}
+          </>
+        )}
       </main>
 
       {/* Dog form modal */}
@@ -901,7 +1059,7 @@ export default function Admin() {
         <DogFormModal
           dog={editingDog}
           onClose={() => setShowForm(false)}
-          onSaved={fetchData}
+          onSaved={fetchManageData}
         />
       )}
     </div>
