@@ -44,11 +44,14 @@ export default function WeeklyView({ sector, today, onSelectDay }) {
     async function load() {
       const dates = weekDays.map(d => d.date)
       const [groupsRes, walkersRes] = await Promise.all([
-        supabase
-          .from('walk_groups')
-          .select('walk_date, group_num, dog_ids, walker_ids, group_name')
-          .in('walk_date', dates)
-          .eq('sector', sector === 'both' ? 'Plateau' : sector),
+        (() => {
+          let q = supabase
+            .from('walk_groups')
+            .select('walk_date, group_num, dog_ids, walker_ids, group_name')
+            .in('walk_date', dates)
+          if (sector !== 'both') q = q.eq('sector', sector)
+          return q
+        })(),
         supabase
           .from('profiles')
           .select('id, full_name, sector, schedule, role')

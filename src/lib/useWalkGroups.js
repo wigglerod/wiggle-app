@@ -231,8 +231,6 @@ export function useWalkGroups(events, date, sector) {
       for (const gNum of affectedGroups) {
         saveGroup(gNum, next[gNum])
       }
-
-      toast.success('✓ Saved')
     },
     [saveGroup]
   )

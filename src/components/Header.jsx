@@ -11,7 +11,7 @@ const SECTOR_COLORS = {
 }
 
 export default function Header({ date }) {
-  const { profile, permissions, signOut } = useAuth()
+  const { profile, permissions, isAdmin, signOut } = useAuth()
   const navigate = useNavigate()
   const [owlOpen, setOwlOpen] = useState(false)
   const owlCount = useOwlNoteCount()
@@ -52,12 +52,16 @@ export default function Header({ date }) {
                 )}
               </button>
             )}
-            {profile?.role === 'admin' ? (
+            {isAdmin ? (
               <button
                 onClick={() => navigate('/admin')}
-                className="text-xs px-2.5 py-1 rounded-full bg-[#E8634A] text-white font-semibold min-h-[32px] flex items-center active:bg-[#d4552d]"
+                className={`text-xs px-2.5 py-1 rounded-full font-semibold min-h-[32px] flex items-center ${
+                  profile?.role === 'admin'
+                    ? 'bg-[#E8634A] text-white active:bg-[#d4552d]'
+                    : 'bg-purple-100 text-purple-700 active:bg-purple-200'
+                }`}
               >
-                Chief Pup
+                {roleLabel(profile?.role)}
               </button>
             ) : profile?.role && (
               <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${roleColor(profile.role)}`}>

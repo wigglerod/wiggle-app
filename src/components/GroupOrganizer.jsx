@@ -217,7 +217,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   useEffect(() => { onAnyGroupLocked?.(anyGroupLocked) }, [anyGroupLocked, onAnyGroupLocked])
 
   // Pickup tracking
-  const { pickups, markPickup } = usePickups(date)
+  const { pickups, markPickup, undoPickup } = usePickups(date)
 
   // Quick note sheet
   const [swipeNoteDog, setSwipeNoteDog] = useState(null)
@@ -362,12 +362,19 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     if (!selectedId) return
     const fromGroup = findGroup(selectedId)
     if (fromGroup === null || fromGroup === targetGroup) { setSelectedId(null); return }
-    const ev = eventsMap.get(selectedId)
+    const dogId = selectedId
+    const ev = eventsMap.get(dogId)
     const targetName = targetGroup === 'unassigned' ? 'Unassigned' : (groupNames[targetGroup] || `Group ${targetGroup}`)
-    moveEvent(selectedId, fromGroup, targetGroup)
+    moveEvent(dogId, fromGroup, targetGroup)
     setSelectedId(null)
     try { navigator.vibrate?.(20) } catch {}
-    toast(`Moved ${ev?.displayName || 'dog'} to ${targetName}`)
+    toast(`Moved ${ev?.displayName || 'dog'} to ${targetName}`, {
+      action: {
+        label: 'Undo',
+        onClick: () => moveEvent(dogId, targetGroup, fromGroup),
+      },
+      duration: 3000,
+    })
   }
 
   // Long-hold gesture on a card
@@ -403,9 +410,16 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const { dogId, fromGroup } = longPressMenu
     if (fromGroup !== targetGroup) {
       const ev = eventsMap.get(dogId)
+      const targetName = targetGroup === 'unassigned' ? 'Unassigned' : (groupNames[targetGroup] || `Group ${targetGroup}`)
       moveEvent(dogId, fromGroup, targetGroup)
       try { navigator.vibrate?.(20) } catch {}
-      toast(`Moved ${ev?.displayName || 'dog'} to ${groupNames[targetGroup] || `Group ${targetGroup}`}`)
+      toast(`Moved ${ev?.displayName || 'dog'} to ${targetName}`, {
+        action: {
+          label: 'Undo',
+          onClick: () => moveEvent(dogId, targetGroup, fromGroup),
+        },
+        duration: 3000,
+      })
     }
     setLongPressMenu(null)
   }
@@ -502,6 +516,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             setSwipeNoteDog({ id: dogId, dog_name: dog.dog_name || ev.displayName, photo_url: dog.photo_url })
             setSwipeNoteGroupName(gName)
           }}
+          onUndoPickup={dogPickup ? () => undoPickup(dogId) : undefined}
           onTapName={!isLocked ? () => handleDogTap(ev) : undefined}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
           showDragHandle={!isLocked && !isCompact}

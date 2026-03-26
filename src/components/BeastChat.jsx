@@ -65,7 +65,6 @@ Alt addresses today:\n${altText}
 }
 
 export default function BeastChat() {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -78,7 +77,7 @@ export default function BeastChat() {
   }, [messages, loading])
 
   async function sendMessage(text) {
-    if (!text.trim() || !apiKey || loading) return
+    if (!text.trim() || loading) return
 
     const userMsg = { role: 'user', content: text.trim(), ts: Date.now() }
     const next = [...messages, userMsg]
@@ -98,14 +97,9 @@ export default function BeastChat() {
           : m.content,
       }))
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/beast', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1024,

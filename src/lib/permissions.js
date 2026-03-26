@@ -1,5 +1,6 @@
 export function getPermissions(role) {
-  const isAdmin = role === 'admin';
+  const isChiefPup = role === 'admin';
+  const isSeniorOrAbove = role === 'admin' || role === 'senior_walker';
   const isWalker = role === 'senior_walker' || role === 'junior_walker';
 
   return {
@@ -12,24 +13,26 @@ export function getPermissions(role) {
     canLogPickups: true,
     canLogWalkerNotes: true,
     canViewSchedule: true,
+    canAccessSettings: true,
+
+    // SENIOR WALKER + ADMIN
+    canAccessAdmin: isSeniorOrAbove,
+    canCreateOwlNotes: isSeniorOrAbove,
+    canAddOwlNotes: isSeniorOrAbove,
 
     // ADMIN ONLY
-    canEditDogProfiles: isAdmin,
-    canViewClientInfo: isAdmin,
-    canViewAllSectors: isAdmin,
-    canCreateOwlNotes: isAdmin,
-    canSwitchSectors: isAdmin,
+    canEditDogProfiles: isChiefPup,
+    canViewClientInfo: isChiefPup,
+    canViewAllSectors: isChiefPup,
+    canSwitchSectors: isChiefPup,
+    canSeeAllSectors: isChiefPup,
 
     // WALKERS see only their sector
     canViewOwnSectorOnly: isWalker,
 
-    // Backward-compat aliases (used by pages not yet migrated to V3 names)
+    // Backward-compat aliases
     canEditGroups: true,
     canLogWalks: true,
-    canAccessAdmin: isAdmin,
-    canAccessSettings: isAdmin,
-    canSeeAllSectors: isAdmin,
-    canAddOwlNotes: isAdmin,
     canLockSchedule: true,
     canViewMap: true,
     canViewDogProfile: true,

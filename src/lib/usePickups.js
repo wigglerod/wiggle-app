@@ -34,7 +34,7 @@ export function usePickups(date) {
     load()
   }, [date])
 
-  // Realtime subscription for pickup changes
+  // Realtime subscription for pickup changes (INSERT + DELETE)
   useEffect(() => {
     if (!date) return
 
@@ -43,14 +43,32 @@ export function usePickups(date) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'walker_notes',
           filter: `walk_date=eq.${date}`,
         },
         (payload) => {
+          if (payload.eventType === 'DELETE') {
+            // Re-fetch all pickups to stay in sync (DELETE payload may lack full row data)
+            supabase
+              .from('walker_notes')
+              .select('dog_id, created_at, walker_name')
+              .eq('walk_date', date)
+              .eq('note_type', 'pickup')
+              .then(({ data }) => {
+                if (data) {
+                  const map = {}
+                  for (const row of data) {
+                    if (row.dog_id) map[row.dog_id] = { time: row.created_at, walkerName: row.walker_name }
+                  }
+                  setPickups(map)
+                }
+              })
+            return
+          }
           const row = payload.new
-          if (row.note_type === 'pickup' && row.dog_id) {
+          if (row?.note_type === 'pickup' && row.dog_id) {
             setPickups(prev => ({
               ...prev,
               [row.dog_id]: { time: row.created_at, walkerName: row.walker_name }
@@ -89,5 +107,34 @@ export function usePickups(date) {
     }
   }, [user, profile, date])
 
-  return { pickups, markPickup }
+  const undoPickup = useCallback(async (dogId) => {
+    if (!user || !date || !dogId) return
+
+    // Optimistic: remove from local state
+    const previous = pickups[dogId]
+    setPickups(prev => {
+      const next = { ...prev }
+      delete next[dogId]
+      return next
+    })
+
+    const { error } = await supabase
+      .from('walker_notes')
+      .delete()
+      .eq('dog_id', dogId)
+      .eq('walk_date', date)
+      .eq('note_type', 'pickup')
+
+    if (error) {
+      toast.error('Failed to undo pickup')
+      // Restore optimistic removal
+      if (previous) {
+        setPickups(prev => ({ ...prev, [dogId]: previous }))
+      }
+    } else {
+      toast('Pickup undone')
+    }
+  }, [user, date, pickups])
+
+  return { pickups, markPickup, undoPickup }
 }

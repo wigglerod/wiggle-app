@@ -22,11 +22,13 @@ export default function DogCard({
   onSwipeRight,
   onTapName,
   onTapAddress,
+  onUndoPickup,
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const [showUndoConfirm, setShowUndoConfirm] = useState(false);
   const cardRef = useRef(null);
   const touchRef = useRef({ x: 0, y: 0, claimed: false });
 
@@ -97,9 +99,10 @@ export default function DogCard({
     };
   }, [isLocked, isPickedUp, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-  // Auto-collapse when picked up
+  // Auto-collapse when picked up; reset undo confirm when state changes
   useEffect(() => {
     if (isPickedUp) setExpanded(false);
+    if (!isPickedUp) setShowUndoConfirm(false);
   }, [isPickedUp]);
 
   const photoUrl = dog.photo_url || null;
@@ -193,7 +196,13 @@ export default function DogCard({
       {/* ── MINI CARD ───────────────────────────────────────── */}
       <div
         ref={cardRef}
-        onClick={() => setExpanded(prev => !prev)}
+        onClick={() => {
+          if (isPickedUp && onUndoPickup) {
+            setShowUndoConfirm(true);
+          } else {
+            setExpanded(prev => !prev);
+          }
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -301,6 +310,49 @@ export default function DogCard({
             </span>
           )}
         </div>
+
+        {/* Undo pickup confirmation overlay */}
+        {isPickedUp && showUndoConfirm && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 12,
+            background: 'rgba(255,255,255,0.97)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 12px',
+            zIndex: 5,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            border: '1px solid #e5e5e5',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>Undo pickup?</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); onUndoPickup(); setShowUndoConfirm(false); }}
+                style={{
+                  padding: '8px 14px', borderRadius: 8,
+                  background: '#E8634A', color: '#fff', border: 'none',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  minHeight: 44,
+                }}
+              >
+                Yes, undo
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowUndoConfirm(false); }}
+                style={{
+                  padding: '8px 14px', borderRadius: 8,
+                  background: '#f0f0f0', color: '#888', border: 'none',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  minHeight: 44,
+                }}
+              >
+                Keep
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── EXPANDED PANEL ──────────────────────────────────── */}

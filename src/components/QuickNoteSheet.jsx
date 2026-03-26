@@ -46,7 +46,7 @@ export default function QuickNoteSheet({ isOpen, onClose, dog, groupName, walkDa
     if (selectedTags.length === 0 && !message.trim()) return
     setSaving(true)
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const { data, error } = await supabase.from('walker_notes').insert({
       dog_id: dog.id,
       dog_name: dog.dog_name,
       walker_id: walkerId,
@@ -55,7 +55,7 @@ export default function QuickNoteSheet({ isOpen, onClose, dog, groupName, walkDa
       message: message.trim() || null,
       walk_date: walkDate,
       note_type: 'note',
-    })
+    }).select().single()
 
     setSaving(false)
 
@@ -63,7 +63,18 @@ export default function QuickNoteSheet({ isOpen, onClose, dog, groupName, walkDa
       toast.error('Failed to save note')
     } else {
       if (navigator.vibrate) navigator.vibrate(50)
-      toast.success('Note saved')
+      toast('Note saved', {
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            if (data?.id) {
+              await supabase.from('walker_notes').delete().eq('id', data.id)
+              toast('Note removed')
+            }
+          },
+        },
+        duration: 5000,
+      })
       onClose()
     }
   }
