@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import BottomTabs from '../components/BottomTabs'
 import { roleLabel, roleColor } from '../lib/roles'
@@ -94,11 +95,19 @@ export default function SettingsPage() {
           <p className="text-[10px] text-gray-300">{__APP_VERSION__}</p>
           <button
             onClick={async () => {
-              const reg = window.__swRegistration
-              if (reg) {
-                await reg.update()
-                window.location.reload()
-              } else {
+              try {
+                const reg = window.__swRegistration
+                if (reg) {
+                  await reg.update()
+                  if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+                  } else {
+                    toast('Already on latest version')
+                  }
+                } else {
+                  window.location.reload()
+                }
+              } catch (e) {
                 window.location.reload()
               }
             }}

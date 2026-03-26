@@ -25,8 +25,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      // Use virtual:pwa-register in main.jsx for periodic update checks
+      registerType: 'prompt',
+      // Use virtual:pwa-register in main.jsx for aggressive update checks
       injectRegister: false,
       includeAssets: ['favicon-32x32.png', 'apple-touch-icon.png', 'WiggleLogo.png', 'play.jpg'],
       manifest: {
