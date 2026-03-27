@@ -105,6 +105,15 @@ export default function DogCard({
     if (!isPickedUp) setShowUndoConfirm(false);
   }, [isPickedUp]);
 
+  function cleanAddress(raw) {
+    if (!raw) return '';
+    // Strip everything after first comma (city, province, country)
+    let addr = raw.split(',')[0].trim();
+    // Strip Canadian postal codes (H2W 2L5 or H2W2L5 pattern)
+    addr = addr.replace(/\s*[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i, '').trim();
+    return addr;
+  }
+
   const photoUrl = dog.photo_url || null;
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
@@ -251,19 +260,6 @@ export default function DogCard({
           </span>
         )}
 
-        {/* Photo */}
-        <div style={{
-          width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: photoUrl ? '#f5f5f5' : bgColor,
-          opacity: isPickedUp ? 0.5 : 1,
-        }}>
-          {photoUrl
-            ? <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>{initial}</span>
-          }
-        </div>
-
         {/* Level dot */}
         <span style={{
           width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
@@ -296,7 +292,7 @@ export default function DogCard({
             textAlign: 'right', whiteSpace: 'nowrap',
             overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
-            {dog.address}
+            {cleanAddress(dog.address)}
           </span>
         )}
 

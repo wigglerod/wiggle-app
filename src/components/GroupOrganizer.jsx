@@ -652,6 +652,18 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           }
         />
 
+        {/* Walker assignment buttons — PLAN mode only */}
+        {!isGroupLocked && (
+          <WalkerButtons
+            num={num}
+            wIds={wIds}
+            walkerNameMap={walkerNameMap}
+            allWalkers={walkerNameMap}
+            onAdd={(walkerId) => addWalker(num, walkerId)}
+            onRemove={(walkerId) => removeWalker(num, walkerId)}
+          />
+        )}
+
         {/* Swipe hint (first locked group only) */}
         {isGroupLocked && groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
           <p style={{ fontSize: 11, color: '#c5c0bb', textAlign: 'center', marginBottom: 6, padding: '8px 16px', letterSpacing: '0.02em', background: 'rgba(0,0,0,0.015)', borderRadius: 8 }}>
@@ -977,6 +989,84 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 //   SUB-COMPONENTS
 // ══════════════════════════════════════════════════════════════════
+
+// ── Walker assignment buttons (PLAN mode) ────────────────────────
+function WalkerButtons({ num, wIds, walkerNameMap, allWalkers, onAdd, onRemove }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const walkerList = Object.entries(allWalkers)
+    .map(([id, name]) => ({ id, name }))
+    .filter(w => !wIds.includes(w.id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap', position: 'relative' }}>
+      {wIds.map(id => {
+        const name = walkerNameMap[id]
+        if (!name) return null
+        return (
+          <button
+            key={id}
+            onClick={() => onRemove(id)}
+            style={{
+              background: '#EEEDFE', color: '#534AB7',
+              border: '1.5px solid #AFA9EC',
+              fontSize: 10, fontWeight: 700,
+              padding: '4px 12px', borderRadius: 20,
+              cursor: 'pointer',
+            }}
+          >
+            {name.split(' ')[0]} ×
+          </button>
+        )
+      })}
+      {wIds.length < 2 && (
+        <button
+          onClick={() => setPickerOpen(p => !p)}
+          style={{
+            background: 'transparent', color: '#D5CFC8',
+            border: '1.5px dashed #D5CFC8',
+            fontSize: 10, fontWeight: 500,
+            padding: '4px 12px', borderRadius: 20,
+            cursor: 'pointer',
+          }}
+        >
+          + walker
+        </button>
+      )}
+      {pickerOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setPickerOpen(false)} />
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, zIndex: 50,
+            background: '#fff', border: '1px solid #e5e5e5', borderRadius: 12,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: 4,
+            maxHeight: 200, overflowY: 'auto', minWidth: 160,
+          }}>
+            {walkerList.length === 0 && (
+              <p style={{ fontSize: 11, color: '#aaa', padding: '8px 12px' }}>No walkers available</p>
+            )}
+            {walkerList.map(w => (
+              <button
+                key={w.id}
+                onClick={() => { onAdd(w.id); setPickerOpen(false) }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '8px 12px', fontSize: 12, fontWeight: 500,
+                  color: '#333', background: 'transparent', border: 'none',
+                  cursor: 'pointer', borderRadius: 8, minHeight: 36,
+                }}
+                className="active:bg-[#FFF4F1]"
+              >
+                {w.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 // ── Group header ──────────────────────────────────────────────────
 function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
