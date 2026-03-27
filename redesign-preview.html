@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle V4 Redesign Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* V4 Design Bible */
+    --peach: #FFF5F0;
+    --coral: #E8634A;
+    --coral-dark: #C94A34;
+    --green: #0F6E56;
+    --green-bg: #E1F5EE;
+    --amber: #BA7517;
+    --amber-bg: #FAEEDA;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --purple: #534AB7;
+    --purple-bg: #EEEDFE;
+    --text: #333;
+    --text-mid: #888;
+    --text-light: #aaa;
+    --card-bg: #fff;
+    --card-border: #e8e5e0;
+    --card-shadow: #d5d2cc;
+    --surface: #f0ece8;
+
+    /* OLD values for comparison */
+    --old-bg: #FFF4F1;
+    --old-text: #1A1A1A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+  .subtitle { font-size: 14px; color: #aaa; text-align: center; margin-bottom: 32px; }
+
+  .nav {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 32px;
+  }
+  .nav button {
+    font-family: 'DM Sans', sans-serif;
+    padding: 8px 16px; border-radius: 20px; border: 1px solid #444;
+    background: #2a2a2a; color: #ccc; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .nav button.active { background: var(--coral); color: #fff; border-color: var(--coral); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .comparison {
+    display: flex; gap: 24px; justify-content: center;
+    flex-wrap: wrap; margin-bottom: 40px;
+  }
+
+  .phone-frame {
+    width: 320px; min-height: 568px; border-radius: 32px;
+    border: 3px solid #444; overflow: hidden; position: relative;
+    flex-shrink: 0;
+  }
+  .phone-frame .label {
+    position: absolute; top: -28px; left: 0; right: 0;
+    text-align: center; font-size: 12px; font-weight: 700;
+    color: #888; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .phone-frame.old { border-color: #555; }
+  .phone-frame.new { border-color: var(--coral); }
+  .phone-frame.old .label { color: #666; }
+  .phone-frame.new .label { color: var(--coral); }
+
+  .phone-content { overflow-y: auto; max-height: 640px; }
+
+  .changes {
+    max-width: 680px; margin: 0 auto 48px;
+    background: #2a2a2a; border-radius: 12px; padding: 16px 20px;
+  }
+  .changes h3 { font-size: 14px; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+  .changes ul { list-style: none; padding: 0; }
+  .changes li {
+    font-size: 12px; color: #bbb; padding: 4px 0;
+    border-bottom: 1px solid #333;
+  }
+  .changes li:last-child { border: none; }
+  .changes li strong { color: #fff; }
+  .changes li .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 4px; margin-right: 6px;
+  }
+  .tag-changed { background: #534AB7; color: #fff; }
+  .tag-added { background: var(--green); color: #fff; }
+  .tag-removed { background: #c0392b; color: #fff; }
+  .tag-moved { background: var(--blue); color: #fff; }
+
+  /* Mini component styles for mockups */
+  .m-header {
+    padding: 12px 12px 8px; display: flex; align-items: center;
+    justify-content: space-between; border-bottom: 1px solid var(--card-border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .m-header img { height: 28px; }
+  .m-header .role-badge {
+    font-size: 10px; font-weight: 700; padding: 4px 10px;
+    border-radius: 20px; min-height: 32px; display: flex; align-items: center;
+  }
+  .m-date { font-size: 12px; padding: 0 12px 8px; }
+  .m-bottom-tabs {
+    position: sticky; bottom: 0; display: flex;
+    border-top: 1px solid var(--card-border); padding: 8px 0 12px;
+  }
+  .m-bottom-tabs .tab {
+    flex: 1; text-align: center; font-size: 10px; font-weight: 600;
+  }
+  .m-bottom-tabs .tab.active { color: var(--coral); }
+  .m-bottom-tabs .tab.inactive { color: var(--text-light); }
+
+  .m-card {
+    background: var(--card-bg); border: 0.5px solid var(--card-border);
+    border-bottom: 2.5px solid var(--card-shadow); margin-bottom: 3px;
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    min-height: 44px;
+  }
+  .m-card-10 { border-radius: 10px; }
+  .m-card-12 { border-radius: 12px; }
+
+  .m-group {
+    border: 2px dashed; border-radius: 16px; padding: 10px;
+    margin-bottom: 10px;
+  }
+  .m-group.locked { border-style: solid; }
+
+  .m-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .m-photo {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+  }
+
+  .m-pill {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  .m-btn {
+    width: 100%; padding: 12px; border-radius: 10px; border: none;
+    font-family: 'DM Sans', sans-serif; font-weight: 700;
+    font-size: 13px; text-align: center; cursor: default;
+    min-height: 44px;
+  }
+
+  .section-title {
+    font-size: 24px; font-weight: 700; text-align: center;
+    margin: 48px 0 16px; color: #fff;
+  }
+  .section-subtitle {
+    font-size: 13px; color: #888; text-align: center; margin-bottom: 24px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wiggle V4 Redesign Preview</h1>
+<p class="subtitle">Before/after for Rod to review. Tap screens to navigate.</p>
+
+<div class="nav" id="nav">
+  <button class="active" onclick="show('login')">Login</button>
+  <button onclick="show('plan')">Plan Mode</button>
+  <button onclick="show('walk')">Walk Mode</button>
+  <button onclick="show('admin-today')">Admin Today</button>
+  <button onclick="show('admin-manage')">Admin Manage</button>
+  <button onclick="show('palette')">Color Palette</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- LOGIN SCREEN -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen active" id="login">
+  <h2 class="section-title">Login Screen</h2>
+  <div class="comparison">
+    <div class="phone-frame old" style="margin-top:32px">
+      <div class="label">Current</div>
+      <div class="phone-content" style="background:#FFF4F1; min-height:568px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40'%3E%3Crect width='140' height='40' rx='8' fill='%23E8634A' opacity='0.15'/%3E%3Ctext x='70' y='26' text-anchor='middle' fill='%23E8634A' font-family='DM Sans' font-weight='700' font-size='16'%3EWiggle%3C/text%3E%3C/svg%3E" style="margin-bottom:32px">
+        <div style="width:100%; background:#fff; border-radius:24px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+          <p style="font-size:16px; font-weight:700; color:#1A1A1A; margin-bottom:16px;">Walker Sign In</p>
+          <div style="margin-bottom:12px;">
+            <p style="font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Email</p>
+            <div style="border:1px solid #ddd; border-radius:16px; padding:10px 14px; font-size:12px; color:#ccc;">you@example.com</div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <p style="font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Password</p>
+            <div style="border:1px solid #ddd; border-radius:16px; padding:10px 14px; font-size:12px; color:#ccc;">••••••••</div>
+          </div>
+          <div style="background:#E8634A; color:#fff; text-align:center; padding:12px; border-radius:16px; font-weight:700; font-size:13px; margin-top:8px;">Sign In</div>
+        </div>
+        <p style="font-size:10px; color:#aaa; margin-top:20px;">Wiggle Dog Walks · Montréal, QC</p>
+      </div>
+    </div>
+
+    <div class="phone-frame new" style="margin-top:32px">
+      <div class="label">Proposed V4</div>
+      <div class="phone-content" style="background:var(--peach); min-height:568px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40'%3E%3Crect width='140' height='40' rx='8' fill='%23E8634A' opacity='0.15'/%3E%3Ctext x='70' y='26' text-anchor='middle' fill='%23E8634A' font-family='DM Sans' font-weight='700' font-size='16'%3EWiggle%3C/text%3E%3C/svg%3E" style="margin-bottom:32px">
+        <div style="width:100%; background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:20px;">
+          <p style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:16px;">Walker Sign In</p>
+          <div style="margin-bottom:12px;">
+            <p style="font-size:10px; font-weight:600; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Email</p>
+            <div style="border:1px solid var(--card-border); border-radius:8px; padding:10px 14px; font-size:12px; color:#ccc;">you@example.com</div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <p style="font-size:10px; font-weight:600; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Password</p>
+            <div style="border:1px solid var(--card-border); border-radius:8px; padding:10px 14px; font-size:12px; color:#ccc;">••••••••</div>
+          </div>
+          <div style="background:var(--coral); color:#fff; text-align:center; padding:12px; border-radius:10px; font-weight:700; font-size:13px; margin-top:8px; border-bottom:2.5px solid var(--coral-dark);">Sign In</div>
+        </div>
+        <p style="font-size:10px; color:var(--text-light); margin-top:20px;">Wiggle Dog Walks · Montréal, QC</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes">
+    <h3>Changes</h3>
+    <ul>
+      <li><span class="tag tag-changed">Changed</span> Background from <strong>#FFF4F1</strong> to <strong>#FFF5F0</strong> (warmer peach)</li>
+      <li><span class="tag tag-changed">Changed</span> Header text from <strong>#1A1A1A</strong> to <strong>#333</strong></li>
+      <li><span class="tag tag-changed">Changed</span> Card radius from <strong>24px</strong> to <strong>12px</strong> with bottom shadow</li>
+      <li><span class="tag tag-changed">Changed</span> Input radius from <strong>16px</strong> to <strong>8px</strong></li>
+      <li><span class="tag tag-added">Added</span> 3D bottom shadow on card (<strong>2.5px solid #d5d2cc</strong>)</li>
+      <li><span class="tag tag-added">Added</span> Button pressed-state shadow (<strong>border-bottom coral-dark</strong>)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- PLAN MODE -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen" id="plan">
+  <h2 class="section-title">Plan Mode (Unlocked)</h2>
+  <p class="section-subtitle">Walkers organize dogs into groups before locking</p>
+  <div class="comparison">
+    <div class="phone-frame old" style="margin-top:32px">
+      <div class="label">Current</div>
+      <div class="phone-content" style="background:#FFF4F1; min-height:568px;">
+        <div class="m-header" style="background:#fff;">
+          <div style="font-size:14px; font-weight:700; color:#1A1A1A;">Wiggle</div>
+          <div class="role-badge" style="background:#E8634A; color:#fff;">Chief Pup</div>
+        </div>
+        <div style="padding:12px;">
+          <!-- Unassigned -->
+          <div style="border:2px dashed #D3D1C7; border-radius:16px; padding:10px; background:#f8f8f6; margin-bottom:10px;">
+            <p style="font-size:11px; color:#888; margin-bottom:6px;">Unassigned (2)</p>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <div style="background:#fff; border:0.5px solid #e8e5e0; border-radius:24px; padding:4px 10px; font-size:11px; color:#1A1A1A; font-weight:500;">Luna</div>
+              <div style="background:#fff; border:0.5px solid #e8e5e0; border-radius:24px; padding:4px 10px; font-size:11px; color:#1A1A1A; font-weight:500;">Chaska</div>
+            </div>
+          </div>
+          <!-- Group 1 -->
+          <div style="border:2px dashed #85B7EB; border-radius:16px; padding:10px; background:#f5f9fd; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:13px; font-weight:600; color:#1A1A1A;">Morning Park</span>
+              <span style="font-size:11px; color:#bbb;">3 dogs</span>
+            </div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <div style="background:#fff; border:0.5px solid #e8e5e0; border-radius:24px; padding:4px 10px; font-size:11px; color:#1A1A1A; font-weight:500;">Ziva</div>
+              <div style="background:#fff; border:0.5px solid #e8e5e0; border-radius:24px; padding:4px 10px; font-size:11px; color:#1A1A1A; font-weight:500;">Mochi</div>
+              <div style="background:#fff; border:0.5px solid #e8e5e0; border-radius:24px; padding:4px 10px; font-size:11px; color:#1A1A1A; font-weight:500;">Bear</div>
+            </div>
+          </div>
+          <!-- Lock button -->
+          <div style="background:#E8634A; color:#fff; text-align:center; padding:14px; border-radius:12px; font-weight:700; font-size:14px; opacity:0.4;">Assign 2 dogs to lock</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-frame new" style="margin-top:32px">
+      <div class="label">Proposed V4</div>
+      <div class="phone-content" style="background:var(--peach); min-height:568px;">
+        <div class="m-header" style="background:#fff;">
+          <div style="font-size:14px; font-weight:700; color:var(--text);">Wiggle</div>
+          <div class="role-badge" style="background:var(--coral); color:#fff;">Chief Pup</div>
+        </div>
+        <div style="padding:12px;">
+          <!-- Unassigned -->
+          <div style="border:2px dashed #D3D1C7; border-radius:16px; padding:10px; background:var(--surface); margin-bottom:10px;">
+            <p style="font-size:11px; color:var(--text-mid); margin-bottom:6px;">Unassigned (2)</p>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <div class="m-card m-card-10" style="padding:4px 10px; font-size:11px; color:var(--text); font-weight:500; display:inline-flex;">Luna</div>
+              <div class="m-card m-card-10" style="padding:4px 10px; font-size:11px; color:var(--text); font-weight:500; display:inline-flex;">Chaska</div>
+            </div>
+          </div>
+          <!-- Group 1 -->
+          <div style="border:2px dashed #85B7EB; border-radius:16px; padding:10px; background:#f5f9fd; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:13px; font-weight:600; color:var(--text);">Morning Park</span>
+              <span style="font-size:11px; color:var(--text-light);">3 dogs</span>
+            </div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <div class="m-card m-card-10" style="padding:4px 10px; font-size:11px; color:var(--text); font-weight:500; display:inline-flex;">Ziva</div>
+              <div class="m-card m-card-10" style="padding:4px 10px; font-size:11px; color:var(--text); font-weight:500; display:inline-flex;">Mochi</div>
+              <div class="m-card m-card-10" style="padding:4px 10px; font-size:11px; color:var(--text); font-weight:500; display:inline-flex;">Bear</div>
+            </div>
+          </div>
+          <!-- Lock button -->
+          <div style="background:var(--coral); color:#fff; text-align:center; padding:14px; border-radius:10px; font-weight:700; font-size:14px; opacity:0.4; border-bottom:2.5px solid var(--coral-dark);">Assign 2 dogs to lock</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes">
+    <h3>Changes</h3>
+    <ul>
+      <li><span class="tag tag-changed">Changed</span> All text from <strong>#1A1A1A</strong> to <strong>#333</strong></li>
+      <li><span class="tag tag-added">Added</span> Bottom shadow on dog chips (<strong>2.5px solid #d5d2cc</strong>)</li>
+      <li><span class="tag tag-changed">Changed</span> Chip border-radius from <strong>24px</strong> to <strong>10px</strong></li>
+      <li><span class="tag tag-changed">Changed</span> Surface color to <strong>#f0ece8</strong> for unassigned pool</li>
+      <li><span class="tag tag-added">Added</span> Button 3D pressed effect on lock button</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- WALK MODE -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen" id="walk">
+  <h2 class="section-title">Walk Mode (Locked)</h2>
+  <p class="section-subtitle">Active walking with pickups in progress</p>
+  <div class="comparison">
+    <div class="phone-frame old" style="margin-top:32px">
+      <div class="label">Current</div>
+      <div class="phone-content" style="background:#FFF4F1; min-height:568px;">
+        <div class="m-header" style="background:#fff;">
+          <div style="font-size:14px; font-weight:700; color:#1A1A1A;">Wiggle</div>
+          <div class="role-badge" style="background:purple; color:#fff; opacity:0.15; padding:4px 8px; font-size:10px;">
+            <span style="color:purple; font-weight:700;">Wiggle Pro</span>
+          </div>
+        </div>
+        <div style="padding:12px;">
+          <!-- Walking mode banner -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#E1F5EE; border-radius:12px; border:1px solid #bbf7d0; margin-bottom:10px;">
+            <span style="font-size:13px; font-weight:600; color:#0F6E56;">Walking mode</span>
+            <span style="font-size:11px; padding:4px 12px; background:#fff; color:#0F6E56; border-radius:8px; border:1px solid #bbf7d0;">Unlock</span>
+          </div>
+          <!-- Group (locked, solid border) -->
+          <div style="border:2px solid #85B7EB; border-radius:16px; padding:10px; background:#f5f9fd; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:13px; font-weight:600; color:#1A1A1A;">Morning Park</span>
+              <span style="font-size:9px; padding:2px 8px; background:#FAECE7; color:#993C1D; border-radius:6px; font-weight:600;">Walking</span>
+            </div>
+            <!-- Picked up dog -->
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f0fdf4; border:1px solid #bbf7d0; border-bottom:2.5px solid #86efac; border-radius:12px; margin-bottom:3px; min-height:48px;">
+              <span style="font-size:12px; color:#0F6E56; font-weight:600; width:18px; text-align:center;">&check;</span>
+              <div style="width:28px; height:28px; border-radius:50%; background:#7F77DD; display:flex; align-items:center; justify-content:center; opacity:0.5;"><span style="color:#fff; font-size:11px; font-weight:700;">Z</span></div>
+              <span style="font-size:14px; font-weight:600; color:#aaa; text-decoration:line-through; flex:1;">Ziva</span>
+              <span style="font-size:12px; font-weight:700; color:#0F6E56;">9:42 AM</span>
+            </div>
+            <!-- Current dog -->
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#fff; border:1.5px solid #E8634A; border-bottom:2.5px solid #E8634A; border-radius:12px; margin-bottom:3px; min-height:48px;">
+              <span style="font-size:12px; color:#E8634A; font-weight:600; width:18px; text-align:center;">2</span>
+              <div style="width:28px; height:28px; border-radius:50%; background:#378ADD; display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-size:11px; font-weight:700;">M</span></div>
+              <span style="font-size:14px; font-weight:600; color:#1A1A1A; flex:1;">Mochi</span>
+              <span style="font-size:10px; color:#185FA5; font-weight:600; background:#E6F1FB; padding:2px 6px; border-radius:4px;">#4523</span>
+            </div>
+            <!-- Waiting dog -->
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#fff; border:0.5px solid #e8e5e0; border-bottom:2.5px solid #d5d2cc; border-radius:12px; min-height:48px;">
+              <span style="font-size:12px; color:#aaa; font-weight:600; width:18px; text-align:center;">3</span>
+              <div style="width:28px; height:28px; border-radius:50%; background:#1D9E75; display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-size:11px; font-weight:700;">B</span></div>
+              <span style="font-size:14px; font-weight:600; color:#1A1A1A; flex:1;">Bear</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-frame new" style="margin-top:32px">
+      <div class="label">Proposed V4</div>
+      <div class="phone-content" style="background:var(--peach); min-height:568px;">
+        <div class="m-header" style="background:#fff;">
+          <div style="font-size:14px; font-weight:700; color:var(--text);">Wiggle</div>
+          <div class="role-badge" style="background:var(--purple-bg); color:var(--purple);">Wiggle Pro</div>
+        </div>
+        <div style="padding:12px;">
+          <!-- Walking mode banner -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--green-bg); border-radius:12px; border:1px solid #bbf7d0; margin-bottom:10px;">
+            <span style="font-size:13px; font-weight:600; color:var(--green);">Walking mode</span>
+            <span style="font-size:11px; padding:4px 12px; background:#fff; color:var(--green); border-radius:8px; border:1px solid #bbf7d0; min-height:32px; display:flex; align-items:center;">Unlock</span>
+          </div>
+          <!-- Group (locked, solid border) -->
+          <div class="m-group locked" style="border-color:#85B7EB; background:#f5f9fd;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:13px; font-weight:600; color:var(--text);">Morning Park</span>
+              <span class="m-pill" style="background:#FAECE7; color:#993C1D;">Walking</span>
+            </div>
+            <!-- Picked up dog -->
+            <div class="m-card m-card-12" style="background:#f0fdf4; border-color:#bbf7d0; border-bottom:2.5px solid #86efac;">
+              <span style="font-size:12px; color:var(--green); font-weight:600; width:18px; text-align:center;">&check;</span>
+              <div class="m-photo" style="background:#7F77DD; opacity:0.5;">Z</div>
+              <span style="font-size:14px; font-weight:600; color:var(--text-light); text-decoration:line-through; flex:1;">Ziva</span>
+              <span style="font-size:12px; font-weight:700; color:var(--green);">9:42 AM</span>
+            </div>
+            <!-- Current dog -->
+            <div class="m-card m-card-12" style="border:1.5px solid var(--coral); border-bottom:2.5px solid var(--coral);">
+              <span style="font-size:12px; color:var(--coral); font-weight:600; width:18px; text-align:center;">2</span>
+              <div class="m-photo" style="background:#378ADD;">M</div>
+              <span style="font-size:14px; font-weight:600; color:var(--text); flex:1;">Mochi</span>
+              <span style="font-size:10px; color:var(--blue); font-weight:600; background:var(--blue-bg); padding:2px 6px; border-radius:4px;">#4523</span>
+            </div>
+            <!-- Waiting dog -->
+            <div class="m-card m-card-12">
+              <span style="font-size:12px; color:var(--text-light); font-weight:600; width:18px; text-align:center;">3</span>
+              <div class="m-photo" style="background:#1D9E75;">B</div>
+              <span style="font-size:14px; font-weight:600; color:var(--text); flex:1;">Bear</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes">
+    <h3>Changes</h3>
+    <ul>
+      <li><span class="tag tag-changed">Changed</span> All <strong>#1A1A1A</strong> text to <strong>#333</strong></li>
+      <li><span class="tag tag-changed">Changed</span> Background <strong>#FFF4F1</strong> to <strong>#FFF5F0</strong></li>
+      <li><span class="tag tag-changed">Changed</span> Wiggle Pro badge: proper <strong>purple-bg + purple text</strong> (was broken opacity)</li>
+      <li><span class="tag tag-changed">Changed</span> Card radius stays <strong>12px</strong> (already correct)</li>
+      <li><span class="tag tag-changed">Changed</span> Bottom shadow consistent on all cards</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- ADMIN TODAY TAB -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen" id="admin-today">
+  <h2 class="section-title">Admin — Today Tab</h2>
+  <p class="section-subtitle">The new command center (Part 1 of this prompt)</p>
+  <div class="comparison">
+    <div class="phone-frame new" style="margin-top:32px; width:340px;">
+      <div class="label">New Layout</div>
+      <div class="phone-content" style="background:var(--peach); min-height:568px;">
+        <!-- Header -->
+        <div style="background:#fff; padding:12px; border-bottom:1px solid var(--card-border); position:sticky; top:0; z-index:10;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:12px; color:var(--text-light);">&larr; Schedule</span>
+              <span style="color:#ddd;">/</span>
+              <span style="font-size:14px; font-weight:700;"><span style="color:var(--coral);">Admin</span> <span style="color:var(--text);">Dashboard</span></span>
+            </div>
+            <span style="font-size:10px; padding:4px 8px; background:var(--surface); color:var(--text-mid); border-radius:20px;">Sign out</span>
+          </div>
+          <!-- Tab toggle -->
+          <div style="display:flex; gap:4px; margin-top:10px; background:var(--surface); border-radius:20px; padding:3px;">
+            <div style="flex:1; text-align:center; padding:6px; border-radius:18px; background:var(--coral); color:#fff; font-size:11px; font-weight:600;">Today</div>
+            <div style="flex:1; text-align:center; padding:6px; border-radius:18px; color:var(--text-mid); font-size:11px; font-weight:600;">Manage</div>
+          </div>
+        </div>
+
+        <div style="padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <!-- Status bars -->
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="width:8px; height:8px; border-radius:50%; background:var(--coral);"></span>
+              <span style="font-size:13px; font-weight:600; color:var(--text);">Plateau</span>
+              <span style="font-size:11px; color:var(--text-light);">12 dogs</span>
+              <span style="font-size:11px; color:var(--text-light);">Chloe, Solene</span>
+            </div>
+            <span style="font-size:11px; font-weight:600; color:var(--coral);">Walking</span>
+          </div>
+
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="width:8px; height:8px; border-radius:50%; background:#ccc;"></span>
+              <span style="font-size:13px; font-weight:600; color:var(--text);">Laurier</span>
+              <span style="font-size:11px; color:var(--text-light);">8 dogs</span>
+              <span style="font-size:11px; color:var(--text-light);">Amanda, Megan</span>
+            </div>
+            <span style="font-size:11px; font-weight:600; color:var(--text-light);">Planning</span>
+          </div>
+
+          <!-- Alerts -->
+          <div style="background:var(--amber-bg); border:1px solid #FAC775; border-radius:12px; padding:8px 12px;">
+            <p style="font-size:11px; color:#854F0B; font-weight:500;">Group 3 (Laurier) has no walker assigned</p>
+          </div>
+
+          <!-- Groups overview -->
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); overflow:hidden;">
+            <p style="font-size:9px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:1px; padding:10px 14px 4px;">Groups</p>
+
+            <div style="display:flex; align-items:center; padding:10px 14px; border-top:1px solid #f5f3f0; min-height:44px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--coral); margin-right:10px;"></span>
+              <div style="flex:1;">
+                <span style="font-size:13px; font-weight:500; color:var(--text);">Morning Park</span>
+                <span style="font-size:10px; color:var(--text-light); margin-left:4px;">Plateau</span>
+                <span style="font-size:11px; color:var(--text-light); margin-left:8px;">Chloe</span>
+              </div>
+              <span style="font-size:11px; color:var(--text-light); margin-right:6px;">3/5</span>
+              <span class="m-pill" style="background:#FAECE7; color:#993C1D;">Walking</span>
+            </div>
+
+            <div style="display:flex; align-items:center; padding:10px 14px; border-top:1px solid #f5f3f0; min-height:44px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--coral); margin-right:10px;"></span>
+              <div style="flex:1;">
+                <span style="font-size:13px; font-weight:500; color:var(--text);">Hill Run</span>
+                <span style="font-size:10px; color:var(--text-light); margin-left:4px;">Plateau</span>
+                <span style="font-size:11px; color:var(--text-light); margin-left:8px;">Solene</span>
+              </div>
+              <span style="font-size:11px; color:var(--text-light); margin-right:6px;">1/4</span>
+              <span class="m-pill" style="background:#FAECE7; color:#993C1D;">Walking</span>
+            </div>
+
+            <div style="display:flex; align-items:center; padding:10px 14px; border-top:1px solid #f5f3f0; min-height:44px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#ccc; margin-right:10px;"></span>
+              <div style="flex:1;">
+                <span style="font-size:13px; font-weight:500; color:var(--text);">Afternoon</span>
+                <span style="font-size:10px; color:var(--text-light); margin-left:4px;">Laurier</span>
+                <span style="font-size:11px; color:var(--text-light); margin-left:8px;">Amanda</span>
+              </div>
+              <span style="font-size:11px; color:var(--text-light); margin-right:6px;">5</span>
+              <span class="m-pill" style="background:var(--surface); color:var(--text-light);">Planning</span>
+            </div>
+
+            <div style="display:flex; align-items:center; padding:10px 14px; border-top:1px solid #f5f3f0; min-height:44px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--green); margin-right:10px;"></span>
+              <div style="flex:1;">
+                <span style="font-size:13px; font-weight:500; color:var(--text);">Early Bird</span>
+                <span style="font-size:10px; color:var(--text-light); margin-left:4px;">Plateau</span>
+                <span style="font-size:11px; color:var(--text-light); margin-left:8px;">Belen</span>
+              </div>
+              <span style="font-size:11px; color:var(--text-light); margin-right:6px;">3/3</span>
+              <span class="m-pill" style="background:var(--green-bg); color:var(--green);">Done</span>
+            </div>
+          </div>
+
+          <!-- Beast chat collapsed -->
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; font-weight:600; color:var(--text-mid);">Beast AI Assistant</span>
+            <span style="font-size:10px; color:var(--text-light);">&#9662;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes">
+    <h3>What's New</h3>
+    <ul>
+      <li><span class="tag tag-added">Added</span> <strong>Sector status bars</strong> — one glance shows dog count, walkers, status</li>
+      <li><span class="tag tag-added">Added</span> <strong>Alerts section</strong> — only appears when action needed</li>
+      <li><span class="tag tag-added">Added</span> <strong>Compact groups list</strong> — sorted walking &rarr; planning &rarr; done</li>
+      <li><span class="tag tag-moved">Moved</span> <strong>Dog CRUD, logs, system</strong> to Manage tab</li>
+      <li><span class="tag tag-changed">Changed</span> Beast chat is <strong>collapsed by default</strong></li>
+      <li><span class="tag tag-removed">Removed</span> 5-tab bar (dogs/logs/owl/beast/system) replaced by <strong>Today/Manage</strong> pills</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- ADMIN MANAGE TAB -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen" id="admin-manage">
+  <h2 class="section-title">Admin — Manage Tab</h2>
+  <p class="section-subtitle">Chief Pup only. Same content, relocated.</p>
+  <div class="comparison">
+    <div class="phone-frame new" style="margin-top:32px; width:340px;">
+      <div class="label">New Layout</div>
+      <div class="phone-content" style="background:var(--peach); min-height:568px;">
+        <div style="background:#fff; padding:12px; border-bottom:1px solid var(--card-border);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:14px; font-weight:700;"><span style="color:var(--coral);">Admin</span> <span style="color:var(--text);">Dashboard</span></span>
+            <span style="font-size:10px; padding:4px 8px; background:var(--surface); color:var(--text-mid); border-radius:20px;">Sign out</span>
+          </div>
+          <div style="display:flex; gap:4px; margin-top:10px; background:var(--surface); border-radius:20px; padding:3px;">
+            <div style="flex:1; text-align:center; padding:6px; border-radius:18px; color:var(--text-mid); font-size:11px; font-weight:600;">Today</div>
+            <div style="flex:1; text-align:center; padding:6px; border-radius:18px; background:var(--coral); color:#fff; font-size:11px; font-weight:600;">Manage</div>
+          </div>
+        </div>
+
+        <div style="padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <!-- Sector filter -->
+          <div style="display:flex; gap:6px;">
+            <span style="padding:4px 12px; border-radius:20px; background:var(--coral); color:#fff; font-size:11px; font-weight:600;">All</span>
+            <span style="padding:4px 12px; border-radius:20px; background:var(--surface); color:var(--text-mid); font-size:11px; font-weight:600;">Plateau</span>
+            <span style="padding:4px 12px; border-radius:20px; background:var(--surface); color:var(--text-mid); font-size:11px; font-weight:600;">Laurier</span>
+          </div>
+
+          <!-- Sub-tabs -->
+          <div style="background:#fff; border-radius:12px; display:flex; overflow:hidden; border-bottom:2.5px solid var(--card-shadow);">
+            <div style="flex:1; text-align:center; padding:8px; font-size:11px; font-weight:600; color:var(--coral); border-bottom:2px solid var(--coral);">Dogs</div>
+            <div style="flex:1; text-align:center; padding:8px; font-size:11px; font-weight:600; color:var(--text-light);">Logs & Conflicts</div>
+            <div style="flex:1; text-align:center; padding:8px; font-size:11px; font-weight:600; color:var(--text-light);">System</div>
+          </div>
+
+          <!-- Action row -->
+          <div style="display:flex; gap:8px;">
+            <div style="flex:1; background:var(--coral); color:#fff; text-align:center; padding:10px; border-radius:10px; font-weight:700; font-size:12px; border-bottom:2.5px solid var(--coral-dark);">+ Add Dog</div>
+            <div style="padding:10px 14px; background:#fff; border:1px solid var(--card-border); border-radius:10px; font-size:12px; font-weight:600; color:var(--text-mid); border-bottom:2.5px solid var(--card-shadow);">Sync</div>
+          </div>
+
+          <!-- Dog card example -->
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:var(--peach); display:flex; align-items:center; justify-content:center; font-size:18px;">&#x1F436;</div>
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:var(--green);"></span>
+                  <span style="font-size:14px; font-weight:700; color:var(--text);">Luna</span>
+                  <span style="font-size:10px; background:var(--surface); color:var(--text-mid); padding:1px 6px; border-radius:10px;">Plateau</span>
+                </div>
+                <p style="font-size:11px; color:var(--text-light); margin-top:2px;">Golden Retriever</p>
+              </div>
+              <div style="display:flex; gap:4px;">
+                <span style="width:28px; height:28px; background:var(--surface); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px;">&#x270F;&#xFE0F;</span>
+                <span style="width:28px; height:28px; background:#fef2f2; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px;">&#x1F5D1;&#xFE0F;</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff; border-radius:12px; border-bottom:2.5px solid var(--card-shadow); padding:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:var(--peach); display:flex; align-items:center; justify-content:center; font-size:18px;">&#x1F436;</div>
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:var(--amber);"></span>
+                  <span style="font-size:14px; font-weight:700; color:var(--text);">Chaska</span>
+                  <span style="font-size:10px; background:var(--surface); color:var(--text-mid); padding:1px 6px; border-radius:10px;">Plateau</span>
+                </div>
+                <p style="font-size:11px; color:var(--text-light); margin-top:2px;">Husky Mix</p>
+              </div>
+              <div style="display:flex; gap:4px;">
+                <span style="width:28px; height:28px; background:var(--surface); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px;">&#x270F;&#xFE0F;</span>
+              </div>
+            </div>
+            <div style="background:var(--coral); color:#fff; border-radius:8px; padding:4px 10px; font-size:10px; font-weight:500; margin-top:8px;">Leash reactive — needs experienced walker</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="changes">
+    <h3>What Moved Here</h3>
+    <ul>
+      <li><span class="tag tag-moved">Moved</span> Dog CRUD (add/edit/delete) from old Dogs tab</li>
+      <li><span class="tag tag-moved">Moved</span> Walk history search + conflict rules from old Logs tab</li>
+      <li><span class="tag tag-moved">Moved</span> System section (backup, team, protection) from old System tab</li>
+      <li><span class="tag tag-moved">Moved</span> Acuity sync button (stays with dog management)</li>
+      <li><span class="tag tag-changed">Changed</span> Card radius from <strong>24px</strong> to <strong>12px</strong> with 3D shadow</li>
+      <li><span class="tag tag-changed">Changed</span> All text colors to spec (<strong>#333</strong> primary)</li>
+      <li><span class="tag tag-removed">Removed</span> Owl notes tab from Manage (stays in Today tab)</li>
+      <li><span class="tag tag-removed">Removed</span> Beast chat from Manage (stays in Today tab)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- COLOR PALETTE -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="screen" id="palette">
+  <h2 class="section-title">V4 Color Palette</h2>
+  <p class="section-subtitle">The complete Wiggle design system</p>
+
+  <div style="max-width:680px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+    <div style="background:var(--peach); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:var(--text);">Peach</p>
+      <p style="font-size:10px; color:var(--text-mid);">#FFF5F0</p>
+      <p style="font-size:9px; color:var(--text-light); margin-top:4px;">App background</p>
+    </div>
+    <div style="background:var(--coral); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Coral</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#E8634A</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Primary action</p>
+    </div>
+    <div style="background:var(--coral-dark); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Coral Dark</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#C94A34</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Pressed states</p>
+    </div>
+    <div style="background:var(--green); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Green</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#0F6E56</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Success / Easy</p>
+    </div>
+    <div style="background:var(--amber); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Amber</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#BA7517</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Warning / Caution</p>
+    </div>
+    <div style="background:var(--blue); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Blue</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#185FA5</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Info / Addresses</p>
+    </div>
+    <div style="background:var(--purple); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:#fff;">Purple</p>
+      <p style="font-size:10px; color:rgba(255,255,255,0.7);">#534AB7</p>
+      <p style="font-size:9px; color:rgba(255,255,255,0.5); margin-top:4px;">Walker identity</p>
+    </div>
+    <div style="background:var(--surface); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:var(--text);">Surface</p>
+      <p style="font-size:10px; color:var(--text-mid);">#f0ece8</p>
+      <p style="font-size:9px; color:var(--text-light); margin-top:4px;">Container bg</p>
+    </div>
+    <div style="background:var(--card-bg); border:1px solid var(--card-border); border-bottom:2.5px solid var(--card-shadow); border-radius:12px; padding:16px; text-align:center;">
+      <p style="font-size:12px; font-weight:700; color:var(--text);">Card</p>
+      <p style="font-size:10px; color:var(--text-mid);">#fff + shadow</p>
+      <p style="font-size:9px; color:var(--text-light); margin-top:4px;">3D pill effect</p>
+    </div>
+  </div>
+
+  <div class="changes" style="margin-top:32px;">
+    <h3>Systematic Deviations Found</h3>
+    <ul>
+      <li><strong>5 files</strong> use <code>#FFF4F1</code> instead of <code>#FFF5F0</code> for background</li>
+      <li><strong>8 instances</strong> use <code>#1A1A1A</code> instead of <code>#333</code> for primary text</li>
+      <li><strong>6 instances</strong> use <code>rounded-2xl</code> (24px) instead of 10-12px for cards</li>
+      <li><strong>3 instances</strong> in Header have touch targets at 32px (should be 44px)</li>
+      <li>Pressed states use <code>#d4552d</code> instead of <code>#C94A34</code></li>
+      <li>DogCard correctly uses the 3D shadow &mdash; other cards do not</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>

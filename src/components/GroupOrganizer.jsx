@@ -502,7 +502,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         onTouchEnd={!isLocked && !isCompact ? handleTouchEndOnCard : undefined}
       >
         <DogCard
-          dog={{ id: dogId, dog_name: ev.displayName, photo_url: dog.photo_url, address: dog.address, door_code: dog.door_code, level: dog.level }}
+          dog={{ id: dogId, dog_name: ev.displayName, photo_url: dog.photo_url, address: dog.address, door_code: dog.door_code, level: dog.level, notes: dog.notes }}
           routeNumber={idx + 1}
           owlNote={owlNote}
           altAddress={hasAlt ? true : null}
@@ -517,7 +517,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             setSwipeNoteGroupName(gName)
           }}
           onUndoPickup={dogPickup ? () => undoPickup(dogId) : undefined}
-          onTapName={!isLocked ? () => handleDogTap(ev) : undefined}
+          onTapName={() => enrichDogClick(ev, groupNum)}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
           showDragHandle={!isLocked && !isCompact}
         />
@@ -601,14 +601,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             <span style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>{gName}</span>
             <span style={{ fontSize: 10, color: '#aaa' }}>{'\u00b7'}</span>
             <span style={{ fontSize: 10, color: '#aaa' }}>{total} dogs</span>
-            {wNames.map((name, i) => {
-              const bc = walkerBadgeColor(name)
-              return (
-                <span key={wIds[i]} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 6, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
-                  {name.split(' ')[0]}
-                </span>
-              )
-            })}
+            {wNames.length > 0 && (
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap' }}>
+                {wNames.map(n => n.split(' ')[0]).join(' + ')}
+              </span>
+            )}
           </div>
           <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
         </div>
@@ -1029,15 +1026,12 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
           </span>
         )}
 
-        {/* Walker badges */}
-        {wNames.map((name, i) => {
-          const bc = walkerBadgeColor(name)
-          return (
-            <span key={wIds[i]} style={{ fontSize: 9, padding: '2px 7px', borderRadius: 8, fontWeight: 600, background: bc.bg, color: bc.text, whiteSpace: 'nowrap' }}>
-              {name.split(' ')[0]}
-            </span>
-          )
-        })}
+        {/* Walker names — purple, always visible */}
+        {wNames.length > 0 && (
+          <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap', marginLeft: 2 }}>
+            {wNames.map(n => n.split(' ')[0]).join(' + ')}
+          </span>
+        )}
 
         {/* Locked by badge */}
         {isLocked && lockInfo?.locked_by_name && (
@@ -1251,9 +1245,11 @@ function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, picku
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <span style={{ fontSize: 12 }}>{'\u{1F512}'}</span>
           <span style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>{gName}</span>
-          {wNames.map((name, i) => (
-            <span key={i} style={{ fontSize: 10, padding: '1px 5px', borderRadius: 6, background: '#eee', color: '#666', fontWeight: 600 }}>{name.split(' ')[0]}</span>
-          ))}
+          {wNames.length > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap' }}>
+              {wNames.map(n => n.split(' ')[0]).join(' + ')}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 10, color: '#aaa' }}>{pickedCount}/{dogIds.length} dogs</span>

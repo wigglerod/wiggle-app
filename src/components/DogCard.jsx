@@ -109,6 +109,8 @@ export default function DogCard({
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
+  const hasPermanentNotes = dog.notes && dog.notes.trim().length > 0;
+  const nameColor = hasPermanentNotes ? '#961e78' : '#534AB7';
 
   const containerBg = isPickedUp ? '#f0fdf4' : isCurrent ? '#FFF4F1' : '#ffffff';
   const containerBorder = isPickedUp ? '1px solid #bbf7d0'
@@ -148,12 +150,19 @@ export default function DogCard({
             <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
           )}
         </div>
-        <span style={{
-          flex: 1, fontWeight: 500, fontSize: 11, overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          textDecoration: isPickedUp ? 'line-through' : 'none',
-          color: isPickedUp ? '#aaa' : '#1a1a1a',
-        }}>
+        <span
+          onClick={(e) => {
+            if (onTapName) { e.stopPropagation(); onTapName(); }
+          }}
+          style={{
+            fontWeight: 500, fontSize: 11, overflow: 'hidden',
+            textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            textDecoration: isPickedUp ? 'line-through' : 'none',
+            color: isPickedUp ? '#aaa' : nameColor,
+            borderBottom: isPickedUp ? 'none' : '1px dashed #AFA9EC',
+            cursor: onTapName ? 'pointer' : 'default',
+          }}
+        >
           {dog.dog_name}
         </span>
         {dog.door_code && (
@@ -262,15 +271,34 @@ export default function DogCard({
         }} />
 
         {/* Dog name */}
-        <span style={{
-          flex: 1, fontSize: 14, fontWeight: 600,
-          color: isPickedUp ? '#aaa' : '#333',
-          textDecoration: isPickedUp ? 'line-through' : 'none',
-          letterSpacing: '-0.01em',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+        <span
+          onClick={(e) => {
+            if (onTapName) { e.stopPropagation(); onTapName(); }
+          }}
+          style={{
+            fontSize: 14, fontWeight: 600,
+            color: isPickedUp ? '#aaa' : nameColor,
+            textDecoration: isPickedUp ? 'line-through' : 'none',
+            borderBottom: isPickedUp ? 'none' : '1px dashed #AFA9EC',
+            letterSpacing: '-0.01em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            flexShrink: 1, minWidth: 0,
+            cursor: onTapName ? 'pointer' : 'default',
+          }}
+        >
           {dog.dog_name}
         </span>
+
+        {/* Address — ALWAYS visible on mini card */}
+        {!isPickedUp && dog.address && (
+          <span style={{
+            flex: 1, fontSize: 10, color: '#475569', fontWeight: 500,
+            textAlign: 'right', whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {dog.address}
+          </span>
+        )}
 
         {/* Right side — context-dependent */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -284,8 +312,8 @@ export default function DogCard({
           {/* Door code — show inline on mini card when NOT picked up */}
           {!isPickedUp && dog.door_code && (
             <span style={{
-              fontSize: 10, color: '#185FA5', fontWeight: 600,
-              background: '#E6F1FB', padding: '2px 6px', borderRadius: 4,
+              fontSize: 9, color: '#fff', fontWeight: 700,
+              background: '#475569', padding: '2px 7px', borderRadius: 5,
             }}>
               #{dog.door_code}
             </span>
