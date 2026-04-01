@@ -630,20 +630,23 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const isOtherLocked = isGroupLocked && !isOwn && !isAdmin
     const isTarget = selectedId !== null && selectedGroup !== num && !isGroupLocked
 
-    // A dog is "done" if it has been picked up (includes returned)
+    // Pickup and return counts
     const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.pickedUpAt }).length
+    const returnedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.returnedAt }).length
     const total = dogIds.length
     const allPickedUp = total > 0 && pickedCount === total
+    const allReturned = total > 0 && returnedCount === total
 
-    // ── DONE state (collapsed) ─────────────────────────────────
-    if ((allPickedUp || isDone) && isGroupLocked) {
-      const times = dogIds.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.pickedUpAt ? new Date(p.pickedUpAt).getTime() : null }).filter(Boolean)
-      const elapsed = times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 60000) : 0
+    // ── DONE state (collapsed) — only when ALL dogs returned home ──
+    if ((allReturned || isDone) && isGroupLocked) {
+      const pickupTimes = dogIds.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.pickedUpAt ? new Date(p.pickedUpAt).getTime() : null }).filter(Boolean)
+      const returnTimes = dogIds.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.returnedAt ? new Date(p.returnedAt).getTime() : null }).filter(Boolean)
+      const elapsed = pickupTimes.length > 0 && returnTimes.length > 0 ? Math.round((Math.max(...returnTimes) - Math.min(...pickupTimes)) / 60000) : 0
       return (
         <div key={num} style={{ opacity: 0.45, background: '#f0ece8', border: '0.5px solid #e0dcd8', borderRadius: 14, padding: '8px 10px' }}
           className="flex items-center justify-between"
         >
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#0F6E56' }}>{'\u2713'} {gName} {'\u00b7'} {elapsed} min</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#0F6E56' }}>{'\u2713'} {gName} {'\u00b7'} {elapsed >= 60 ? `${Math.floor(elapsed / 60)}h ${elapsed % 60}min` : `${elapsed} min`}</span>
           <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56' }}>Done</span>
         </div>
       )
@@ -714,8 +717,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           isLinked={!!groupLinks.find(l => l.group_a_key === `${date}_${sector}_${num}` || l.group_b_key === `${date}_${sector}_${num}`)}
           onLinkTap={() => setLinkPickerNum(num)}
           statusBadge={
-            isGroupLocked && allPickedUp ? 'done'
-            : isGroupLocked && !allPickedUp ? 'walking'
+            isGroupLocked && allReturned ? 'done'
+            : isGroupLocked ? 'walking'
             : !isGroupLocked && anyGroupLocked ? 'upnext'
             : null
           }
@@ -1469,7 +1472,7 @@ function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, events
 
   const allDone = myLockedNums.length > 0 && myLockedNums.every(n => {
     const ids = (groups[n] || []).map(String)
-    return (ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] })) || doneGroupNums.has(n)
+    return (ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.returnedAt })) || doneGroupNums.has(n)
   })
 
   // Fetch note/issue counts
@@ -1501,13 +1504,15 @@ function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, events
   // Per-group durations + total time
   const groupStats = myLockedNums.map(n => {
     const ids = (groups[n] || []).map(String)
-    const times = ids.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
-    const duration = times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 60000) : 0
-    return { num: n, name: groupNames[n] || `Group ${n}`, duration, times }
+    const pickupTimes = ids.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.pickedUpAt ? new Date(p.pickedUpAt).getTime() : null }).filter(Boolean)
+    const returnTimes = ids.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.returnedAt ? new Date(p.returnedAt).getTime() : null }).filter(Boolean)
+    const duration = pickupTimes.length > 0 && returnTimes.length > 0 ? Math.round((Math.max(...returnTimes) - Math.min(...pickupTimes)) / 60000) : 0
+    return { num: n, name: groupNames[n] || `Group ${n}`, duration, pickupTimes, returnTimes }
   })
 
-  const allTimes = groupStats.flatMap(g => g.times)
-  const totalTime = allTimes.length > 1 ? Math.round((Math.max(...allTimes) - Math.min(...allTimes)) / 60000) : 0
+  const allPickupTimes = groupStats.flatMap(g => g.pickupTimes)
+  const allReturnTimes = groupStats.flatMap(g => g.returnTimes)
+  const totalTime = allPickupTimes.length > 0 && allReturnTimes.length > 0 ? Math.round((Math.max(...allReturnTimes) - Math.min(...allPickupTimes)) / 60000) : 0
 
   return (
     <div style={{ textAlign: 'center', padding: '30px 14px' }}>
