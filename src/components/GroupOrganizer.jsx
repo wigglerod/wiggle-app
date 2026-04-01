@@ -216,8 +216,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const anyGroupLocked = Object.keys(groupLocks).length > 0
   useEffect(() => { onAnyGroupLocked?.(anyGroupLocked) }, [anyGroupLocked, onAnyGroupLocked])
 
-  // Pickup tracking
-  const { pickups, markPickup, undoPickup } = usePickups(date)
+  // Pickup + return tracking
+  const { pickups, markPickup, markReturned, undoPickup } = usePickups(date)
 
   // Quick note sheet
   const [swipeNoteDog, setSwipeNoteDog] = useState(null)
@@ -231,15 +231,29 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   useEffect(() => {
     if (!sector) return
     async function fetchWalkers() {
+      // Fetch walkers for current sector:
+      //   • All profiles whose sector matches the current sector
+      //   • PLUS profiles with sector = 'both' whose full_name starts with 'Rodrigo'
+      //   • Exclude null names and known non-walking accounts
+      //   • Deduplicate by full_name (Rodrigo has two accounts)
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, sector, schedule')
-        .in('role', ['senior_walker', 'admin', 'junior_walker'])
+        .select('id, full_name, role, sector, schedule')
+        .or(`sector.eq.${sector},and(sector.eq.both,full_name.ilike.Rodrigo%)`)
+        .not('full_name', 'is', null)
+        .not('full_name', 'in', '(Gen,Wiggle Pro,Pup Walker)')
         .order('full_name')
       if (data) {
-        setAllWalkers(data)
+        // Deduplicate by full_name — keep first occurrence (already ordered)
+        const seen = new Set()
+        const deduped = data.filter(w => {
+          if (seen.has(w.full_name)) return false
+          seen.add(w.full_name)
+          return true
+        })
+        setAllWalkers(deduped)
         const map = {}
-        for (const w of data) map[w.id] = w.full_name
+        for (const w of deduped) map[w.id] = w.full_name
         setWalkerNameMap(map)
       }
     }
@@ -451,25 +465,28 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   function handleSelectWalker(wId) {
     if (!walkerPickerOpen) return
     const { groupNum, slotIndex } = walkerPickerOpen
-    const { setWalkers } = useWalkGroups(events, date, sector) // grab from hook (wait, we already have it in scope)
+    // setWalkers is already destructured from useWalkGroups above
     const currentWIds = walkerAssignments[groupNum] || []
-    
+
     let nextIds = [...currentWIds]
     if (nextIds.length < 2) nextIds = [...nextIds, ...Array(2 - nextIds.length).fill(null)]
-    
+
     if (wId === null) {
+      // Clear this slot
       nextIds[slotIndex] = null
     } else {
       nextIds[slotIndex] = wId
+      // Prevent the same walker from occupying both slots
       if (slotIndex === 0 && nextIds[1] === wId) nextIds[1] = null
       if (slotIndex === 1 && nextIds[0] === wId) nextIds[0] = null
     }
-    
+
+    // Auto-collapse: if slot 0 is empty but slot 1 is filled, shift up
     if (nextIds[0] === null && nextIds[1] !== null) {
       nextIds[0] = nextIds[1]
       nextIds[1] = null
     }
-    
+
     const finalIds = nextIds.filter(Boolean)
     setWalkers(groupNum, finalIds)
     setWalkerPickerOpen(null)
@@ -506,22 +523,32 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const selectedGroup = selectedId ? findGroup(selectedId) : null
   const selectedDogName = selectedId ? eventsMap.get(selectedId)?.displayName : null
 
-  function enrichDogClick(ev, groupKey) {
+  function enrichDogClick(ev, groupKey, dogPickup = null, dogId = null, walkDate = null) {
     const gName = groupKey === 'unassigned' ? 'Unassigned' : (groupNames[groupKey] || `Group ${groupKey}`)
-    onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName })
+    const walkInfo = (dogId && dogPickup?.pickedUpAt) ? {
+      dogId,
+      walkDate: walkDate || date,
+      pickedUpAt: dogPickup.pickedUpAt,
+      returnedAt: dogPickup.returnedAt || null,
+    } : null
+    onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName, _walkInfo: walkInfo })
   }
 
-  // Format pickup time
-  function formatPickupTime(time) {
+  // Format a timestamp in Toronto time
+  function formatWalkTime(time) {
     if (!time) return null
     return new Date(time).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' })
   }
+  // Legacy alias
+  const formatPickupTime = formatWalkTime
 
   // ── Render a DogCard for an event ──────────────────────────────
   function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false, isCompact = false) {
     const dog = ev.dog || {}
     const dogId = dog.id
     const dogPickup = dogId ? pickups[dogId] : null
+    const isPickedUp = !!dogPickup?.pickedUpAt
+    const isReturned = !!dogPickup?.returnedAt
     const owlNote = dogId ? owlDogNotesMap.get(dogId) : null
     const hasAlt = dogId && altAddressDogIds.has(dogId)
     const gName = groupNames[groupNum] || `Group ${groupNum}`
@@ -538,17 +565,20 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           owlNote={owlNote}
           altAddress={hasAlt ? true : null}
           isLocked={isLocked}
-          isPickedUp={!!dogPickup}
+          isPickedUp={isPickedUp}
+          isReturned={isReturned}
           isCurrent={isCurrent}
           isCompact={isCompact}
-          pickupTime={formatPickupTime(dogPickup?.time)}
-          onSwipeLeft={() => markPickup(dogId, ev.displayName)}
+          pickupTime={formatWalkTime(dogPickup?.pickedUpAt)}
+          returnedTime={formatWalkTime(dogPickup?.returnedAt)}
+          onSwipeLeft={!isPickedUp ? () => markPickup(dogId, ev.displayName) : undefined}
+          onSwipeLeftSecond={isPickedUp && !isReturned ? () => markReturned(dogId, ev.displayName) : undefined}
           onSwipeRight={() => {
             setSwipeNoteDog({ id: dogId, dog_name: dog.dog_name || ev.displayName, photo_url: dog.photo_url })
             setSwipeNoteGroupName(gName)
           }}
-          onUndoPickup={dogPickup ? () => undoPickup(dogId) : undefined}
-          onTapName={() => enrichDogClick(ev, groupNum)}
+          onUndoPickup={isPickedUp ? () => undoPickup(dogId) : undefined}
+          onTapName={() => enrichDogClick(ev, groupNum, dogPickup, dogId, date)}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
           showDragHandle={!isLocked && !isCompact}
         />
@@ -597,13 +627,14 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const isOtherLocked = isGroupLocked && !isOwn && !isAdmin
     const isTarget = selectedId !== null && selectedGroup !== num && !isGroupLocked
 
-    const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
+    // A dog is "done" if it has been picked up (includes returned)
+    const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.pickedUpAt }).length
     const total = dogIds.length
     const allPickedUp = total > 0 && pickedCount === total
 
     // ── DONE state (collapsed) ─────────────────────────────────
     if ((allPickedUp || isDone) && isGroupLocked) {
-      const times = dogIds.map(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.time ? new Date(pickups[ev.dog.id].time).getTime() : null }).filter(Boolean)
+      const times = dogIds.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.pickedUpAt ? new Date(p.pickedUpAt).getTime() : null }).filter(Boolean)
       const elapsed = times.length > 1 ? Math.round((Math.max(...times) - Math.min(...times)) / 60000) : 0
       return (
         <div key={num} style={{ opacity: 0.45, background: '#f0ece8', border: '0.5px solid #e0dcd8', borderRadius: 14, padding: '8px 10px' }}
@@ -686,11 +717,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           }
         />
 
-        {/* Swipe hint (first locked group only) */}
+        {/* Swipe hint bar (first locked group only) */}
         {isGroupLocked && groupNums.filter(n => groupLocks[n]).indexOf(num) === 0 && (
-          <p style={{ fontSize: 11, color: '#c5c0bb', textAlign: 'center', marginBottom: 6, padding: '8px 16px', letterSpacing: '0.02em', background: 'rgba(0,0,0,0.015)', borderRadius: 8 }}>
-            {'\u2190'} swipe = picked up | swipe {'\u2192'} = note
-          </p>
+          <SwipeHintBar />
         )}
 
         {/* Dogs */}
@@ -699,7 +728,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           (() => {
             const firstUnpickedIdx = dogIds.findIndex(id => {
               const ev = eventsMap.get(id)
-              return ev?.dog?.id && !pickups[ev.dog.id]
+              // "current" = first dog not yet picked up and not returned
+              return ev?.dog?.id && !pickups[ev.dog.id]?.pickedUpAt
             })
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1028,6 +1058,43 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 //   SUB-COMPONENTS
 // ══════════════════════════════════════════════════════════════════
+
+// ── Swipe hint bar ─────────────────────────────────────────────────
+function SwipeHintBar() {
+  const divStyle = {
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '5px 4px', gap: 3,
+  }
+  const arrowStyle = { fontSize: 13, color: '#B5AFA8', fontWeight: 700, lineHeight: 1 }
+  const labelStyle = { fontSize: 11, color: '#8C857E', fontWeight: 500 }
+  const dividerStyle = { width: 1, alignSelf: 'stretch', background: '#E8E4E0', flexShrink: 0 }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'stretch',
+      background: '#F0ECE8', borderRadius: 10, border: '1px solid #E8E4E0',
+      marginBottom: 8, overflow: 'hidden',
+    }}>
+      <div style={divStyle}>
+        <span style={arrowStyle}>←</span>
+        <span style={labelStyle}>pick up</span>
+      </div>
+      <div style={dividerStyle} />
+      <div style={divStyle}>
+        <span style={arrowStyle}>←</span>
+        <span style={labelStyle}>back home</span>
+      </div>
+      <div style={dividerStyle} />
+      <div style={divStyle}>
+        <span style={labelStyle}>tap name</span>
+        <span style={arrowStyle}>→</span>
+        <span style={labelStyle}>profile</span>
+      </div>
+    </div>
+  )
+}
+
+
 
 // ── Group header ──────────────────────────────────────────────────
 function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, onWalkerSlotTap, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
@@ -1614,19 +1681,10 @@ function LinkPicker({ sourceNum, sourceName, groupNums, groupNames, groupLinks, 
 function WalkerPickerSheet({ isOpen, onClose, groupNum, slotIndex, currentWIds, allWalkers, date, sector, onSelect }) {
   const dayName = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })
   
-  // Filter generic and admin
-  const validWalkers = allWalkers.filter(w => {
-    if (!w.full_name) return false
-    if (w.full_name.includes('Wiggle Pro') || w.full_name.includes('Pup Walker') || w.full_name.includes('Gen')) return false
-    return true
-  })
-
-  // Sector filtering
-  const sectorWalkers = validWalkers.filter(w => w.sector === sector || w.sector === 'both')
-
-  // split primary and secondary
-  const primary = sectorWalkers.filter(w => w.schedule && w.schedule.includes(dayName))
-  const secondary = sectorWalkers.filter(w => !(w.schedule && w.schedule.includes(dayName)))
+  // allWalkers is already filtered, sector-scoped, and deduplicated by the fetch query.
+  // Just split by schedule for UI grouping.
+  const primary = allWalkers.filter(w => w.schedule && w.schedule.includes(dayName))
+  const secondary = allWalkers.filter(w => !(w.schedule && w.schedule.includes(dayName)))
 
   function renderBtn(w, isPrimary) {
     const isAssigned = currentWIds.includes(w.id)
