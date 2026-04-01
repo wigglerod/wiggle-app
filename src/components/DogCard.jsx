@@ -39,6 +39,11 @@ export default function DogCard({
   const swipeXRef = useRef(0);
   const swipingRef = useRef(false);
 
+  // Keep latest swipe callbacks in a ref so handleTouchEnd is always stable
+  // and never reads stale closure values after state transitions (e.g. pickup → return)
+  const swipeCallbacksRef = useRef({ onSwipeLeft, onSwipeLeftSecond, onSwipeRight });
+  swipeCallbacksRef.current = { onSwipeLeft, onSwipeLeftSecond, onSwipeRight };
+
   const handleTouchStart = useCallback((e) => {
     const t = e.touches[0];
     touchRef.current = { x: t.clientX, y: t.clientY, claimed: false };
@@ -72,21 +77,22 @@ export default function DogCard({
   const handleTouchEnd = useCallback(() => {
     if (!swipingRef.current) return;
     const dx = swipeXRef.current;
+    const { onSwipeLeft: left, onSwipeLeftSecond: leftSecond, onSwipeRight: right } = swipeCallbacksRef.current;
 
     if (dx < -THRESHOLD_PX) {
       try { navigator.vibrate?.(10) } catch {}
-      if (!isPickedUp && onSwipeLeft) onSwipeLeft();
-      else if (isPickedUp && !isReturned && onSwipeLeftSecond) onSwipeLeftSecond();
-    } else if (dx > THRESHOLD_PX && onSwipeRight) {
+      if (left) left();
+      else if (leftSecond) leftSecond();
+    } else if (dx > THRESHOLD_PX && right) {
       try { navigator.vibrate?.(10) } catch {}
-      onSwipeRight();
+      right();
     }
 
     swipingRef.current = false;
     swipeXRef.current = 0;
     setSwiping(false);
     setSwipeX(0);
-  }, [isPickedUp, isReturned, onSwipeLeft, onSwipeLeftSecond, onSwipeRight]);
+  }, []);
 
   // Attach touch listeners — active when locked and not yet returned
   useEffect(() => {
@@ -113,8 +119,6 @@ export default function DogCard({
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
-  const hasPermanentNotes = dog.notes && dog.notes.trim().length > 0;
-  const nameColor = hasPermanentNotes ? '#961e78' : '#2D2926';
 
   // ── Derive visual state ────────────────────────────────────────
   // State 3: Returned home
@@ -183,8 +187,9 @@ export default function DogCard({
             fontWeight: 500, fontSize: 11, overflow: 'hidden',
             textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             textDecoration: (isPickedUp || isReturned) ? 'line-through' : 'none',
-            color: (isPickedUp || isReturned) ? '#B5AFA8' : nameColor,
-            borderBottom: (isPickedUp || isReturned) ? 'none' : '1px dashed #AFA9EC',
+            textDecorationColor: '#534AB7',
+            color: '#534AB7',
+            borderBottom: '1px dashed #AFA9EC',
             cursor: onTapName ? 'pointer' : 'default',
           }}
         >
@@ -306,14 +311,15 @@ export default function DogCard({
           background: levelDot,
         }} />
 
-        {/* Dog name — tap opens profile */}
+        {/* Dog name — tap opens profile (ALWAYS purple link, every state) */}
         <span
           onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
           style={{
             fontSize: 14, fontWeight: 600,
-            color: (isPickedUp || isReturned) ? '#B5AFA8' : nameColor,
+            color: '#534AB7',
             textDecoration: (isPickedUp || isReturned) ? 'line-through' : 'none',
-            borderBottom: (isPickedUp || isReturned) ? 'none' : '1px dashed #AFA9EC',
+            textDecorationColor: '#534AB7',
+            borderBottom: '1px dashed #AFA9EC',
             letterSpacing: '-0.01em',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             flexShrink: 1, minWidth: 0,

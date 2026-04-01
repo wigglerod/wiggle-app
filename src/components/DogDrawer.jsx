@@ -667,28 +667,10 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
           {!editing && (
             <div className="flex flex-col gap-3">
 
-              {/* ── Walk Times (when dog is walked today) ──────── */}
-              {event._walkInfo?.pickedUpAt && (() => {
-                const wi = event._walkInfo
-                const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
-                const pickedFmt = fmt(wi.pickedUpAt)
-                const returnedFmt = fmt(wi.returnedAt)
-                const duration = wi.pickedUpAt && wi.returnedAt
-                  ? Math.round((new Date(wi.returnedAt) - new Date(wi.pickedUpAt)) / 60000)
-                  : null
-
-                return (
-                  <WalkTimesSection
-                    pickedUpAt={wi.pickedUpAt}
-                    returnedAt={wi.returnedAt}
-                    pickedFmt={pickedFmt}
-                    returnedFmt={returnedFmt}
-                    duration={duration}
-                    dogId={wi.dogId}
-                    walkDate={wi.walkDate}
-                  />
-                )
-              })()}
+              {/* ── Walk Times (always shown when walkInfo exists) ──────── */}
+              {event._walkInfo && (
+                <LiveWalkTimes walkInfo={event._walkInfo} />
+              )}
 
               {owlNotes && owlNotes.length > 0 && (
                 <div className="flex flex-col gap-2">
@@ -984,8 +966,40 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   )
 }
 
+// ── Live Walk Times wrapper — reads live pickup state from usePickups ──
+function LiveWalkTimes({ walkInfo }) {
+  const { pickups } = usePickups(walkInfo.walkDate)
+  const wi = walkInfo
+  const livePickup = wi.dogId ? pickups[wi.dogId] : null
+  const pickedUpAt = livePickup?.pickedUpAt || null
+  const returnedAt = livePickup?.returnedAt || null
+
+  const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
+  const pickedFmt = fmt(pickedUpAt)
+  const returnedFmt = fmt(returnedAt)
+  const duration = pickedUpAt && returnedAt
+    ? Math.round((new Date(returnedAt) - new Date(pickedUpAt)) / 60000)
+    : null
+
+  return (
+    <WalkTimesSection
+      pickedUpAt={pickedUpAt}
+      returnedAt={returnedAt}
+      pickedFmt={pickedFmt}
+      returnedFmt={returnedFmt}
+      duration={duration}
+      dogId={wi.dogId}
+      walkDate={wi.walkDate}
+      onMarkPickup={wi.markPickup}
+      onMarkReturned={wi.markReturned}
+      onUndoPickup={wi.undoPickup}
+      onUndoReturned={wi.undoReturned}
+    />
+  )
+}
+
 // ── Walk Times Section ───────────────────────────────────────────────
-function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, duration, dogId, walkDate }) {
+function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, duration, dogId, walkDate, onMarkPickup, onMarkReturned, onUndoPickup, onUndoReturned }) {
   const { updateTimestamp } = usePickups(walkDate)
   const [editingType, setEditingType] = useState(null) // 'pickup' | 'returned'
   const [timeInput, setTimeInput] = useState('')
@@ -1025,11 +1039,100 @@ function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, dura
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '8px 0', borderBottom: '1px solid #F0ECE8',
   }
+  const actionBtnStyle = {
+    width: '100%', padding: 10, borderRadius: 10,
+    background: '#2D8F6F', color: '#fff',
+    fontSize: 13, fontWeight: 700, textAlign: 'center',
+    border: 'none', cursor: 'pointer', marginTop: 8,
+  }
+  const undoLinkStyle = {
+    fontSize: 11, color: '#E8634A', textAlign: 'center',
+    marginTop: 6, cursor: 'pointer', background: 'none',
+    border: 'none', width: '100%', padding: 0,
+  }
 
+  // ── STATE: WAITING (not picked up) ─────────────────────────
+  if (!pickedUpAt) {
+    return (
+      <div style={{
+        background: '#F8F6F4', borderRadius: 14,
+        border: '1px solid #E8E4E0', padding: '12px 14px',
+      }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#8C857E', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          Walk Times
+        </p>
+        <div style={rowStyle}>
+          <span style={{ fontSize: 13, color: '#B5AFA8', fontWeight: 500 }}>Picked up</span>
+          <span style={{ fontSize: 11, color: '#D5CFC8' }}>not yet</span>
+        </div>
+        {onMarkPickup && (
+          <button onClick={onMarkPickup} style={actionBtnStyle}>
+            Mark as picked up
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // ── STATE: PICKED UP (not returned) ─────────────────────────
+  if (pickedUpAt && !returnedAt) {
+    return (
+      <div style={{
+        background: '#F8F6F4', borderRadius: 14,
+        border: '1px solid #E8E4E0', padding: '12px 14px',
+      }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#8C857E', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          Walk Times
+        </p>
+
+        {/* Picked up row */}
+        <div style={rowStyle}>
+          <span style={{ fontSize: 13, color: '#2D2926', fontWeight: 500 }}>Picked up</span>
+          {editingType === 'pickup' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="time" value={timeInput} onChange={e => setTimeInput(e.target.value)}
+                style={{ fontSize: 13, border: '1px solid #AFA9EC', borderRadius: 8, padding: '3px 6px', color: '#534AB7', background: '#EEEDFE' }} />
+              <button onClick={saveEdit} disabled={saving} style={{ ...editBtnStyle, background: '#534AB7', color: '#fff', border: 'none' }}>
+                {saving ? '...' : 'Save'}
+              </button>
+              <button onClick={() => setEditingType(null)} style={{ ...editBtnStyle, background: '#F0ECE8', color: '#8C857E', border: '1px solid #E8E4E0' }}>✕</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#2D8F6F' }}>{pickedFmt}</span>
+              <button onClick={() => startEdit('pickup')} style={editBtnStyle}>Edit</button>
+            </div>
+          )}
+        </div>
+
+        {/* Back home — not yet */}
+        <div style={{ ...rowStyle, borderBottom: 'none' }}>
+          <span style={{ fontSize: 13, color: '#B5AFA8', fontWeight: 500 }}>Back home</span>
+          <span style={{ fontSize: 11, color: '#D5CFC8' }}>not yet</span>
+        </div>
+
+        {/* Action: mark as back home */}
+        {onMarkReturned && (
+          <button onClick={onMarkReturned} style={actionBtnStyle}>
+            Mark as back home
+          </button>
+        )}
+
+        {/* Undo pickup */}
+        {onUndoPickup && (
+          <button onClick={onUndoPickup} style={undoLinkStyle}>
+            Undo pickup
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // ── STATE: RETURNED (back home) ─────────────────────────────
   return (
     <div style={{
       background: '#F8F6F4', borderRadius: 14,
-      border: '1px solid #E8E4E0', padding: '12px 14px', marginBottom: 0,
+      border: '1px solid #E8E4E0', padding: '12px 14px',
     }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#8C857E', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
         Walk Times
@@ -1040,18 +1143,12 @@ function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, dura
         <span style={{ fontSize: 13, color: '#2D2926', fontWeight: 500 }}>Picked up</span>
         {editingType === 'pickup' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="time"
-              value={timeInput}
-              onChange={e => setTimeInput(e.target.value)}
-              style={{ fontSize: 13, border: '1px solid #AFA9EC', borderRadius: 8, padding: '3px 6px', color: '#534AB7', background: '#EEEDFE' }}
-            />
+            <input type="time" value={timeInput} onChange={e => setTimeInput(e.target.value)}
+              style={{ fontSize: 13, border: '1px solid #AFA9EC', borderRadius: 8, padding: '3px 6px', color: '#534AB7', background: '#EEEDFE' }} />
             <button onClick={saveEdit} disabled={saving} style={{ ...editBtnStyle, background: '#534AB7', color: '#fff', border: 'none' }}>
               {saving ? '...' : 'Save'}
             </button>
-            <button onClick={() => setEditingType(null)} style={{ ...editBtnStyle, background: '#F0ECE8', color: '#8C857E', border: '1px solid #E8E4E0' }}>
-              ✕
-            </button>
+            <button onClick={() => setEditingType(null)} style={{ ...editBtnStyle, background: '#F0ECE8', color: '#8C857E', border: '1px solid #E8E4E0' }}>✕</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1062,50 +1159,44 @@ function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, dura
       </div>
 
       {/* Back home row */}
-      {returnedAt ? (
-        <div style={{ ...rowStyle, borderBottom: duration !== null ? '1px solid #F0ECE8' : 'none' }}>
-          <span style={{ fontSize: 13, color: '#2D2926', fontWeight: 500 }}>Back home</span>
-          {editingType === 'returned' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input
-                type="time"
-                value={timeInput}
-                onChange={e => setTimeInput(e.target.value)}
-                style={{ fontSize: 13, border: '1px solid #AFA9EC', borderRadius: 8, padding: '3px 6px', color: '#534AB7', background: '#EEEDFE' }}
-              />
-              <button onClick={saveEdit} disabled={saving} style={{ ...editBtnStyle, background: '#534AB7', color: '#fff', border: 'none' }}>
-                {saving ? '...' : 'Save'}
-              </button>
-              <button onClick={() => setEditingType(null)} style={{ ...editBtnStyle, background: '#F0ECE8', color: '#8C857E', border: '1px solid #E8E4E0' }}>
-                ✕
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#B5AFA8' }}>{returnedFmt}</span>
-              <button onClick={() => startEdit('returned')} style={editBtnStyle}>Edit</button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ ...rowStyle, borderBottom: 'none' }}>
-          <span style={{ fontSize: 13, color: '#B5AFA8', fontStyle: 'italic' }}>Back home</span>
-          <span style={{ fontSize: 11, color: '#D5CFC8' }}>not yet</span>
-        </div>
-      )}
+      <div style={{ ...rowStyle, borderBottom: duration !== null ? '1px solid #F0ECE8' : 'none' }}>
+        <span style={{ fontSize: 13, color: '#2D2926', fontWeight: 500 }}>Back home</span>
+        {editingType === 'returned' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="time" value={timeInput} onChange={e => setTimeInput(e.target.value)}
+              style={{ fontSize: 13, border: '1px solid #AFA9EC', borderRadius: 8, padding: '3px 6px', color: '#534AB7', background: '#EEEDFE' }} />
+            <button onClick={saveEdit} disabled={saving} style={{ ...editBtnStyle, background: '#534AB7', color: '#fff', border: 'none' }}>
+              {saving ? '...' : 'Save'}
+            </button>
+            <button onClick={() => setEditingType(null)} style={{ ...editBtnStyle, background: '#F0ECE8', color: '#8C857E', border: '1px solid #E8E4E0' }}>✕</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#B5AFA8' }}>{returnedFmt}</span>
+            <button onClick={() => startEdit('returned')} style={editBtnStyle}>Edit</button>
+          </div>
+        )}
+      </div>
 
       {/* Duration */}
       {duration !== null && (
         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
           <span style={{ fontSize: 12, color: '#8C857E' }}>Duration</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#2D8F6F' }}>
-            {duration >= 60 ? `${Math.floor(duration / 60)}h ${duration % 60}m` : `${duration} min`}
+            {duration >= 60 ? `${Math.floor(duration / 60)}h ${String(duration % 60).padStart(2, '0')}min` : `${duration} min`}
           </span>
         </div>
       )}
 
+      {/* Undo return */}
+      {onUndoReturned && (
+        <button onClick={onUndoReturned} style={undoLinkStyle}>
+          Undo return
+        </button>
+      )}
+
       <p style={{ fontSize: 10, color: '#D5CFC8', textAlign: 'center', marginTop: 10 }}>
-        Edit times to undo pickup or home log
+        Edit times to correct pickup or home log
       </p>
     </div>
   )

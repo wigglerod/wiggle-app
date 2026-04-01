@@ -209,7 +209,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const {
     groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
     moveEvent, addGroup, renameGroup, reorderGroup,
-    addWalker, removeWalker, linkGroups, unlinkGroups,
+    addWalker, removeWalker, setWalkers, linkGroups, unlinkGroups,
     loaded, lastSaved, lockGroup, unlockGroup,
   } = useWalkGroups(events, date, sector)
 
@@ -217,7 +217,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   useEffect(() => { onAnyGroupLocked?.(anyGroupLocked) }, [anyGroupLocked, onAnyGroupLocked])
 
   // Pickup + return tracking
-  const { pickups, markPickup, markReturned, undoPickup } = usePickups(date)
+  const { pickups, markPickup, markReturned, undoPickup, undoReturned } = usePickups(date)
 
   // Quick note sheet
   const [swipeNoteDog, setSwipeNoteDog] = useState(null)
@@ -226,7 +226,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   // Walker name and profile lookup
   const [walkerNameMap, setWalkerNameMap] = useState({})
   const [allWalkers, setAllWalkers] = useState([])
-  const [walkerPickerOpen, setWalkerPickerOpen] = useState(null) // { groupNum, slotIndex }
 
   useEffect(() => {
     if (!sector) return
@@ -462,34 +461,33 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     }
   }
 
-  function handleSelectWalker(wId) {
-    if (!walkerPickerOpen) return
-    const { groupNum, slotIndex } = walkerPickerOpen
-    // setWalkers is already destructured from useWalkGroups above
+  function handleCycleSlot(groupNum, slotIndex) {
     const currentWIds = walkerAssignments[groupNum] || []
+    const sorted = getSortedWalkers(allWalkers, sector)
+    const sortedIds = sorted.map(w => w.id)
+    const currentId = currentWIds[slotIndex] || null
 
-    let nextIds = [...currentWIds]
-    if (nextIds.length < 2) nextIds = [...nextIds, ...Array(2 - nextIds.length).fill(null)]
-
-    if (wId === null) {
-      // Clear this slot
-      nextIds[slotIndex] = null
+    // Find next walker in cycle: empty → first → second → ... → last → empty
+    let nextId = null
+    if (currentId === null) {
+      nextId = sortedIds[0] || null
     } else {
-      nextIds[slotIndex] = wId
-      // Prevent the same walker from occupying both slots
-      if (slotIndex === 0 && nextIds[1] === wId) nextIds[1] = null
-      if (slotIndex === 1 && nextIds[0] === wId) nextIds[0] = null
+      const idx = sortedIds.indexOf(currentId)
+      if (idx === -1 || idx === sortedIds.length - 1) {
+        nextId = null // cycle back to empty
+      } else {
+        nextId = sortedIds[idx + 1]
+      }
     }
 
-    // Auto-collapse: if slot 0 is empty but slot 1 is filled, shift up
-    if (nextIds[0] === null && nextIds[1] !== null) {
-      nextIds[0] = nextIds[1]
-      nextIds[1] = null
-    }
+    // Build new walker list: [slot0, slot1]
+    const newIds = [...currentWIds]
+    while (newIds.length < 2) newIds.push(null)
+    newIds[slotIndex] = nextId
 
-    const finalIds = nextIds.filter(Boolean)
+    // If both slots are null, clear; otherwise filter nulls from end
+    const finalIds = newIds.filter(Boolean)
     setWalkers(groupNum, finalIds)
-    setWalkerPickerOpen(null)
   }
 
   function handleBackgroundTap(e) {
@@ -525,11 +523,16 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   function enrichDogClick(ev, groupKey, dogPickup = null, dogId = null, walkDate = null) {
     const gName = groupKey === 'unassigned' ? 'Unassigned' : (groupNames[groupKey] || `Group ${groupKey}`)
-    const walkInfo = (dogId && dogPickup?.pickedUpAt) ? {
+    const dogName = ev.displayName || ev.dog?.dog_name || 'Dog'
+    const walkInfo = dogId ? {
       dogId,
       walkDate: walkDate || date,
-      pickedUpAt: dogPickup.pickedUpAt,
-      returnedAt: dogPickup.returnedAt || null,
+      pickedUpAt: dogPickup?.pickedUpAt || null,
+      returnedAt: dogPickup?.returnedAt || null,
+      markPickup: () => markPickup(dogId, dogName),
+      markReturned: () => markReturned(dogId, dogName),
+      undoPickup: () => undoPickup(dogId),
+      undoReturned: () => undoReturned(dogId),
     } : null
     onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName, _walkInfo: walkInfo })
   }
@@ -698,7 +701,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           wIds={wIds}
           allWalkers={allWalkers}
           date={date}
-          onWalkerSlotTap={(slotIndex) => setWalkerPickerOpen({ groupNum: num, slotIndex })}
+          sector={sector}
+          onCycleSlot={(slotIndex) => handleCycleSlot(num, slotIndex)}
           isLocked={isGroupLocked}
           lockInfo={lockInfo}
           dogCount={total}
@@ -1007,23 +1011,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         )}
       </AnimatePresence>
 
-      {/* Walker Picker Sheet */}
-      <AnimatePresence>
-        {walkerPickerOpen && (
-          <WalkerPickerSheet
-            isOpen={!!walkerPickerOpen}
-            onClose={() => setWalkerPickerOpen(null)}
-            groupNum={walkerPickerOpen.groupNum}
-            slotIndex={walkerPickerOpen.slotIndex}
-            currentWIds={walkerAssignments[walkerPickerOpen.groupNum] || []}
-            allWalkers={allWalkers}
-            date={date}
-            sector={sector}
-            onSelect={handleSelectWalker}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Group creation sheet */}
       <AnimatePresence>
         {creationSheetOpen && (
@@ -1096,8 +1083,29 @@ function SwipeHintBar() {
 
 
 
+// ── Fixed walker display order per sector ─────────────────────────
+const WALKER_ORDER = {
+  Laurier: ['Amanda', 'Amelie', 'Rodrigo', 'Maeva', 'Belen'],
+  Plateau: ['Chloe', 'Megan', 'Rodrigo', 'Solene'],
+}
+
+function getSortedWalkers(allWalkers, sector) {
+  const order = WALKER_ORDER[sector] || []
+  return [...allWalkers].sort((a, b) => {
+    const aFirst = (a.full_name || '').split(' ')[0]
+    const bFirst = (b.full_name || '').split(' ')[0]
+    const aIdx = order.indexOf(aFirst)
+    const bIdx = order.indexOf(bFirst)
+    // Known names come first in defined order; unknowns go to end alphabetically
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx
+    if (aIdx !== -1) return -1
+    if (bIdx !== -1) return 1
+    return aFirst.localeCompare(bFirst)
+  })
+}
+
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, onWalkerSlotTap, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
+function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCycleSlot, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -1112,7 +1120,48 @@ function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, onWalkerSlotT
     if (trimmed && trimmed !== gName) onRename?.(trimmed)
   }
 
-  const dayName = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })
+  const walkerNameMap = useMemo(() => {
+    const m = {}
+    for (const w of allWalkers) m[w.id] = (w.full_name || '').split(' ')[0]
+    return m
+  }, [allWalkers])
+
+  function renderSlot(slotIndex) {
+    const wId = wIds[slotIndex]
+    const name = wId ? (walkerNameMap[wId] || 'Walker') : null
+    const isAssigned = !!wId
+
+    // Locked: only show assigned slots
+    if (isLocked && !isAssigned) return null
+
+    return (
+      <button
+        key={slotIndex}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!isLocked) onCycleSlot(slotIndex)
+        }}
+        style={{
+          fontSize: 9,
+          padding: '2px 7px',
+          borderRadius: 8,
+          fontWeight: isAssigned ? 600 : 400,
+          background: isAssigned ? '#534AB7' : 'transparent',
+          color: isAssigned ? '#fff' : '#B5AFA8',
+          border: isAssigned ? '1px solid #534AB7' : '1px dashed #AFA9EC',
+          cursor: isLocked ? 'default' : 'pointer',
+          minHeight: 28,
+          minWidth: 44,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        {isAssigned ? name : '+ walker'}
+      </button>
+    )
+  }
 
   return (
     <div
@@ -1148,44 +1197,8 @@ function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, onWalkerSlotT
 
         {/* Walker slots */}
         <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
-          {[0, 1].map(slotIndex => {
-            const wId = wIds[slotIndex]
-            if (wId) {
-              const name = wNames[slotIndex]?.split(' ')[0] || 'Walker'
-              const w = allWalkers.find(x => x.id === wId)
-              const isPrimary = w?.schedule?.includes(dayName)
-              return (
-                <button
-                  key={slotIndex}
-                  onClick={(e) => { e.stopPropagation(); if (!isLocked) onWalkerSlotTap(slotIndex) }}
-                  style={{
-                    fontSize: 10, padding: '3px 10px', borderRadius: 8, fontWeight: 600,
-                    background: isPrimary ? '#534AB7' : '#EEEDFE', 
-                    color: isPrimary ? '#fff' : '#534AB7', 
-                    border: isPrimary ? '1px solid #534AB7' : '1px solid #C4C0DE',
-                    cursor: isLocked ? 'default' : 'pointer'
-                  }}
-                >
-                  {name}
-                </button>
-              )
-            } else {
-              if (isLocked) return null
-              return (
-                <button
-                  key={slotIndex}
-                  onClick={(e) => { e.stopPropagation(); onWalkerSlotTap(slotIndex) }}
-                  style={{
-                    fontSize: 10, padding: '3px 10px', borderRadius: 8, fontWeight: 500,
-                    background: 'transparent', color: '#888', border: '1px dashed #bbb',
-                    cursor: 'pointer'
-                  }}
-                >
-                  + walker
-                </button>
-              )
-            }
-          })}
+          {renderSlot(0)}
+          {renderSlot(1)}
         </div>
 
         {/* Locked by badge */}
@@ -1425,7 +1438,10 @@ function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, picku
             return (
               <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '2px 0', opacity: dogPk ? 0.5 : 1 }}>
                 <span style={{ color: '#aaa', width: 14, textAlign: 'center' }}>{idx + 1}</span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: dogPk ? 'line-through' : 'none', color: dogPk ? '#aaa' : '#555' }}>{ev.displayName}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); onDogClick(ev) }}
+                  style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: dogPk ? 'line-through' : 'none', textDecorationColor: '#534AB7', color: '#534AB7', borderBottom: '1px dashed #AFA9EC', cursor: 'pointer' }}
+                >{ev.displayName}</span>
                 {timeStr && <span style={{ fontSize: 10, color: '#0F6E56' }}>{timeStr}</span>}
                 {dog.address && (
                   <span onClick={() => onDogClick(ev)} style={{ fontSize: 10, color: '#185FA5', cursor: 'pointer', flexShrink: 0 }}>
@@ -1677,80 +1693,3 @@ function LinkPicker({ sourceNum, sourceName, groupNums, groupNames, groupLinks, 
   )
 }
 
-// ── Walker Picker Sheet ───────────────────────────────────────────
-function WalkerPickerSheet({ isOpen, onClose, groupNum, slotIndex, currentWIds, allWalkers, date, sector, onSelect }) {
-  const dayName = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })
-  
-  // allWalkers is already filtered, sector-scoped, and deduplicated by the fetch query.
-  // Just split by schedule for UI grouping.
-  const primary = allWalkers.filter(w => w.schedule && w.schedule.includes(dayName))
-  const secondary = allWalkers.filter(w => !(w.schedule && w.schedule.includes(dayName)))
-
-  function renderBtn(w, isPrimary) {
-    const isAssigned = currentWIds.includes(w.id)
-    return (
-      <button key={w.id} onClick={() => onSelect(w.id)}
-        style={{
-          width: '100%', padding: 12, borderRadius: 10,
-          background: isPrimary ? (isAssigned ? '#3730A3' : '#534AB7') : (isAssigned ? '#EEEDFE' : 'transparent'),
-          color: isPrimary ? '#fff' : '#534AB7',
-          border: isPrimary ? (isAssigned ? '1px solid #3730A3' : '1px solid #534AB7') : '1px solid #534AB7',
-          fontSize: 14, fontWeight: 600,
-          marginBottom: 8, cursor: 'pointer',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}
-      >
-        <span>{w.full_name.split(' ')[0]}</span>
-        {isAssigned && <span style={{ fontSize: 12, opacity: 0.8 }}>{'\u2713'} Assigned</span>}
-      </button>
-    )
-  }
-
-  return (
-    <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100]" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={onClose} />
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[101] bg-white shadow-2xl pb-[env(safe-area-inset-bottom)]"
-        style={{ borderRadius: '16px 16px 0 0', padding: 20, maxHeight: '80vh', overflowY: 'auto' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2 }} />
-        </div>
-        
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#333' }}>
-          Assign walker to slot {slotIndex + 1}
-        </h3>
-
-        {primary.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Scheduled Today</p>
-            {primary.map(w => renderBtn(w, true))}
-          </div>
-        )}
-
-        {secondary.length > 0 && (
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Other Walkers</p>
-            {secondary.map(w => renderBtn(w, false))}
-          </div>
-        )}
-
-        {/* Clear assignment button */}
-        {currentWIds[slotIndex] && (
-          <button onClick={() => onSelect(null)}
-            style={{
-              width: '100%', padding: 12, borderRadius: 10,
-              background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca',
-              fontSize: 14, fontWeight: 600, marginTop: 16, cursor: 'pointer'
-            }}
-          >
-            Clear Slot
-          </button>
-        )}
-      </motion.div>
-    </>
-  )
-}
