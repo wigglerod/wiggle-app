@@ -44,11 +44,22 @@ export function useWalkGroups(events, date, sector) {
     if (!date || !sector || allEventIds.length === 0) return
 
     async function load() {
-      const { data, error: loadError } = await supabase
+      const isAdmin = profile?.role === 'admin'
+
+      // Build query — admins see ALL groups; regular users see groups locked by
+      // them or unlocked groups (RLS policies may also enforce this server-side)
+      let query = supabase
         .from('walk_groups')
         .select('*')
         .eq('walk_date', date)
         .eq('sector', sector)
+
+      // For non-admins: only return rows that are either unlocked OR locked by the current user
+      if (!isAdmin && user) {
+        query = query.or(`locked.eq.false,locked_by.eq.${user.id},locked.is.null`)
+      }
+
+      const { data, error: loadError } = await query
 
       if (loadError) {
         toast.error('Failed to load walk groups')
@@ -389,6 +400,21 @@ export function useWalkGroups(events, date, sector) {
     [date, sector, user]
   )
 
+  // Set exact walker list (replaces all) — used for slot-based picker
+  const setWalkers = useCallback(
+    async (groupNum, walkerIds) => {
+      setWalkerAssignments((prev) => {
+        if (walkerIds.length === 0) {
+          const next = { ...prev }; delete next[groupNum]; return next
+        }
+        return { ...prev, [groupNum]: walkerIds }
+      })
+      await _persistWalkerIds(groupNum, walkerIds)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [date, sector, user]
+  )
+
   // Internal helper: persist walker_ids to Supabase
   async function _persistWalkerIds(groupNum, walkerIds) {
     if (!date || !sector || !user) return
@@ -441,7 +467,7 @@ export function useWalkGroups(events, date, sector) {
   return {
     groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
     moveEvent, addGroup, renameGroup, reorderGroup,
-    assignWalker, addWalker, removeWalker, linkGroups, unlinkGroups,
+    assignWalker, addWalker, removeWalker, setWalkers, linkGroups, unlinkGroups,
     loaded, lastSaved, lockGroup, unlockGroup,
   }
 }

@@ -110,7 +110,7 @@ export default function DogCard({
   const bgColor = nameToColor(dog.dog_name || '');
   const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
   const hasPermanentNotes = dog.notes && dog.notes.trim().length > 0;
-  const nameColor = hasPermanentNotes ? '#961e78' : '#534AB7';
+  const nameColor = hasPermanentNotes ? '#961e78' : '#2D2926';
 
   const containerBg = isPickedUp ? '#f0fdf4' : isCurrent ? '#FFF4F1' : '#ffffff';
   const containerBorder = isPickedUp ? '1px solid #bbf7d0'

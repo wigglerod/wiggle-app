@@ -223,8 +223,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const [swipeNoteDog, setSwipeNoteDog] = useState(null)
   const [swipeNoteGroupName, setSwipeNoteGroupName] = useState(null)
 
-  // Walker name lookup
+  // Walker name and profile lookup
   const [walkerNameMap, setWalkerNameMap] = useState({})
+  const [allWalkers, setAllWalkers] = useState([])
+  const [walkerPickerOpen, setWalkerPickerOpen] = useState(null) // { groupNum, slotIndex }
+
   useEffect(() => {
     if (!sector) return
     async function fetchWalkers() {
@@ -234,6 +237,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         .in('role', ['senior_walker', 'admin', 'junior_walker'])
         .order('full_name')
       if (data) {
+        setAllWalkers(data)
         const map = {}
         for (const w of data) map[w.id] = w.full_name
         setWalkerNameMap(map)
@@ -444,6 +448,33 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     }
   }
 
+  function handleSelectWalker(wId) {
+    if (!walkerPickerOpen) return
+    const { groupNum, slotIndex } = walkerPickerOpen
+    const { setWalkers } = useWalkGroups(events, date, sector) // grab from hook (wait, we already have it in scope)
+    const currentWIds = walkerAssignments[groupNum] || []
+    
+    let nextIds = [...currentWIds]
+    if (nextIds.length < 2) nextIds = [...nextIds, ...Array(2 - nextIds.length).fill(null)]
+    
+    if (wId === null) {
+      nextIds[slotIndex] = null
+    } else {
+      nextIds[slotIndex] = wId
+      if (slotIndex === 0 && nextIds[1] === wId) nextIds[1] = null
+      if (slotIndex === 1 && nextIds[0] === wId) nextIds[0] = null
+    }
+    
+    if (nextIds[0] === null && nextIds[1] !== null) {
+      nextIds[0] = nextIds[1]
+      nextIds[1] = null
+    }
+    
+    const finalIds = nextIds.filter(Boolean)
+    setWalkers(groupNum, finalIds)
+    setWalkerPickerOpen(null)
+  }
+
   function handleBackgroundTap(e) {
     if (e.target === e.currentTarget) setSelectedId(null)
   }
@@ -634,6 +665,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           num={num}
           wNames={wNames}
           wIds={wIds}
+          allWalkers={allWalkers}
+          date={date}
+          onWalkerSlotTap={(slotIndex) => setWalkerPickerOpen({ groupNum: num, slotIndex })}
           isLocked={isGroupLocked}
           lockInfo={lockInfo}
           dogCount={total}
@@ -943,6 +977,23 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
         )}
       </AnimatePresence>
 
+      {/* Walker Picker Sheet */}
+      <AnimatePresence>
+        {walkerPickerOpen && (
+          <WalkerPickerSheet
+            isOpen={!!walkerPickerOpen}
+            onClose={() => setWalkerPickerOpen(null)}
+            groupNum={walkerPickerOpen.groupNum}
+            slotIndex={walkerPickerOpen.slotIndex}
+            currentWIds={walkerAssignments[walkerPickerOpen.groupNum] || []}
+            allWalkers={allWalkers}
+            date={date}
+            sector={sector}
+            onSelect={handleSelectWalker}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Group creation sheet */}
       <AnimatePresence>
         {creationSheetOpen && (
@@ -979,7 +1030,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 // ══════════════════════════════════════════════════════════════════
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
+function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, onWalkerSlotTap, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -993,6 +1044,8 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
     const trimmed = nameInput.trim()
     if (trimmed && trimmed !== gName) onRename?.(trimmed)
   }
+
+  const dayName = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })
 
   return (
     <div
@@ -1026,12 +1079,47 @@ function GroupHeader({ gName, num, wNames, wIds, isLocked, lockInfo, dogCount, p
           </span>
         )}
 
-        {/* Walker names — purple, always visible */}
-        {wNames.length > 0 && (
-          <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap', marginLeft: 2 }}>
-            {wNames.map(n => n.split(' ')[0]).join(' + ')}
-          </span>
-        )}
+        {/* Walker slots */}
+        <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
+          {[0, 1].map(slotIndex => {
+            const wId = wIds[slotIndex]
+            if (wId) {
+              const name = wNames[slotIndex]?.split(' ')[0] || 'Walker'
+              const w = allWalkers.find(x => x.id === wId)
+              const isPrimary = w?.schedule?.includes(dayName)
+              return (
+                <button
+                  key={slotIndex}
+                  onClick={(e) => { e.stopPropagation(); if (!isLocked) onWalkerSlotTap(slotIndex) }}
+                  style={{
+                    fontSize: 10, padding: '3px 10px', borderRadius: 8, fontWeight: 600,
+                    background: isPrimary ? '#534AB7' : '#EEEDFE', 
+                    color: isPrimary ? '#fff' : '#534AB7', 
+                    border: isPrimary ? '1px solid #534AB7' : '1px solid #C4C0DE',
+                    cursor: isLocked ? 'default' : 'pointer'
+                  }}
+                >
+                  {name}
+                </button>
+              )
+            } else {
+              if (isLocked) return null
+              return (
+                <button
+                  key={slotIndex}
+                  onClick={(e) => { e.stopPropagation(); onWalkerSlotTap(slotIndex) }}
+                  style={{
+                    fontSize: 10, padding: '3px 10px', borderRadius: 8, fontWeight: 500,
+                    background: 'transparent', color: '#888', border: '1px dashed #bbb',
+                    cursor: 'pointer'
+                  }}
+                >
+                  + walker
+                </button>
+              )
+            }
+          })}
+        </div>
 
         {/* Locked by badge */}
         {isLocked && lockInfo?.locked_by_name && (
@@ -1516,6 +1604,93 @@ function LinkPicker({ sourceNum, sourceName, groupNums, groupNames, groupLinks, 
               )
             })}
           </>
+        )}
+      </motion.div>
+    </>
+  )
+}
+
+// ── Walker Picker Sheet ───────────────────────────────────────────
+function WalkerPickerSheet({ isOpen, onClose, groupNum, slotIndex, currentWIds, allWalkers, date, sector, onSelect }) {
+  const dayName = new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })
+  
+  // Filter generic and admin
+  const validWalkers = allWalkers.filter(w => {
+    if (!w.full_name) return false
+    if (w.full_name.includes('Wiggle Pro') || w.full_name.includes('Pup Walker') || w.full_name.includes('Gen')) return false
+    return true
+  })
+
+  // Sector filtering
+  const sectorWalkers = validWalkers.filter(w => w.sector === sector || w.sector === 'both')
+
+  // split primary and secondary
+  const primary = sectorWalkers.filter(w => w.schedule && w.schedule.includes(dayName))
+  const secondary = sectorWalkers.filter(w => !(w.schedule && w.schedule.includes(dayName)))
+
+  function renderBtn(w, isPrimary) {
+    const isAssigned = currentWIds.includes(w.id)
+    return (
+      <button key={w.id} onClick={() => onSelect(w.id)}
+        style={{
+          width: '100%', padding: 12, borderRadius: 10,
+          background: isPrimary ? (isAssigned ? '#3730A3' : '#534AB7') : (isAssigned ? '#EEEDFE' : 'transparent'),
+          color: isPrimary ? '#fff' : '#534AB7',
+          border: isPrimary ? (isAssigned ? '1px solid #3730A3' : '1px solid #534AB7') : '1px solid #534AB7',
+          fontSize: 14, fontWeight: 600,
+          marginBottom: 8, cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}
+      >
+        <span>{w.full_name.split(' ')[0]}</span>
+        {isAssigned && <span style={{ fontSize: 12, opacity: 0.8 }}>{'\u2713'} Assigned</span>}
+      </button>
+    )
+  }
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100]" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={onClose} />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-[101] bg-white shadow-2xl pb-[env(safe-area-inset-bottom)]"
+        style={{ borderRadius: '16px 16px 0 0', padding: 20, maxHeight: '80vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2 }} />
+        </div>
+        
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#333' }}>
+          Assign walker to slot {slotIndex + 1}
+        </h3>
+
+        {primary.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Scheduled Today</p>
+            {primary.map(w => renderBtn(w, true))}
+          </div>
+        )}
+
+        {secondary.length > 0 && (
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Other Walkers</p>
+            {secondary.map(w => renderBtn(w, false))}
+          </div>
+        )}
+
+        {/* Clear assignment button */}
+        {currentWIds[slotIndex] && (
+          <button onClick={() => onSelect(null)}
+            style={{
+              width: '100%', padding: 12, borderRadius: 10,
+              background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca',
+              fontSize: 14, fontWeight: 600, marginTop: 16, cursor: 'pointer'
+            }}
+          >
+            Clear Slot
+          </button>
         )}
       </motion.div>
     </>

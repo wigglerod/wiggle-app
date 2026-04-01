@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -7,6 +7,29 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [remember, setRemember] = useState(true)
+
+  useEffect(() => {
+    async function checkDevAutoLogin() {
+      if (import.meta.env.DEV) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          await supabase.auth.signInWithPassword({
+            email: 'rod_galvan@hotmail.com',
+            password: 'rodrigoWiggle1'
+          })
+        }
+      }
+    }
+    checkDevAutoLogin()
+  }, [])
+
+  if (import.meta.env.DEV) {
+    return (
+      <div className="min-h-screen bg-[#FFF4F1] flex flex-col items-center justify-center">
+        <p className="text-gray-500 font-medium animate-pulse">Auto-logging in (Dev Mode)...</p>
+      </div>
+    )
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
