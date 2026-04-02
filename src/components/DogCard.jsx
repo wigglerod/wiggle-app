@@ -403,7 +403,7 @@ export default function DogCard({
           onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
           style={{
             fontSize: 14, fontWeight: 600,
-            color: isNotWalking ? '#C4851C' : '#534AB7',
+            color: isNotWalking ? '#C4851C' : (dog.notes ? '#961e78' : '#534AB7'),
             textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
             textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
             borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
