@@ -533,7 +533,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       groupNum: groupKey,
       markPickup: () => markPickup(dogId, dogName),
       markReturned: () => markReturned(dogId, dogName),
-      undoPickup: () => undoPickup(dogId),
+      undoPickup: () => undoPickup(dogId, dogName),
       undoReturned: () => undoReturned(dogId),
       markNotWalking: () => markNotWalking(dogId, dogName, groupKey),
       undoNotWalking: () => undoNotWalking(dogId),

@@ -199,29 +199,25 @@ export function usePickups(date) {
     }
   }, [user, profile, date])
 
-  // ── Undo pickup (also removes returned row) ────────────────────
-  const undoPickup = useCallback(async (dogId) => {
-    if (!user || !date || !dogId) return
+  // ── Undo pickup ──────────────────────────────────────────────────
+  const undoPickup = useCallback(async (dogId, dogName) => {
+    if (!user || !date || !dogId || !dogName) return false
 
-    const previous = pickups[dogId]
-    setPickups(prev => { const next = { ...prev }; delete next[dogId]; return next })
+    const { error } = await supabase.from('walker_notes').delete()
+      .eq('dog_name', dogName)
+      .eq('note_type', 'pickup')
+      .eq('walk_date', date)
 
-    // Delete both pickup and returned rows
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      supabase.from('walker_notes').delete()
-        .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'pickup'),
-      supabase.from('walker_notes').delete()
-        .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'returned'),
-    ])
-
-    if (e1 || e2) {
+    if (error) {
       toast.error('Failed to undo pickup')
-      if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
+      return false
     } else {
+      setPickups(prev => { const next = { ...prev }; delete next[dogId]; return next })
       toast('Pickup undone')
       notifySync()
+      return true
     }
-  }, [user, date, pickups])
+  }, [user, date])
 
   // ── Undo return only (keep picked-up state) ────────────────────
   const undoReturned = useCallback(async (dogId) => {
