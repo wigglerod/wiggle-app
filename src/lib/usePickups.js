@@ -18,34 +18,46 @@ export function usePickups(date) {
   const { user, profile } = useAuth()
   const [pickups, setPickups] = useState({}) // { dogId: { pickedUpAt, returnedAt, walkerName } }
 
-  // ── Load existing pickups + returns for today ──────────────────
-  useEffect(() => {
+  // Extract load function so we can call it on custom events
+  const load = useCallback(async () => {
     if (!date) return
-    async function load() {
-      const { data } = await supabase
-        .from('walker_notes')
-        .select('dog_id, note_type, created_at, walker_name')
-        .eq('walk_date', date)
-        .in('note_type', ['pickup', 'returned', 'not_walking'])
+    const { data } = await supabase
+      .from('walker_notes')
+      .select('dog_id, note_type, created_at, walker_name')
+      .eq('walk_date', date)
+      .in('note_type', ['pickup', 'returned', 'not_walking'])
 
-      if (data) {
-        const map = {}
-        for (const row of data) {
-          if (!row.dog_id) continue
-          if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
-          if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
-          if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
-          if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
-        }
-        // Legacy compat: expose .time on the root for any code still reading pickups[id].time
-        for (const id of Object.keys(map)) {
-          map[id].time = map[id].pickedUpAt
-        }
-        setPickups(map)
+    if (data) {
+      const map = {}
+      for (const row of data) {
+        if (!row.dog_id) continue
+        if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
+        if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
+        if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
+        if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
       }
+      for (const id of Object.keys(map)) {
+        map[id].time = map[id].pickedUpAt
+      }
+      setPickups(map)
     }
-    load()
   }, [date])
+
+  // Initial load
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Custom event listener to keep multiple hook instances in sync across components
+  useEffect(() => {
+    const handleSync = (e) => {
+      if (e.detail === date) load()
+    }
+    window.addEventListener('pickups:sync', handleSync)
+    return () => window.removeEventListener('pickups:sync', handleSync)
+  }, [date, load])
+
+  const notifySync = () => window.dispatchEvent(new CustomEvent('pickups:sync', { detail: date }))
 
   // ── Realtime subscription ──────────────────────────────────────
   useEffect(() => {
@@ -151,6 +163,8 @@ export function usePickups(date) {
         if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null } }
         return next
       })
+    } else {
+      notifySync()
     }
   }, [user, profile, date])
 
@@ -180,6 +194,8 @@ export function usePickups(date) {
         if (next[dogId]) { next[dogId] = { ...next[dogId], returnedAt: null } }
         return next
       })
+    } else {
+      notifySync()
     }
   }, [user, profile, date])
 
@@ -203,6 +219,7 @@ export function usePickups(date) {
       if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
     } else {
       toast('Pickup undone')
+      notifySync()
     }
   }, [user, date, pickups])
 
@@ -224,6 +241,7 @@ export function usePickups(date) {
       if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
     } else {
       toast('Return undone')
+      notifySync()
     }
   }, [user, date, pickups])
 
@@ -253,8 +271,12 @@ export function usePickups(date) {
       created_at: newTimeISO,
     })
 
-    if (error) toast.error('Failed to update time')
-    else toast.success('Time updated')
+    if (error) {
+      toast.error('Failed to update time')
+    } else {
+      toast.success('Time updated')
+      notifySync()
+    }
   }, [user, profile, date])
 
   // ── Mark not walking ────────────────────────────────────────────
@@ -284,6 +306,8 @@ export function usePickups(date) {
         if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
         return next
       })
+    } else {
+      notifySync()
     }
   }, [user, profile, date])
 
@@ -306,6 +330,7 @@ export function usePickups(date) {
       if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
     } else {
       toast('Not walking undone')
+      notifySync()
     }
   }, [user, date, pickups])
 

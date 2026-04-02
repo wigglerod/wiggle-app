@@ -201,23 +201,39 @@ export default function DogCard({
         >
           {dog.dog_name}
         </span>
-        {isNotWalking && (
-          <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
-            Not walking
+        
+        {/* Address — visible in all states */}
+        {!isNotWalking && dog.address && (
+          <span style={{
+            flex: 1, fontSize: 10,
+            color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
+            fontWeight: 500,
+            textAlign: 'right', whiteSpace: 'nowrap',
+            overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {dog.address.split(',')[0]}
           </span>
         )}
-        {dog.door_code && (
-          <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, background: '#475569', padding: '1px 4px', borderRadius: 3 }}>
-            #{dog.door_code}
-          </span>
-        )}
-        {isReturned && pickupTime && returnedTime ? (
-          <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', flexShrink: 0 }}>
-            {pickupTime} → {returnedTime}
-          </span>
-        ) : isPickedUp && pickupTime ? (
-          <span style={{ fontSize: 9, fontWeight: 600, color: '#2D8F6F', flexShrink: 0 }}>{pickupTime}</span>
-        ) : null}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: dog.address && !isNotWalking ? 0 : 'auto' }}>
+          {isNotWalking && (
+            <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+              Not walking
+            </span>
+          )}
+          {dog.door_code && (
+            <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, background: '#475569', padding: '1px 4px', borderRadius: 3 }}>
+              #{dog.door_code}
+            </span>
+          )}
+          {isReturned && pickupTime && returnedTime ? (
+            <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', flexShrink: 0 }}>
+              {pickupTime} → {returnedTime}
+            </span>
+          ) : isPickedUp && pickupTime ? (
+            <span style={{ fontSize: 9, fontWeight: 600, color: '#2D8F6F', flexShrink: 0 }}>{pickupTime}</span>
+          ) : null}
+        </div>
       </div>
     );
   }

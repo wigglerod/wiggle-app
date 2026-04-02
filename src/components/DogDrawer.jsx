@@ -991,13 +991,13 @@ function LiveWalkTimes({ walkInfo, onClose }) {
       duration={duration}
       dogId={wi.dogId}
       walkDate={wi.walkDate}
-      onMarkPickup={wi.markPickup ? () => { wi.markPickup(); onClose?.() } : undefined}
-      onMarkReturned={wi.markReturned ? () => { wi.markReturned(); onClose?.() } : undefined}
-      onUndoPickup={wi.undoPickup ? () => { wi.undoPickup(); onClose?.() } : undefined}
-      onUndoReturned={wi.undoReturned ? () => { wi.undoReturned(); onClose?.() } : undefined}
+      onMarkPickup={wi.markPickup ? async () => { await wi.markPickup(); onClose?.() } : undefined}
+      onMarkReturned={wi.markReturned ? async () => { await wi.markReturned(); onClose?.() } : undefined}
+      onUndoPickup={wi.undoPickup ? async () => { await wi.undoPickup(); onClose?.() } : undefined}
+      onUndoReturned={wi.undoReturned ? async () => { await wi.undoReturned(); onClose?.() } : undefined}
       isNotWalking={isNotWalking}
-      onMarkNotWalking={wi.markNotWalking ? () => { wi.markNotWalking(); onClose?.() } : undefined}
-      onUndoNotWalking={wi.undoNotWalking ? () => { wi.undoNotWalking(); onClose?.() } : undefined}
+      onMarkNotWalking={wi.markNotWalking ? async () => { await wi.markNotWalking(); onClose?.() } : undefined}
+      onUndoNotWalking={wi.undoNotWalking ? async () => { await wi.undoNotWalking(); onClose?.() } : undefined}
     />
   )
 }

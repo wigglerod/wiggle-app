@@ -1,6 +1,6 @@
 # WIGGLE PROJECT — Master Context
 ## Read this before touching ANYTHING. Every tool. Every session.
-## Last updated: April 2, 2026
+## Last updated: April 2, 2026 — end of session
 
 ---
 
@@ -54,7 +54,8 @@ Never claim something works without device verification.
 ## TEST CREDENTIALS
 - test@wiggledogwalks.com / WiggleTest2026!
 - Role: senior_walker, Sector: Plateau
-- Use this for all Antigravity automated testing
+- Created April 2 — confirmed exists in auth.users and profiles
+- Use for ALL Antigravity automated testing
 - Never appears in walker assignment dropdowns
 
 ---
@@ -67,33 +68,42 @@ address, door_code, notes, photo_url, breed, level,
 ig_handle, contact_method, building_access, unit_number
 
 ### walk_groups
-id, walk_date, group_num, group_name, dog_ids (text[]),
+id, walk_date, group_num, group_name, dog_ids (uuid[]),
 walker_ids (uuid[]), sector, locked, locked_by,
 locked_by_name, dog_order (jsonb)
-NOTE: dog_ids stores dog names as text[], not UUIDs.
 Query must return ALL rows where walk_date = today
 and dog_ids is not empty. No other filters.
+NOTE: useWalkGroups.js fixed April 2 — removed incorrect
+isAdmin locked-group filter hiding groups from senior_walkers.
 
-### walker_notes (pickup state lives here, NOT walk_logs)
+### walker_notes (ALL walk state lives here)
 id, dog_id, dog_name, walker_id, walker_name,
 note_type, message, walk_date, group_num, tags, created_at
-note_type values: 'pickup', 'returned', 'not_walking'
+note_type values:
+  'pickup'      — dog has been picked up
+  'returned'    — dog is back home
+  'not_walking' — dog is not walking today
+DO NOT use walk_logs for live walk state — it is empty.
 
-### walk_logs (currently EMPTY — unused by app)
-Do not write pickup/return/not_walking state here.
+### walk_logs (EMPTY — unused by app)
+Do not write any walk state here.
 Use walker_notes exclusively.
 
-### acuity_name_map
-acuity_name (owner name from Acuity), dog_name (canonical
-dog name from dogs table), acuity_email (owner email for
-disambiguation). Multiple rows per acuity_name for
-same-home pairs (e.g. Amber Rose → Romeo AND Miyagi).
+### acuity_name_map (fully cleaned April 2)
+acuity_name = OWNER name from Acuity
+dog_name = canonical DOG name from dogs table
+acuity_email = owner email for disambiguation
+Rules:
+- Same-home pairs get two rows per booking name
+  (e.g. Amber Rose → Romeo AND Amber Rose → Miyagi)
+- Email disambiguates duplicate acuity_names
+  (e.g. two Lunas, two Peppers, two Cleos, two Buddys)
+- Never store descriptions as dog_name
+- All entries verified clean as of April 2
 
 ### profiles (14 rows)
-full_name, role, sector, email, schedule (text string
-e.g. "Mon, Tue, Wed" — parse with regex, no boolean columns)
-
-### owl_notes, group_links, expected_schedule, dogs_audit
+full_name, role, sector, email,
+schedule (text "Mon, Tue, Wed" — parse with regex)
 
 ---
 
@@ -103,7 +113,7 @@ e.g. "Mon, Tue, Wed" — parse with regex, no boolean columns)
 - Sage #2D8F6F — picked up state, positive, done
 - Amber #C4851C — not_walking state, warnings, attention
 - Slate #475569 — door codes, addresses
-- Fuschia #961e78 — dog name color when dogs.notes has content
+- Fuschia #961e78 — dog name ONLY when dogs.notes has content
 - NO BLUE anywhere in the app. Ever.
 - Background: Peach #FFF5F0
 - Cards: Cream #FAF7F4 (never pure white)
@@ -112,107 +122,114 @@ e.g. "Mon, Tue, Wed" — parse with regex, no boolean columns)
 ---
 
 ## DOG CARD — ALWAYS SHOW (non negotiable)
-Mini card must ALWAYS show regardless of layout mode:
+Mini card must ALWAYS show regardless of layout mode
+including isCompact (interlock) mode:
 1. Dog name — purple tappable link → opens DogProfileDrawer
    If dogs.notes has content → name color = fuschia #961e78
 2. Address — street number + street name only, no postal code
-3. Door code — slate pill (#475569 bg, white text) if exists
+3. Door code — slate pill if exists
 4. Difficulty dot — sage = easy, amber = needs attention
-isCompact may reduce padding/font size for interlock layout
-but NEVER removes name, address, or door code.
+isCompact may reduce padding/font size ONLY.
+NEVER removes name, address, or door code. Ever.
+
+Card states:
+- Waiting: cream bg, purple name
+- Picked up: sage bg #E8F5EF, name struck through, pickup time
+- Back home: sand bg #F0ECE8, opacity 0.55, both times shown
+- Not walking: amber bg #FDF3E3, amber border, name struck
+  through in amber, "Not walking" badge
 
 ---
 
 ## DOG PROFILE DRAWER — ACTION CENTRE
-The profile is the action centre. It contains:
+CLOSE drawer after: Picked Up, Back Home, Not Walking, any Undo
+NEVER CLOSE after: door code reveal, edit times, info taps
+WHY: Status actions = done with this dog, move on.
+Door code = still needed to enter the building.
 
-ACTIONS (in order):
-1. Mark as Picked Up → onClose() after success
-2. Mark as Back Home → onClose() after success
-3. Not Walking today → onClose() after success
-4. Undo (contextual — shows based on current state)
-
-DRAWER CLOSE RULES:
-CLOSE after: Picked Up, Back Home, Not Walking, Undo actions
-NEVER CLOSE after: door code reveal, edit times, any info tap
-WHY: Status actions transition the walker to the next dog.
-Door code reveal is an information lookup mid-task.
-
-NOT WALKING STATE:
-- Writes to walker_notes: note_type = 'not_walking'
-- Card stays visible in group — does NOT disappear
-- Card renders: amber bg (#FDF3E3), amber border (#F0C76E),
-  name crossed out in amber (#C4851C), "Not walking" badge
-- Undo: deletes walker_notes row, resets card to default
-- If already not_walking: show undo button, not the action
+NOT WALKING:
+- Writes walker_notes note_type='not_walking'
+- Card stays visible in amber state — does NOT disappear
+- Undo deletes the row, resets card, closes drawer
 
 INFORMATION SECTIONS:
-- Forever Notes (dogs.notes) — permanent standing instructions
-- Owl Notes (owl_notes table) — walker-to-walker, temporary
-- Acuity notes — TBD next session
+1. Walk Times — pickup/return times, duration, edit buttons
+2. Forever Notes — dogs.notes, amber bg, permanent
+3. Owl Notes — owl_notes table, walker-to-walker
+4. Acuity notes — not yet built
 
 ---
 
-## GROUP RULES
-- Walker name ALWAYS visible on every group header — purple, bold
-- Two walker slots per group — tappable buttons with picker
-- Active group: coral solid border + cream bg
-- Done group: collapsed, tappable to expand
-- Done group expanded: shows all dogs in final state
-  Sage ✓ = returned home, Amber ✗ = not walking,
-  Sage ✓ strikethrough = picked up only
-  Each dog name is tappable purple link → opens profile with undo
-- Interlock groups: side-by-side, purple sync bar between them
+## WHAT WAS BUILT — APRIL 2, 2026
+1. Not Walking button — built, writes to walker_notes,
+   card stays visible in amber with strikethrough
+2. Done groups expandable — tap to expand, all dogs shown
+   in final state, names tappable → profile with undo
+3. useWalkGroups query fixed — all walkers see all groups
+4. acuity_name_map fully cleaned — zero broken entries
+5. Test user created — test@wiggledogwalks.com / WiggleTest2026!
 
 ---
 
-## WALKER ROSTER
-PLATEAU: Chloe (Mon/Tue/Fri), Megan (Mon/Thu), Solene (Tue/Wed/Thu)
-LAURIER: Amanda (Mon-Thu), Amelie (Tue/Wed), Belen (Mon/Thu/Fri),
-         Maeva (Fri)
-BOTH: Rodrigo (Wed Plateau, Fri Plateau)
+## CURRENT BUGS — START NEXT SESSION HERE
+All go to Antigravity. Use test@wiggledogwalks.com.
+Run test_all_actions.txt.
+
+BUG 1 — Undo pickup state not updating live
+usePickups.js undoPickup() deletes DB row but does not
+update local React state. Reopen profile still shows
+picked up. Fix: refresh local state after DB delete.
+
+BUG 2 — Back home drawer not auto-closing
+DogProfileDrawer.jsx markBackHome() not calling onClose()
+after success. Fix: call onClose() after await resolves.
+
+BUG 3 — Not Walking unverified
+Cannot confirm until bugs 1 and 2 are fixed.
+Test last after 1 and 2 confirmed working.
+
+BUG 4 — Interlock cards broken
+DogCard.jsx isCompact mode strips name, address, door code.
+Swipe gesture broken in interlock layout.
+Fix: isCompact reduces size only, never removes content.
+Re-attach swipe handler for interlock layout.
 
 ---
 
-## CURRENT BUGS (as of April 2, 2026)
-1. App shows "No walks today" even when groups exist in DB
-   → walk_groups query filtering incorrectly (fix_todays_groups.txt ready)
-2. Undo pickup: state not updating live after undo
-   → local React state not refreshed after DB delete
-3. Back home: drawer not closing automatically after action
-4. Not Walking button: exists but unverified due to bugs 2 and 3
-5. Interlock cards: missing name/address/door code in compact mode,
-   swipe broken in interlock layout
-All bugs 2-5: use Antigravity (test_all_actions.txt ready)
-
----
-
-## PROMPT RULES — READ BEFORE WRITING ANY PROMPT
+## PROMPT RULES — EVERY PROMPT EVERY TIME
 1. Job first. Why inside the job. Rules after. Test at end.
-2. Verify the thing EXISTS before writing behaviour rules for it.
-3. Query Supabase FIRST. Never ask Rod for data that's in the DB.
-4. One prompt = one puzzle piece. State what piece before writing.
-5. Clean build ≠ working feature. Only device test confirms it works.
+2. Verify the thing EXISTS before writing rules for it.
+3. Query Supabase FIRST. Never ask Rod for data in the DB.
+4. One prompt = one puzzle piece. State what piece + how it
+   connects to the whole before writing anything.
+5. Clean build ≠ working feature. Device test is the only proof.
 6. Antigravity for anything visual or interactive. Always.
-7. "What would the walker need right now, one hand, winter coat?"
-   Apply this filter to every single decision.
-8. Surgical edits only. Read the full file before touching it.
-   Do not restructure. Do not reformat. Find the spot, insert, done.
+7. WWRS filter: "What would the walker need right now,
+   one hand, winter coat?" Every decision goes through this.
+8. Surgical edits only. Read the full file first.
+   Do not restructure. Do not reformat. Find the spot, done.
 
 ---
 
-## WHAT IS NOT THE BIBLE ANYMORE
-Wiggle_V4_Bible_FINAL.html was the visual design reference.
-This WIGGLE_PROJECT.md is now the single source of truth.
-DESIGN_RULES.md still valid for color/component rules.
-wiggle_back_home_spec.html — can be deleted, covered here.
+## FILES IN PROJECT ROOT — KEEP OR DELETE
+KEEP:
+- WIGGLE_PROJECT.md — this file, single source of truth
+- DESIGN_RULES.md — color/component rules for Claude Code
+- WIGGLE_WORKFLOW.md — three-tool workflow guide
+
+DELETE (no longer needed):
+- wiggle_back_home_spec.html — implemented, covered here
+- Wiggle_V4_Bible_FINAL.html — retired, replaced by this file
 
 ---
 
-## LONG-TERM (do not build now — Tower Control)
-- Supabase trigger: auto-populate acuity_name_map on new dog insert
+## LONG-TERM — TOWER CONTROL ONLY
+Do not build any of these during app sessions.
+- Supabase trigger: auto-populate acuity_name_map on new
+  dog insert using owner_first + email from dogs table
 - Map Health panel in Tower Control
-- 9 AM check: propose new map entries from unresolved bookings
-- Gmail Action Queue in Tower
-- Tower rebuild: single scrollable page replacing tab structure
+- 9 AM Monday trigger: re-register after clasp push
+- 9 AM check: propose map entries from unresolved bookings
 - Admin dashboard: 9 AM trigger health status
+- Gmail Action Queue
+- Tower rebuild: single scrollable page
