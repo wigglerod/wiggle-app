@@ -1,5 +1,6 @@
 # WIGGLE PROJECT — Master Context
 ## Read this before touching ANYTHING. Every tool. Every session.
+### Read WIGGLE_PRINCIPLES.md before making any architectural decision.
 ## Last updated: April 2, 2026 — end of session
 
 ---
@@ -105,6 +106,10 @@ Rules:
 full_name, role, sector, email,
 schedule (text "Mon, Tue, Wed" — parse with regex)
 
+### HARD RULE: Before asking Rod ANY question about dogs, walkers, 
+groups, or schedules — query Supabase first. If the answer is 
+in the DB, answer it directly. Never ask Rod for data that 
+exists in the database.
 ---
 
 ## COLOR SYSTEM — NO EXCEPTIONS

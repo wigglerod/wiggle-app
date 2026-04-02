@@ -3,17 +3,25 @@ import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { useAuth } from '../context/AuthContext'
 
-/**
- * Hook for managing dog pickup + return timestamps during walking mode.
- * Stores events as walker_notes rows:
- *   note_type = 'pickup'   → dog was picked up
- *   note_type = 'returned' → dog was returned home
- *
- * State shape:
- *   pickups = {
- *     [dogId]: { pickedUpAt: ISOString, returnedAt: ISOString|null, walkerName: string }
- *   }
- */
+/** Apply a single walker_notes row to an existing pickup entry */
+function applyRow(entry, row) {
+  const e = { ...(entry || { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: null }) }
+  e.walkerName = row.walker_name ?? e.walkerName
+  if (row.note_type === 'pickup')      { e.pickedUpAt = row.created_at; e.time = row.created_at }
+  if (row.note_type === 'returned')    { e.returnedAt = row.created_at }
+  if (row.note_type === 'not_walking') { e.notWalking = true }
+  return e
+}
+
+/** Reverse a single walker_notes row from an existing pickup entry */
+function removeRow(entry, row) {
+  if (!entry) return entry
+  const e = { ...entry }
+  if (row.note_type === 'pickup')      { e.pickedUpAt = null; e.time = null }
+  if (row.note_type === 'returned')    { e.returnedAt = null }
+  if (row.note_type === 'not_walking') { e.notWalking = false }
+  return e
+}
 export function usePickups(date) {
   const { user, profile } = useAuth()
   const [pickups, setPickups] = useState({}) // { dogId: { pickedUpAt, returnedAt, walkerName } }
@@ -31,13 +39,7 @@ export function usePickups(date) {
       const map = {}
       for (const row of data) {
         if (!row.dog_id) continue
-        if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
-        if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
-        if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
-        if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
-      }
-      for (const id of Object.keys(map)) {
-        map[id].time = map[id].pickedUpAt
+        map[row.dog_id] = applyRow(map[row.dog_id], row)
       }
       setPickups(map)
     }
@@ -51,13 +53,20 @@ export function usePickups(date) {
   // Custom event listener to keep multiple hook instances in sync across components
   useEffect(() => {
     const handleSync = (e) => {
-      if (e.detail === date) load()
+      if (e.detail?.date === date && e.detail?.updater) {
+        setPickups(prev => e.detail.updater(prev))
+      } else if (e.detail === date) {
+        load()
+      }
     }
     window.addEventListener('pickups:sync', handleSync)
     return () => window.removeEventListener('pickups:sync', handleSync)
   }, [date, load])
 
-  const notifySync = () => window.dispatchEvent(new CustomEvent('pickups:sync', { detail: date }))
+  const notifySync = (updater) => {
+    if (updater) window.dispatchEvent(new CustomEvent('pickups:sync', { detail: { date, updater } }))
+    else window.dispatchEvent(new CustomEvent('pickups:sync', { detail: date }))
+  }
 
   // ── Realtime subscription ──────────────────────────────────────
   useEffect(() => {
@@ -75,61 +84,15 @@ export function usePickups(date) {
         },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            // Re-fetch on delete to stay in sync
-            supabase
-              .from('walker_notes')
-              .select('dog_id, note_type, created_at, walker_name')
-              .eq('walk_date', date)
-              .in('note_type', ['pickup', 'returned', 'not_walking'])
-              .then(({ data }) => {
-                if (data) {
-                  const map = {}
-                  for (const row of data) {
-                    if (!row.dog_id) continue
-                    if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
-                    if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
-                    if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
-                    if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
-                  }
-                  for (const id of Object.keys(map)) map[id].time = map[id].pickedUpAt
-                  setPickups(map)
-                }
-              })
+            const oldRow = payload.old
+            if (!oldRow?.dog_id) return
+            setPickups(prev => ({ ...prev, [oldRow.dog_id]: removeRow(prev[oldRow.dog_id], oldRow) }))
             return
           }
 
           const row = payload.new
           if (!row?.dog_id) return
-
-          if (row.note_type === 'pickup') {
-            setPickups(prev => ({
-              ...prev,
-              [row.dog_id]: {
-                ...(prev[row.dog_id] || {}),
-                pickedUpAt: row.created_at,
-                time: row.created_at,
-                walkerName: row.walker_name,
-              }
-            }))
-          } else if (row.note_type === 'returned') {
-            setPickups(prev => ({
-              ...prev,
-              [row.dog_id]: {
-                ...(prev[row.dog_id] || {}),
-                returnedAt: row.created_at,
-                walkerName: row.walker_name,
-              }
-            }))
-          } else if (row.note_type === 'not_walking') {
-            setPickups(prev => ({
-              ...prev,
-              [row.dog_id]: {
-                ...(prev[row.dog_id] || {}),
-                notWalking: true,
-                walkerName: row.walker_name,
-              }
-            }))
-          }
+          setPickups(prev => ({ ...prev, [row.dog_id]: applyRow(prev[row.dog_id], row) }))
         }
       )
       .subscribe()
@@ -164,7 +127,10 @@ export function usePickups(date) {
         return next
       })
     } else {
-      notifySync()
+      notifySync(prev => ({
+        ...prev,
+        [dogId]: { ...(prev[dogId] || {}), pickedUpAt: now, time: now, walkerName: profile?.full_name || 'Walker' }
+      }))
     }
   }, [user, profile, date])
 
@@ -195,7 +161,10 @@ export function usePickups(date) {
         return next
       })
     } else {
-      notifySync()
+      notifySync(prev => ({
+        ...prev,
+        [dogId]: { ...(prev[dogId] || {}), returnedAt: now }
+      }))
     }
   }, [user, profile, date])
 
@@ -212,9 +181,17 @@ export function usePickups(date) {
       toast.error('Failed to undo pickup')
       return false
     } else {
-      setPickups(prev => { const next = { ...prev }; delete next[dogId]; return next })
+      setPickups(prev => {
+        const next = { ...prev }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null } }
+        return next
+      })
       toast('Pickup undone')
-      notifySync()
+      notifySync(prev => {
+        const next = { ...prev }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null } }
+        return next
+      })
       return true
     }
   }, [user, date])
@@ -235,7 +212,10 @@ export function usePickups(date) {
         [dogId]: { ...(prev[dogId] || {}), returnedAt: null }
       }))
       toast('Return undone')
-      notifySync()
+      notifySync(prev => ({
+        ...prev,
+        [dogId]: { ...(prev[dogId] || {}), returnedAt: null }
+      }))
       return true
     }
   }, [user, date])
@@ -323,7 +303,11 @@ export function usePickups(date) {
         return next
       })
       toast('Not walking undone')
-      notifySync()
+      notifySync(prev => {
+        const next = { ...prev }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
+        return next
+      })
       return true
     }
   }, [user, date])

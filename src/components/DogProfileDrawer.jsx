@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -42,7 +42,6 @@ function mapsUrl(address) {
 export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogNameClick }) {
   const { permissions, profile } = useAuth()
   const canEdit = permissions.canEditDogProfiles
-  const [doorRevealed, setDoorRevealed] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({})
@@ -59,7 +58,6 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
 
   /* eslint-disable react-hooks/set-state-in-effect -- reset local UI state when dog prop changes */
   useEffect(() => {
-    setDoorRevealed(false)
     setImgError(false)
     setEditing(false)
     setSaveError(null)
@@ -257,11 +255,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
               <p className="text-[14px] text-[#888] mt-0.5">{dog.breed}</p>
             )}
             <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
-              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                dog.sector === 'Plateau'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-[#FDEBE7] text-[#E8634A]'
-              }`}>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FDEBE7] text-[#E8634A]">
                 {dog.sector}
               </span>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
@@ -432,38 +426,18 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                 </div>
               )}
 
-              {/* Door code — tap to reveal with flip */}
+              {/* Door code — plain slate pill */}
               {dog.door_code && (
-                <div className="bg-gray-50 rounded-2xl p-4" style={{ perspective: '600px' }}>
+                <div className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-gray-500 flex-shrink-0">
                       <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                     </svg>
                     <span className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide">Door / Access Code</span>
                   </div>
-                  <AnimatePresence mode="wait">
-                    {doorRevealed ? (
-                      <motion.div
-                        key="revealed"
-                        initial={{ rotateX: -90, opacity: 0 }}
-                        animate={{ rotateX: 0, opacity: 1 }}
-                        transition={{ duration: 0.3, ease: 'easeOut' }}
-                        className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center"
-                      >
-                        <p className="text-2xl font-mono font-bold text-[#1A1A1A] tracking-widest">{dog.door_code}</p>
-                      </motion.div>
-                    ) : (
-                      <motion.button
-                        key="hidden"
-                        exit={{ rotateX: 90, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => setDoorRevealed(true)}
-                        className="w-full py-3 rounded-full bg-[#E8634A] text-white text-sm font-bold active:bg-[#d4552d] transition-colors min-h-[48px]"
-                      >
-                        Tap to reveal 🔑
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
+                  <span className="inline-block bg-slate-600 text-white text-lg font-mono font-bold px-4 py-1.5 rounded-full tracking-widest">
+                    #{dog.door_code}
+                  </span>
                 </div>
               )}
 

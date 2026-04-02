@@ -120,7 +120,7 @@ export default function DogCard({
   const photoUrl = dog.photo_url || null;
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
-  const levelDot = (dog.level != null && dog.level >= 3) ? '#BA7517' : '#1D9E75';
+  const levelDot = dog.level === 3 ? '#EF4444' : dog.level === 2 ? '#FBBF24' : '#1D9E75';
 
   // ── Derive visual state ────────────────────────────────────────
   // State 3: Returned home
@@ -156,6 +156,12 @@ export default function DogCard({
     containerBorderBottom = '2.5px solid #D5CFC8';
     containerOpacity = 1;
   }
+
+  // ── Swipe backdrop color logic ─────────────────────────────────
+  // Left swipe reveal: sage (State 1) or coral (State 2)
+  const leftRevealBg = isPickedUp ? '#E8634A' : '#E8F5EF';
+  const leftRevealText = isPickedUp ? '#fff' : '#2D8F6F';
+  const leftRevealContent = isPickedUp ? '🏠 Back home' : '✓ Pick up';
 
   // ── COMPACT MODE ──────────────────────────────────────────────
   if (isCompact) {
@@ -298,12 +304,6 @@ export default function DogCard({
     );
   }
 
-  // ── Swipe backdrop color logic ─────────────────────────────────
-  // Left swipe reveal: sage (State 1) or coral (State 2)
-  const leftRevealBg = isPickedUp ? '#E8634A' : '#E8F5EF';
-  const leftRevealText = isPickedUp ? '#fff' : '#2D8F6F';
-  const leftRevealContent = isPickedUp ? '🏠 Back home' : '✓ Pick up';
-
   // ── NORMAL MODE ──────────────────────────────────────────────
   return (
     <div style={{ marginBottom: 3, position: 'relative' }}>
@@ -442,8 +442,6 @@ export default function DogCard({
 
         {/* Right side — context-dependent */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          {/* Debug logs to see what's missing */ (() => { console.log('DogCard Render:', dog.dog_name, { isReturned, isPickedUp, pickupTime, returnedTime }); return null; })()}
-
           {/* State 3: times with arrow */}
           {isReturned && pickupTime && returnedTime && (
             <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', whiteSpace: 'nowrap' }}>
