@@ -550,7 +550,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   const formatPickupTime = formatWalkTime
 
   // ── Render a DogCard for an event ──────────────────────────────
-  function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false, isCompact = false) {
+  function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false, isCompact = false, interlockOwner = null) {
     const dog = ev.dog || {}
     const dogId = dog.id
     const dogPickup = dogId ? pickups[dogId] : null
@@ -578,6 +578,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           isNotWalking={isNotWalking}
           isCurrent={isCurrent}
           isCompact={isCompact}
+          interlockOwner={interlockOwner}
           pickupTime={formatWalkTime(dogPickup?.pickedUpAt)}
           returnedTime={formatWalkTime(dogPickup?.returnedAt)}
           onSwipeLeft={!isPickedUp ? () => markPickup(dogId, ev.displayName) : undefined}
@@ -801,6 +802,77 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     )
   }
 
+  // ── Render merged interlock ──────────────────────────────────────────
+  function renderMergedInterlock(groupA, groupB, syncPos) {
+    const aDogs = (groups[groupA] || []).map(String)
+    const bDogs = (groups[groupB] || []).map(String)
+
+    // Zipper logic
+    const combinedDogs = []
+    const maxIdx = Math.max(aDogs.length, bDogs.length + syncPos)
+    for (let i = 0; i < maxIdx; i++) {
+      if (i < aDogs.length) combinedDogs.push({ type: 'A', dogId: aDogs[i] })
+      if (i >= syncPos && (i - syncPos) < bDogs.length) {
+        combinedDogs.push({ type: 'B', dogId: bDogs[i - syncPos] })
+      }
+    }
+
+    const walkerIdsA = walkerAssignments[groupA] || []
+    const walkerIdsB = walkerAssignments[groupB] || []
+    const nameA = walkerIdsA.map(id => walkerNameMap[id]).filter(Boolean).map(n => n.split(' ')[0]).join(' + ') || 'Walker A'
+    const nameB = walkerIdsB.map(id => walkerNameMap[id]).filter(Boolean).map(n => n.split(' ')[0]).join(' + ') || 'Walker B'
+
+    const totalDogs = aDogs.length + bDogs.length
+    const isDoneA = doneGroupNums.has(groupA)
+    const isDoneB = doneGroupNums.has(groupB)
+
+    return (
+      <div key={`merged-${groupA}-${groupB}`} style={{ border: '2.5px solid #AFA9EC', borderRadius: 16, overflow: 'hidden', marginBottom: 10, background: '#FAF7F4' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px 8px', background: '#EEEDFE', borderBottom: '1.5px solid #AFA9EC' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2926' }}>Groups {groupA} + {groupB}</div>
+            <div style={{ fontSize: 10, color: '#8C857E', marginTop: 1 }}>Interlocked · {totalDogs} dogs</div>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#EEEDFE', color: '#534AB7', border: '1.5px solid #AFA9EC' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#AFA9EC' }} />
+              {nameA}
+            </span>
+            <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FAECE7', color: '#E8634A', border: '1.5px solid #E8634A' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E8634A' }} />
+              {nameB}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: '10px 8px 6px' }}>
+          {combinedDogs.map((item, idx) => {
+            const ev = eventsMap.get(item.dogId)
+            if (!ev) return null
+            const gNum = item.type === 'A' ? groupA : groupB
+            return (
+              <div key={`${item.dogId}-${idx}`}>
+                {renderDogCard(ev, item.dogId, gNum, idx, true, false, true, item.type)}
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'flex', gap: 14, padding: '4px 12px 8px', fontSize: 9, color: '#B5AFA8', alignItems: 'center', borderTop: '1px solid #E8E4E0' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 14, height: 8, borderRadius: 3, flexShrink: 0, background: '#EEEDFE', border: '1px solid #AFA9EC' }} />
+            {nameA}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 14, height: 8, borderRadius: 3, flexShrink: 0, background: '#FAECE7', border: '1px solid #E8634A' }} />
+            {nameB}
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 8, color: '#D5CFC8' }}>left = {nameA} · right = {nameB}</span>
+        </div>
+      </div>
+    )
+  }
+
   // ══════════════════════════════════════════════════════════════
   //   RENDER
   // ══════════════════════════════════════════════════════════════
@@ -914,13 +986,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             const syncPos = link.sync_position ?? 0
             const offsetPx = syncPos > 0 ? syncPos * 45 : 0
 
-            return (
-              <div key={`link-${num}-${partnerNum}`} style={{ display: 'flex', gap: 0 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>{renderGroup(groupA, visibleNums.indexOf(groupA), true)}</div>
-                <div style={{ width: 3, background: '#185FA5', borderRadius: 2, margin: '20px 0', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0, marginTop: offsetPx }}>{renderGroup(groupB, visibleNums.indexOf(groupB), true)}</div>
-              </div>
-            )
+            return renderMergedInterlock(groupA, groupB, syncPos)
           }
 
           renderedNums.add(num)

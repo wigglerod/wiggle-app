@@ -18,6 +18,7 @@ export default function DogCard({
   isNotWalking = false,
   isCurrent = false,
   isCompact = false,
+  interlockOwner = null, // 'A' or 'B'
   pickupTime = null,     // formatted string e.g. "9:32 AM"
   returnedTime = null,   // formatted string e.g. "10:48 AM"
   onSwipeLeft,           // State 1 → 2: pick up
@@ -158,8 +159,35 @@ export default function DogCard({
 
   // ── COMPACT MODE ──────────────────────────────────────────────
   if (isCompact) {
+    let overrideBg = containerBg;
+    let overrideBorder = containerBorder;
+    let overrideBorderLeft = containerBorder;
+    let nameColor = isNotWalking ? '#C4851C' : '#534AB7';
+    const hasNotes = !!dog.notes;
+    let marginLeft = '0';
+    let marginRight = '0';
+    let width = '100%';
+
+    if (interlockOwner === 'A') {
+      overrideBg = '#EEEDFE'; // purple-bg
+      overrideBorder = '1px solid transparent';
+      overrideBorderLeft = '3px solid #AFA9EC';
+      nameColor = hasNotes ? '#961e78' : '#534AB7';
+      width = '72%';
+      marginRight = 'auto'; // hug left
+    } else if (interlockOwner === 'B') {
+      overrideBg = '#FAECE7'; // coral-light
+      overrideBorder = '1px solid transparent';
+      overrideBorderLeft = '3px solid #E8634A';
+      nameColor = hasNotes ? '#961e78' : '#C94A34'; // coral-dark
+      width = '72%';
+      marginLeft = 'auto'; // hug right
+    } else {
+      if (hasNotes) nameColor = '#961e78';
+    }
+
     return (
-      <div style={{ marginBottom: 3, position: 'relative' }}>
+      <div style={{ marginBottom: 5, position: 'relative', width, marginLeft, marginRight }}>
         {/* Swipe backdrop */}
         {swiping && swipeX < 0 && (
           <div style={{
@@ -181,12 +209,13 @@ export default function DogCard({
             transform: `translate3d(${swipeX}px, 0, 0)`,
             transition: swiping ? 'none' : 'transform 0.2s',
             display: 'flex', flexDirection: 'column', gap: 4,
-            padding: '6px 8px', borderRadius: 8,
-            background: containerBg, border: containerBorder,
-            borderBottom: containerBorderBottom,
+            padding: '6px 8px', borderRadius: 10,
+            background: overrideBg, border: overrideBorder,
+            borderLeft: overrideBorderLeft,
             fontSize: 11, cursor: 'pointer',
             opacity: containerOpacity,
             position: 'relative', zIndex: 1,
+            overflow: 'hidden',
           }}
         >
           {/* Row 1: Route, Photo, Name, Difficulty Dot */}
@@ -211,12 +240,12 @@ export default function DogCard({
             <span
               onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
               style={{
-                fontWeight: 500, fontSize: 11, overflow: 'hidden',
+                fontWeight: 600, fontSize: 11, overflow: 'hidden',
                 textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
                 textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
-                textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
-                color: isNotWalking ? '#C4851C' : '#534AB7',
-                borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
+                textDecorationColor: nameColor,
+                color: nameColor,
+                borderBottom: isNotWalking ? '1px dashed #F0C76E' : (hasNotes && !isPickedUp && !isReturned ? '1px dashed #961e78' : '1px dashed #AFA9EC'),
                 cursor: onTapName ? 'pointer' : 'default',
               }}
             >
