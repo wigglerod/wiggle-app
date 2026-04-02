@@ -1177,6 +1177,24 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           />
         )}
       </AnimatePresence>
+
+      {/* Walker picker sheet */}
+      <AnimatePresence>
+        {walkerPickerNum !== null && (
+          <WalkerPickerSheet
+            allWalkers={allWalkers}
+            date={date}
+            onSelect={(walkerId) => {
+              const currentWIds = [...(walkerAssignments[walkerPickerNum] || [])]
+              currentWIds[walkerPickerSlotIndex] = walkerId
+              setWalkers(walkerPickerNum, currentWIds.filter(Boolean))
+              setWalkerPickerNum(null)
+              setWalkerPickerSlotIndex(null)
+            }}
+            onClose={() => { setWalkerPickerNum(null); setWalkerPickerSlotIndex(null) }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
