@@ -468,8 +468,8 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   function handleCycleSlot(groupNum, slotIndex) {
     const currentWIds = walkerAssignments[groupNum] || []
-    const filtered = getSortedWalkers(allWalkers, sector)
-      .filter(w => w.role !== 'admin' && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
+    const filtered = getSortedWalkers(allWalkers, sector, date)
+      .filter(w => w.role !== 'admin' && w.schedule && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
     const otherSlot = slotIndex === 0 ? 1 : 0
     const otherWId = currentWIds[otherSlot] || null
     const sortedIds = filtered.map(w => w.id).filter(id => id !== otherWId)
@@ -1242,23 +1242,16 @@ function SwipeHintBar() {
 
 
 
-// ── Fixed walker display order per sector ─────────────────────────
-const WALKER_ORDER = {
-  Laurier: ['Amanda', 'Amelie', 'Rodrigo', 'Maeva', 'Belen'],
-  Plateau: ['Chloe', 'Megan', 'Rodrigo', 'Solene'],
-}
-
-function getSortedWalkers(allWalkers, sector) {
-  const order = WALKER_ORDER[sector] || []
+// ── Sort walkers: scheduled today first, then others, alphabetical within each ─
+function getSortedWalkers(allWalkers, sector, date) {
+  const dayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })
   return [...allWalkers].sort((a, b) => {
+    const aToday = !!(a.schedule && a.schedule.includes(dayName))
+    const bToday = !!(b.schedule && b.schedule.includes(dayName))
+    if (aToday && !bToday) return -1
+    if (!aToday && bToday) return 1
     const aFirst = (a.full_name || '').split(' ')[0]
     const bFirst = (b.full_name || '').split(' ')[0]
-    const aIdx = order.indexOf(aFirst)
-    const bIdx = order.indexOf(bFirst)
-    // Known names come first in defined order; unknowns go to end alphabetically
-    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx
-    if (aIdx !== -1) return -1
-    if (bIdx !== -1) return 1
     return aFirst.localeCompare(bFirst)
   })
 }
