@@ -159,80 +159,111 @@ export default function DogCard({
   // ── COMPACT MODE ──────────────────────────────────────────────
   if (isCompact) {
     return (
-      <div
-        onClick={() => onTapAddress?.()}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          padding: '6px 8px', borderRadius: 8,
-          background: containerBg, border: containerBorder,
-          borderBottom: containerBorderBottom,
-          marginBottom: 3, fontSize: 11, cursor: 'pointer',
-          opacity: containerOpacity,
-        }}
-      >
-        {routeNumber != null && (
-          <span style={{ fontSize: 9, color: isReturned ? '#B5AFA8' : isPickedUp ? '#2D8F6F' : isNotWalking ? '#C4851C' : isCurrent ? '#E8634A' : '#aaa', width: 14, textAlign: 'center', fontWeight: 700 }}>
-            {isReturned ? '🏠' : isPickedUp ? '✓' : routeNumber}
-          </span>
+      <div style={{ marginBottom: 3, position: 'relative' }}>
+        {/* Swipe backdrop */}
+        {swiping && swipeX < 0 && (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 8, zIndex: 0,
+            background: leftRevealBg, display: 'flex', alignItems: 'center',
+            justifyContent: 'flex-end', paddingRight: 10,
+            color: leftRevealText, fontSize: 11, fontWeight: 700,
+          }}>
+            {leftRevealContent}
+          </div>
         )}
-        <div style={{
-          width: 20, height: 20, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-          background: photoUrl ? '#f5f5f5' : bgColor,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          opacity: (isPickedUp || isReturned) ? 0.5 : 1,
-        }}>
-          {photoUrl ? (
-            <img src={photoUrl} alt={dog.dog_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
-          )}
-        </div>
-        <span
-          onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
+        <div
+          ref={cardRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={() => onTapAddress?.()}
           style={{
-            fontWeight: 500, fontSize: 11, overflow: 'hidden',
-            textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
-            textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
-            color: isNotWalking ? '#C4851C' : '#534AB7',
-            borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
-            cursor: onTapName ? 'pointer' : 'default',
+            transform: `translate3d(${swipeX}px, 0, 0)`,
+            transition: swiping ? 'none' : 'transform 0.2s',
+            display: 'flex', flexDirection: 'column', gap: 4,
+            padding: '6px 8px', borderRadius: 8,
+            background: containerBg, border: containerBorder,
+            borderBottom: containerBorderBottom,
+            fontSize: 11, cursor: 'pointer',
+            opacity: containerOpacity,
+            position: 'relative', zIndex: 1,
           }}
         >
-          {dog.dog_name}
-        </span>
-        
-        {/* Address — visible in all states */}
-        {!isNotWalking && dog.address && (
-          <span style={{
-            flex: 1, fontSize: 10,
-            color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
-            fontWeight: 500,
-            textAlign: 'right', whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {dog.address.split(',')[0]}
-          </span>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginLeft: dog.address && !isNotWalking ? 0 : 'auto' }}>
-          {isNotWalking && (
-            <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
-              Not walking
+          {/* Row 1: Route, Photo, Name, Difficulty Dot */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%' }}>
+            {routeNumber != null && (
+              <span style={{ fontSize: 9, color: isReturned ? '#B5AFA8' : isPickedUp ? '#2D8F6F' : isNotWalking ? '#C4851C' : isCurrent ? '#E8634A' : '#aaa', width: 14, textAlign: 'center', fontWeight: 700 }}>
+                {isReturned ? '🏠' : isPickedUp ? '✓' : routeNumber}
+              </span>
+            )}
+            <div style={{
+              width: 20, height: 20, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+              background: photoUrl ? '#f5f5f5' : bgColor,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: (isPickedUp || isReturned) ? 0.5 : 1,
+            }}>
+              {photoUrl ? (
+                <img src={photoUrl} alt={dog.dog_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
+              )}
+            </div>
+            <span
+              onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
+              style={{
+                fontWeight: 500, fontSize: 11, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
+                textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
+                color: isNotWalking ? '#C4851C' : '#534AB7',
+                borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
+                cursor: onTapName ? 'pointer' : 'default',
+              }}
+            >
+              {dog.dog_name}
             </span>
-          )}
-          {dog.door_code && (
-            <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, background: '#475569', padding: '1px 4px', borderRadius: 3 }}>
-              #{dog.door_code}
-            </span>
-          )}
-          {isReturned && pickupTime && returnedTime ? (
-            <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', flexShrink: 0 }}>
-              {pickupTime} → {returnedTime}
-            </span>
-          ) : isPickedUp && pickupTime ? (
-            <span style={{ fontSize: 9, fontWeight: 600, color: '#2D8F6F', flexShrink: 0 }}>{pickupTime}</span>
-          ) : null}
+            {dog.level && (
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: dog.level === 'hard' ? '#E8634A' : dog.level === 'medium' ? '#F0C76E' : '#2D8F6F'
+              }} />
+            )}
+          </div>
+          
+          {/* Row 2: Address, Door code, Times */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%', justifyContent: 'space-between', paddingLeft: Object.keys(dog).length > 0 ? 18 : 0 }}>
+            {!isNotWalking && dog.address && (
+              <span style={{
+                flex: 1, fontSize: 10,
+                color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
+                fontWeight: 500,
+                textAlign: 'left', whiteSpace: 'nowrap',
+                overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {dog.address.split(',')[0]}
+              </span>
+            )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              {isNotWalking && (
+                <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+                  Not walking
+                </span>
+              )}
+              {dog.door_code && (
+                <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, background: '#475569', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+                  #{dog.door_code}
+                </span>
+              )}
+              {isReturned && pickupTime && returnedTime ? (
+                <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', flexShrink: 0 }}>
+                  {pickupTime.replace(/ AM| PM/g, '')} → {returnedTime}
+                </span>
+              ) : isPickedUp && pickupTime ? (
+                <span style={{ fontSize: 9, fontWeight: 600, color: '#2D8F6F', flexShrink: 0 }}>{pickupTime}</span>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     );
