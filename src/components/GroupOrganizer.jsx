@@ -355,6 +355,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   // ── Link picker ─────────────────────────────────────────────────
   const [linkPickerNum, setLinkPickerNum] = useState(null) // group num being linked
 
+  // ── Merged Interlock / Walker Picker State ──────────────────────
+  const [confirmUnlinkId, setConfirmUnlinkId] = useState(null)
+  const [walkerPickerNum, setWalkerPickerNum] = useState(null)
+  const [walkerPickerSlotIndex, setWalkerPickerSlotIndex] = useState(null)
+
   function findGroup(id) {
     const strId = String(id)
     if ((groups.unassigned || []).includes(strId)) return 'unassigned'
@@ -721,6 +726,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           allWalkers={allWalkers}
           date={date}
           sector={sector}
+          onOpenPicker={(slotIndex) => { setWalkerPickerNum(num); setWalkerPickerSlotIndex(slotIndex) }}
           onCycleSlot={(slotIndex) => handleCycleSlot(num, slotIndex)}
           isLocked={isGroupLocked}
           lockInfo={lockInfo}
@@ -803,7 +809,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   }
 
   // ── Render merged interlock ──────────────────────────────────────────
-  function renderMergedInterlock(groupA, groupB, syncPos) {
+  function renderMergedInterlock(groupA, groupB, syncPos, linkId) {
     const aDogs = (groups[groupA] || []).map(String)
     const bDogs = (groups[groupB] || []).map(String)
 
@@ -833,30 +839,79 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             <div style={{ fontSize: 14, fontWeight: 700, color: '#2D2926' }}>Groups {groupA} + {groupB}</div>
             <div style={{ fontSize: 10, color: '#8C857E', marginTop: 1 }}>Interlocked · {totalDogs} dogs</div>
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#EEEDFE', color: '#534AB7', border: '1.5px solid #AFA9EC' }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <span 
+              onClick={() => setConfirmUnlinkId(linkId)}
+              style={{ fontSize: 10, color: '#B5AFA8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, marginRight: 6 }}
+            >
+              <span style={{ fontSize: 14, lineHeight: 1 }}>&times;</span> Unlink
+            </span>
+            <button 
+              onClick={() => { setWalkerPickerNum(groupA); setWalkerPickerSlotIndex(0) }}
+              style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#EEEDFE', color: '#534AB7', border: '1.5px solid #AFA9EC', cursor: 'pointer' }}
+            >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#AFA9EC' }} />
               {nameA}
-            </span>
-            <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FAECE7', color: '#E8634A', border: '1.5px solid #E8634A' }}>
+            </button>
+            <button 
+              onClick={() => { setWalkerPickerNum(groupB); setWalkerPickerSlotIndex(0) }}
+              style={{ fontSize: 9, padding: '3px 8px', borderRadius: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#FAECE7', color: '#E8634A', border: '1.5px solid #E8634A', cursor: 'pointer' }}
+            >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E8634A' }} />
               {nameB}
-            </span>
+            </button>
           </div>
         </div>
 
-        <div style={{ padding: '10px 8px 6px' }}>
-          {combinedDogs.map((item, idx) => {
-            const ev = eventsMap.get(item.dogId)
-            if (!ev) return null
-            const gNum = item.type === 'A' ? groupA : groupB
-            return (
-              <div key={`${item.dogId}-${idx}`}>
-                {renderDogCard(ev, item.dogId, gNum, idx, true, false, true, item.type)}
-              </div>
-            )
-          })}
-        </div>
+        {confirmUnlinkId === linkId && (
+          <div style={{ background: '#fff', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #AFA9EC' }}>
+            <span style={{ fontSize: 13, color: '#E8634A', fontWeight: 600 }}>Split into 2 groups?</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button 
+                onClick={() => { unlinkGroups(linkId); setConfirmUnlinkId(null) }}
+                style={{ padding: '5px 14px', background: '#E8634A', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >Yes</button>
+              <button 
+                onClick={() => setConfirmUnlinkId(null)}
+                style={{ padding: '5px 14px', background: '#F0ECE8', color: '#8C857E', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <MergedDndZone 
+          combinedDogs={combinedDogs} 
+          eventsMap={eventsMap} 
+          renderDogCard={(ev, id, gNum, idx, type) => renderDogCard(ev, id, gNum, idx, false, false, true, type)}
+          onDragEnd={(oldIdx, newIdx) => {
+            const draggedItem = combinedDogs[oldIdx]
+            const overItem = combinedDogs[newIdx]
+
+            if (draggedItem.type === overItem.type) {
+              const groupNum = draggedItem.type === 'A' ? groupA : groupB
+              const dogIdsStr = draggedItem.type === 'A' ? aDogs : bDogs
+              const dOld = dogIdsStr.indexOf(draggedItem.dogId)
+              const dNew = dogIdsStr.indexOf(overItem.dogId)
+              const newItems = arrayMove(dogIdsStr, dOld, dNew)
+              reorderGroup(groupNum, newItems)
+            } else {
+              const fromGroupNum = draggedItem.type === 'A' ? groupA : groupB
+              const toGroupNum = overItem.type === 'A' ? groupA : groupB
+              
+              const fromDogIds = draggedItem.type === 'A' ? [...aDogs] : [...bDogs]
+              const toDogIds = overItem.type === 'A' ? [...aDogs] : [...bDogs]
+
+              const dOld = fromDogIds.indexOf(draggedItem.dogId)
+              if (dOld !== -1) fromDogIds.splice(dOld, 1)
+
+              const dNew = toDogIds.indexOf(overItem.dogId)
+              if (dNew !== -1) toDogIds.splice(dNew, 0, draggedItem.dogId)
+
+              reorderGroup(fromGroupNum, fromDogIds)
+              reorderGroup(toGroupNum, toDogIds)
+            }
+          }}
+        />
 
         <div style={{ display: 'flex', gap: 14, padding: '4px 12px 8px', fontSize: 9, color: '#B5AFA8', alignItems: 'center', borderTop: '1px solid #E8E4E0' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -986,7 +1041,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             const syncPos = link.sync_position ?? 0
             const offsetPx = syncPos > 0 ? syncPos * 45 : 0
 
-            return renderMergedInterlock(groupA, groupB, syncPos)
+            return renderMergedInterlock(groupA, groupB, syncPos, link.id)
           }
 
           renderedNums.add(num)
@@ -1189,7 +1244,7 @@ function getSortedWalkers(allWalkers, sector) {
 }
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCycleSlot, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
+function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCycleSlot, onOpenPicker, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -1223,7 +1278,10 @@ function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCyc
         key={slotIndex}
         onClick={(e) => {
           e.stopPropagation()
-          if (!isLocked) onCycleSlot(slotIndex)
+          if (!isLocked) {
+             if (onOpenPicker) onOpenPicker(slotIndex)
+             else onCycleSlot(slotIndex)
+          }
         }}
         style={{
           fontSize: 9,
@@ -1463,6 +1521,62 @@ function GroupDndZone({ dogIds, eventsMap, renderDogCard, onReorder, isTarget, s
             return (
               <SortableDogCardWrapper key={id} id={id}>
                 {renderDogCard(ev, id, idx)}
+              </SortableDogCardWrapper>
+            )
+          })}
+        </div>
+      </SortableContext>
+      <DragOverlay>
+        {activeEvent ? (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 10,
+            background: '#fff', border: '2px solid #E8634A', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            fontSize: 12, fontWeight: 500,
+          }}>
+            {activeEvent.displayName}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+// ── Merged group DnD zone ──────────────────────────────────────────────
+function MergedDndZone({ combinedDogs, eventsMap, renderDogCard, onDragEnd }) {
+  const stringItems = useMemo(() => combinedDogs.map(d => String(d.dogId)), [combinedDogs])
+
+  const [activeId, setActiveId] = useState(null)
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { delay: 300, tolerance: 5 } })
+  const sensors = useSensors(touchSensor, pointerSensor)
+
+  function handleDragStart(event) {
+    setActiveId(String(event.active.id))
+    try { navigator.vibrate?.(10) } catch {}
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over || active.id === over.id) return
+    const oldIndex = stringItems.indexOf(String(active.id))
+    const newIndex = stringItems.indexOf(String(over.id))
+    onDragEnd(oldIndex, newIndex)
+    try { navigator.vibrate?.(10) } catch {}
+  }
+
+  const activeEvent = activeId ? eventsMap.get(activeId) : null
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <SortableContext items={stringItems} strategy={verticalListSortingStrategy}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 8px 6px' }}>
+          {combinedDogs.map((item, idx) => {
+            const ev = eventsMap.get(item.dogId)
+            if (!ev) return null
+            return (
+              <SortableDogCardWrapper key={item.dogId} id={item.dogId}>
+                {renderDogCard(ev, item.dogId, item.type === 'A' ? 0 : 1, idx, item.type)}
               </SortableDogCardWrapper>
             )
           })}
@@ -1873,3 +1987,71 @@ function LinkPicker({ sourceNum, sourceName, groupNums, groupNames, groupLinks, 
   )
 }
 
+// ── Walker picker sheet ───────────────────────────────────────────────────
+function WalkerPickerSheet({ allWalkers, date, onSelect, onClose }) {
+  const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' }) // "Mon", "Tue"
+  
+  const scheduledWalkers = []
+  const otherWalkers = []
+
+  const filteredWalkers = allWalkers.filter(w => w.role !== 'admin' && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
+
+  for (const w of filteredWalkers) {
+    if (w.schedule && w.schedule.includes(dayName)) {
+      scheduledWalkers.push(w)
+    } else {
+      otherWalkers.push(w)
+    }
+  }
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100]" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={onClose} />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-[101] bg-white shadow-2xl pb-[env(safe-area-inset-bottom)]"
+        style={{ borderRadius: '16px 16px 0 0', padding: 16, maxHeight: '60vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <div style={{ width: 36, height: 4, background: '#ddd', borderRadius: 2 }} />
+        </div>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Select walker</p>
+        
+        {scheduledWalkers.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Scheduled Today</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {scheduledWalkers.map(w => (
+                <button key={w.id} onClick={() => onSelect(w.id)}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: '#E8F5EF', border: '1px solid #6DCAA8', fontSize: 14, fontWeight: 600, color: '#0F6E56', textAlign: 'left', cursor: 'pointer' }}>
+                  {w.full_name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {otherWalkers.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Other Walkers</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {otherWalkers.map(w => (
+                <button key={w.id} onClick={() => onSelect(w.id)}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: '#FAF7F4', border: '1px solid #E8E4E0', fontSize: 14, fontWeight: 500, color: '#333', textAlign: 'left', cursor: 'pointer' }}>
+                  {w.full_name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button onClick={() => onSelect(null)}
+          style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: 'transparent', border: '1px dashed #AFA9EC', fontSize: 14, fontWeight: 500, color: '#534AB7', cursor: 'pointer', marginTop: 12 }}>
+          Clear assignment
+        </button>
+      </motion.div>
+    </>
+  )
+}
