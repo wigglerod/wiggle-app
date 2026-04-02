@@ -971,9 +971,9 @@ function LiveWalkTimes({ walkInfo, onClose }) {
   const { pickups } = usePickups(walkInfo.walkDate)
   const wi = walkInfo
   const livePickup = wi.dogId ? pickups[wi.dogId] : null
-  const pickedUpAt = livePickup?.pickedUpAt || null
-  const returnedAt = livePickup?.returnedAt || null
-  const isNotWalking = livePickup?.notWalking || false
+  const pickedUpAt = livePickup?.pickedUpAt ?? wi.pickedUpAt ?? null
+  const returnedAt = livePickup?.returnedAt ?? wi.returnedAt ?? null
+  const isNotWalking = livePickup?.notWalking ?? wi.notWalking ?? false
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
   const pickedFmt = fmt(pickedUpAt)

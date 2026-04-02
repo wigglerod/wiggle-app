@@ -200,11 +200,11 @@ export function usePickups(date) {
   }, [user, profile, date])
 
   // ── Undo pickup ──────────────────────────────────────────────────
-  const undoPickup = useCallback(async (dogId, dogName) => {
-    if (!user || !date || !dogId || !dogName) return false
+  const undoPickup = useCallback(async (dogId) => {
+    if (!user || !date || !dogId) return false
 
     const { error } = await supabase.from('walker_notes').delete()
-      .eq('dog_name', dogName)
+      .eq('dog_id', dogId)
       .eq('note_type', 'pickup')
       .eq('walk_date', date)
 
@@ -221,25 +221,24 @@ export function usePickups(date) {
 
   // ── Undo return only (keep picked-up state) ────────────────────
   const undoReturned = useCallback(async (dogId) => {
-    if (!user || !date || !dogId) return
-
-    const previous = pickups[dogId]
-    setPickups(prev => ({
-      ...prev,
-      [dogId]: { ...(prev[dogId] || {}), returnedAt: null }
-    }))
+    if (!user || !date || !dogId) return false
 
     const { error } = await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'returned')
 
     if (error) {
       toast.error('Failed to undo return')
-      if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
+      return false
     } else {
+      setPickups(prev => ({
+        ...prev,
+        [dogId]: { ...(prev[dogId] || {}), returnedAt: null }
+      }))
       toast('Return undone')
       notifySync()
+      return true
     }
-  }, [user, date, pickups])
+  }, [user, date])
 
   // ── Update a timestamp (for profile drawer edit) ───────────────
   const updateTimestamp = useCallback(async (dogId, noteType, newTimeISO) => {
@@ -309,26 +308,25 @@ export function usePickups(date) {
 
   // ── Undo not walking ──────────────────────────────────────────
   const undoNotWalking = useCallback(async (dogId) => {
-    if (!user || !date || !dogId) return
-
-    const previous = pickups[dogId]
-    setPickups(prev => {
-      const next = { ...prev }
-      if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
-      return next
-    })
+    if (!user || !date || !dogId) return false
 
     const { error } = await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'not_walking')
 
     if (error) {
       toast.error('Failed to undo')
-      if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
+      return false
     } else {
+      setPickups(prev => {
+        const next = { ...prev }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
+        return next
+      })
       toast('Not walking undone')
       notifySync()
+      return true
     }
-  }, [user, date, pickups])
+  }, [user, date])
 
   return { pickups, markPickup, markReturned, undoPickup, undoReturned, updateTimestamp, markNotWalking, undoNotWalking }
 }
