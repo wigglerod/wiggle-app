@@ -15,6 +15,7 @@ export default function DogCard({
   isLocked = false,
   isPickedUp = false,
   isReturned = false,
+  isNotWalking = false,
   isCurrent = false,
   isCompact = false,
   pickupTime = null,     // formatted string e.g. "9:32 AM"
@@ -97,7 +98,7 @@ export default function DogCard({
   // Attach touch listeners — active when locked and not yet returned
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || !isLocked || isReturned) return;
+    if (!el || !isLocked || isReturned || isNotWalking) return;
 
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -108,7 +109,7 @@ export default function DogCard({
       el.removeEventListener('touchmove', handleTouchMove);
       el.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isLocked, isReturned, handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, [isLocked, isReturned, isNotWalking, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   // Collapse expanded panel when state changes
   useEffect(() => {
@@ -138,6 +139,11 @@ export default function DogCard({
     containerBorder = '1px solid #6DCAA8';
     containerBorderBottom = '1px solid #6DCAA8';
     containerOpacity = 1;
+  } else if (isNotWalking) {
+    containerBg = '#FDF3E3';
+    containerBorder = '1px solid #F0C76E';
+    containerBorderBottom = '1px solid #F0C76E';
+    containerOpacity = 1;
   } else if (isCurrent) {
     containerBg = '#FFF4F1';
     containerBorder = '1.5px solid #E8634A';
@@ -165,7 +171,7 @@ export default function DogCard({
         }}
       >
         {routeNumber != null && (
-          <span style={{ fontSize: 9, color: isReturned ? '#B5AFA8' : isPickedUp ? '#2D8F6F' : isCurrent ? '#E8634A' : '#aaa', width: 14, textAlign: 'center', fontWeight: 700 }}>
+          <span style={{ fontSize: 9, color: isReturned ? '#B5AFA8' : isPickedUp ? '#2D8F6F' : isNotWalking ? '#C4851C' : isCurrent ? '#E8634A' : '#aaa', width: 14, textAlign: 'center', fontWeight: 700 }}>
             {isReturned ? '🏠' : isPickedUp ? '✓' : routeNumber}
           </span>
         )}
@@ -186,15 +192,20 @@ export default function DogCard({
           style={{
             fontWeight: 500, fontSize: 11, overflow: 'hidden',
             textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            textDecoration: (isPickedUp || isReturned) ? 'line-through' : 'none',
-            textDecorationColor: '#534AB7',
-            color: '#534AB7',
-            borderBottom: '1px dashed #AFA9EC',
+            textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
+            textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
+            color: isNotWalking ? '#C4851C' : '#534AB7',
+            borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
             cursor: onTapName ? 'pointer' : 'default',
           }}
         >
           {dog.dog_name}
         </span>
+        {isNotWalking && (
+          <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+            Not walking
+          </span>
+        )}
         {dog.door_code && (
           <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, background: '#475569', padding: '1px 4px', borderRadius: 3 }}>
             #{dog.door_code}
@@ -247,8 +258,8 @@ export default function DogCard({
       <div
         ref={cardRef}
         onClick={() => {
-          // State 3 (returned): tap does nothing on card body (name tap still works via its own handler)
-          if (isReturned) return;
+          // State 3 (returned) or not walking: tap does nothing on card body (name tap still works via its own handler)
+          if (isReturned || isNotWalking) return;
           if (!isPickedUp) setExpanded(prev => !prev);
         }}
         style={{
@@ -316,10 +327,10 @@ export default function DogCard({
           onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
           style={{
             fontSize: 14, fontWeight: 600,
-            color: '#534AB7',
-            textDecoration: (isPickedUp || isReturned) ? 'line-through' : 'none',
-            textDecorationColor: '#534AB7',
-            borderBottom: '1px dashed #AFA9EC',
+            color: isNotWalking ? '#C4851C' : '#534AB7',
+            textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
+            textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
+            borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
             letterSpacing: '-0.01em',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             flexShrink: 1, minWidth: 0,
@@ -329,8 +340,19 @@ export default function DogCard({
           {dog.dog_name}
         </span>
 
+        {/* Not walking label */}
+        {isNotWalking && (
+          <span style={{
+            fontSize: 9, color: '#C4851C', fontWeight: 700,
+            background: '#FDF3E3', border: '1px solid #F0C76E',
+            padding: '2px 6px', borderRadius: 5, flexShrink: 0,
+          }}>
+            Not walking
+          </span>
+        )}
+
         {/* Address — visible in all states */}
-        {dog.address && (
+        {!isNotWalking && dog.address && (
           <span style={{
             flex: 1, fontSize: 10,
             color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
@@ -344,6 +366,8 @@ export default function DogCard({
 
         {/* Right side — context-dependent */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          {/* Debug logs to see what's missing */ (() => { console.log('DogCard Render:', dog.dog_name, { isReturned, isPickedUp, pickupTime, returnedTime }); return null; })()}
+
           {/* State 3: times with arrow */}
           {isReturned && pickupTime && returnedTime && (
             <span style={{ fontSize: 9, fontWeight: 600, color: '#B5AFA8', whiteSpace: 'nowrap' }}>
@@ -370,12 +394,12 @@ export default function DogCard({
           )}
 
           {/* Owl indicator dot */}
-          {owlNote && !expanded && !isPickedUp && !isReturned && (
+          {owlNote && !expanded && !isPickedUp && !isReturned && !isNotWalking && (
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FAC775', flexShrink: 0 }} />
           )}
 
           {/* Expand chevron — only when waiting */}
-          {!isPickedUp && !isReturned && (
+          {!isPickedUp && !isReturned && !isNotWalking && (
             <span style={{
               fontSize: 10, color: '#ccc',
               transform: expanded ? 'rotate(180deg)' : 'rotate(0)',

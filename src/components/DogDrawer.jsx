@@ -669,7 +669,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
 
               {/* ── Walk Times (always shown when walkInfo exists) ──────── */}
               {event._walkInfo && (
-                <LiveWalkTimes walkInfo={event._walkInfo} />
+                <LiveWalkTimes walkInfo={event._walkInfo} onClose={onClose} />
               )}
 
               {owlNotes && owlNotes.length > 0 && (
@@ -967,12 +967,13 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
 }
 
 // ── Live Walk Times wrapper — reads live pickup state from usePickups ──
-function LiveWalkTimes({ walkInfo }) {
+function LiveWalkTimes({ walkInfo, onClose }) {
   const { pickups } = usePickups(walkInfo.walkDate)
   const wi = walkInfo
   const livePickup = wi.dogId ? pickups[wi.dogId] : null
   const pickedUpAt = livePickup?.pickedUpAt || null
   const returnedAt = livePickup?.returnedAt || null
+  const isNotWalking = livePickup?.notWalking || false
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
   const pickedFmt = fmt(pickedUpAt)
@@ -990,16 +991,19 @@ function LiveWalkTimes({ walkInfo }) {
       duration={duration}
       dogId={wi.dogId}
       walkDate={wi.walkDate}
-      onMarkPickup={wi.markPickup}
-      onMarkReturned={wi.markReturned}
-      onUndoPickup={wi.undoPickup}
-      onUndoReturned={wi.undoReturned}
+      onMarkPickup={wi.markPickup ? () => { wi.markPickup(); onClose?.() } : undefined}
+      onMarkReturned={wi.markReturned ? () => { wi.markReturned(); onClose?.() } : undefined}
+      onUndoPickup={wi.undoPickup ? () => { wi.undoPickup(); onClose?.() } : undefined}
+      onUndoReturned={wi.undoReturned ? () => { wi.undoReturned(); onClose?.() } : undefined}
+      isNotWalking={isNotWalking}
+      onMarkNotWalking={wi.markNotWalking ? () => { wi.markNotWalking(); onClose?.() } : undefined}
+      onUndoNotWalking={wi.undoNotWalking ? () => { wi.undoNotWalking(); onClose?.() } : undefined}
     />
   )
 }
 
 // ── Walk Times Section ───────────────────────────────────────────────
-function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, duration, dogId, walkDate, onMarkPickup, onMarkReturned, onUndoPickup, onUndoReturned }) {
+function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, duration, dogId, walkDate, onMarkPickup, onMarkReturned, onUndoPickup, onUndoReturned, isNotWalking, onMarkNotWalking, onUndoNotWalking }) {
   const { updateTimestamp } = usePickups(walkDate)
   const [editingType, setEditingType] = useState(null) // 'pickup' | 'returned'
   const [timeInput, setTimeInput] = useState('')
@@ -1051,6 +1055,33 @@ function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, dura
     border: 'none', width: '100%', padding: 0,
   }
 
+  // ── STATE: NOT WALKING ──────────────────────────────────────
+  if (isNotWalking && !pickedUpAt) {
+    return (
+      <div style={{
+        background: '#FDF3E3', borderRadius: 14,
+        border: '1px solid #F0C76E', padding: '12px 14px',
+      }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#C4851C', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          Walk Times
+        </p>
+        <div style={rowStyle}>
+          <span style={{ fontSize: 13, color: '#C4851C', fontWeight: 600 }}>Not walking today</span>
+        </div>
+        {onUndoNotWalking && (
+          <button onClick={onUndoNotWalking} style={{
+            width: '100%', padding: 10, borderRadius: 10,
+            background: '#FDF3E3', color: '#C4851C',
+            fontSize: 13, fontWeight: 700, textAlign: 'center',
+            border: '1px solid #F0C76E', cursor: 'pointer', marginTop: 8,
+          }}>
+            Undo — pick up after all
+          </button>
+        )}
+      </div>
+    )
+  }
+
   // ── STATE: WAITING (not picked up) ─────────────────────────
   if (!pickedUpAt) {
     return (
@@ -1068,6 +1099,16 @@ function WalkTimesSection({ pickedUpAt, returnedAt, pickedFmt, returnedFmt, dura
         {onMarkPickup && (
           <button onClick={onMarkPickup} style={actionBtnStyle}>
             Mark as picked up
+          </button>
+        )}
+        {onMarkNotWalking && (
+          <button onClick={onMarkNotWalking} style={{
+            width: '100%', padding: 10, borderRadius: 10,
+            background: '#FDF3E3', color: '#C4851C',
+            fontSize: 13, fontWeight: 700, textAlign: 'center',
+            border: '1px solid #F0C76E', cursor: 'pointer', marginTop: 8,
+          }}>
+            Not Walking today
           </button>
         )}
       </div>

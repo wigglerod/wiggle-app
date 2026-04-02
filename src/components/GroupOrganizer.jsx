@@ -217,7 +217,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   useEffect(() => { onAnyGroupLocked?.(anyGroupLocked) }, [anyGroupLocked, onAnyGroupLocked])
 
   // Pickup + return tracking
-  const { pickups, markPickup, markReturned, undoPickup, undoReturned } = usePickups(date)
+  const { pickups, markPickup, markReturned, undoPickup, undoReturned, markNotWalking, undoNotWalking } = usePickups(date)
 
   // Quick note sheet
   const [swipeNoteDog, setSwipeNoteDog] = useState(null)
@@ -529,10 +529,14 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       walkDate: walkDate || date,
       pickedUpAt: dogPickup?.pickedUpAt || null,
       returnedAt: dogPickup?.returnedAt || null,
+      notWalking: dogPickup?.notWalking || false,
+      groupNum: groupKey,
       markPickup: () => markPickup(dogId, dogName),
       markReturned: () => markReturned(dogId, dogName),
       undoPickup: () => undoPickup(dogId),
       undoReturned: () => undoReturned(dogId),
+      markNotWalking: () => markNotWalking(dogId, dogName, groupKey),
+      undoNotWalking: () => undoNotWalking(dogId),
     } : null
     onDogClick({ ...ev, _groupKey: groupKey, _groupName: gName, _walkInfo: walkInfo })
   }
@@ -552,6 +556,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const dogPickup = dogId ? pickups[dogId] : null
     const isPickedUp = !!dogPickup?.pickedUpAt
     const isReturned = !!dogPickup?.returnedAt
+    const isNotWalking = !!dogPickup?.notWalking
     const owlNote = dogId ? owlDogNotesMap.get(dogId) : null
     const hasAlt = dogId && altAddressDogIds.has(dogId)
     const gName = groupNames[groupNum] || `Group ${groupNum}`
@@ -570,6 +575,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           isLocked={isLocked}
           isPickedUp={isPickedUp}
           isReturned={isReturned}
+          isNotWalking={isNotWalking}
           isCurrent={isCurrent}
           isCompact={isCompact}
           pickupTime={formatWalkTime(dogPickup?.pickedUpAt)}
@@ -643,12 +649,21 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       const returnTimes = dogIds.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.returnedAt ? new Date(p.returnedAt).getTime() : null }).filter(Boolean)
       const elapsed = pickupTimes.length > 0 && returnTimes.length > 0 ? Math.round((Math.max(...returnTimes) - Math.min(...pickupTimes)) / 60000) : 0
       return (
-        <div key={num} style={{ opacity: 0.45, background: '#f0ece8', border: '0.5px solid #e0dcd8', borderRadius: 14, padding: '8px 10px' }}
-          className="flex items-center justify-between"
-        >
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#0F6E56' }}>{'\u2713'} {gName} {'\u00b7'} {elapsed >= 60 ? `${Math.floor(elapsed / 60)}h ${elapsed % 60}min` : `${elapsed} min`}</span>
-          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56' }}>Done</span>
-        </div>
+        <DoneGroup
+          key={num}
+          num={num}
+          gName={gName}
+          elapsed={elapsed}
+          dogIds={dogIds}
+          eventsMap={eventsMap}
+          pickups={pickups}
+          onDogClick={(ev) => {
+            const dog = ev.dog || {}
+            const dogId = dog.id
+            const dogPickup = dogId ? pickups[dogId] : null
+            enrichDogClick(ev, num, dogPickup, dogId, date)
+          }}
+        />
       )
     }
 
@@ -1399,6 +1414,100 @@ function GroupDndZone({ dogIds, eventsMap, renderDogCard, onReorder, isTarget, s
         ) : null}
       </DragOverlay>
     </DndContext>
+  )
+}
+
+// ── Done group (tappable recap) ─────────────────────────────────
+function DoneGroup({ num, gName, elapsed, dogIds, eventsMap, pickups, onDogClick }) {
+  const [expanded, setExpanded] = useState(false)
+  const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
+
+  return (
+    <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f0ece8', border: '0.5px solid #e0dcd8' }}>
+      <button onClick={() => setExpanded(p => !p)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 10px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
+        opacity: expanded ? 0.7 : 0.45,
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: '#0F6E56' }}>
+          {'\u2713'} {gName} {'\u00b7'} {elapsed >= 60 ? `${Math.floor(elapsed / 60)}h ${elapsed % 60}min` : `${elapsed} min`}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#E1F5EE', color: '#0F6E56' }}>Done</span>
+          <span style={{ fontSize: 10, color: '#bbb' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
+        </div>
+      </button>
+      {expanded && (
+        <div style={{ padding: '0 10px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {dogIds.map((id, idx) => {
+            const ev = eventsMap.get(id)
+            if (!ev) return null
+            const dog = ev.dog || {}
+            const dogPk = dog.id ? pickups[dog.id] : null
+            const isNotWalking = !!dogPk?.notWalking
+            const isReturned = !!dogPk?.returnedAt
+            const isPickedUp = !!dogPk?.pickedUpAt
+            const pickupStr = fmt(dogPk?.pickedUpAt)
+            const returnStr = fmt(dogPk?.returnedAt)
+
+            let indicator, nameColor, nameDecoration, decoColor, timeLabel
+            if (isNotWalking) {
+              indicator = { symbol: '\u2717', color: '#C4851C' }
+              nameColor = '#C4851C'
+              nameDecoration = 'line-through'
+              decoColor = '#C4851C'
+              timeLabel = null
+            } else if (isReturned) {
+              indicator = { symbol: '\u2713', color: '#0F6E56' }
+              nameColor = '#534AB7'
+              nameDecoration = 'none'
+              decoColor = '#534AB7'
+              timeLabel = pickupStr && returnStr ? `${pickupStr} \u2192 ${returnStr}` : null
+            } else if (isPickedUp) {
+              indicator = { symbol: '\u2713', color: '#0F6E56' }
+              nameColor = '#534AB7'
+              nameDecoration = 'line-through'
+              decoColor = '#534AB7'
+              timeLabel = pickupStr || null
+            } else {
+              indicator = { symbol: String(idx + 1), color: '#aaa' }
+              nameColor = '#534AB7'
+              nameDecoration = 'none'
+              decoColor = '#534AB7'
+              timeLabel = null
+            }
+
+            return (
+              <div key={id} style={{
+                display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '3px 0',
+                background: isNotWalking ? '#FDF3E3' : 'transparent',
+                borderRadius: isNotWalking ? 6 : 0,
+                paddingLeft: isNotWalking ? 4 : 0,
+                paddingRight: isNotWalking ? 4 : 0,
+              }}>
+                <span style={{ color: indicator.color, width: 14, textAlign: 'center', fontWeight: 700, fontSize: 10 }}>
+                  {indicator.symbol}
+                </span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); onDogClick(ev) }}
+                  style={{
+                    flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    textDecoration: nameDecoration, textDecorationColor: decoColor,
+                    color: nameColor, borderBottom: '1px dashed #AFA9EC', cursor: 'pointer',
+                  }}
+                >{ev.displayName}</span>
+                {isNotWalking && (
+                  <span style={{ fontSize: 9, color: '#C4851C', fontWeight: 600, flexShrink: 0 }}>Not walking</span>
+                )}
+                {timeLabel && (
+                  <span style={{ fontSize: 9, color: '#0F6E56', fontWeight: 500, flexShrink: 0 }}>{timeLabel}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

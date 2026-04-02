@@ -44,20 +44,13 @@ export function useWalkGroups(events, date, sector) {
     if (!date || !sector || allEventIds.length === 0) return
 
     async function load() {
-      const isAdmin = profile?.role === 'admin'
-
-      // Build query — admins see ALL groups; regular users see groups locked by
-      // them or unlocked groups (RLS policies may also enforce this server-side)
-      let query = supabase
+      // Build query — fetch ALL groups for today. Every walker needs to see
+      // all groups (including ones locked by others) so the organizer renders correctly.
+      const query = supabase
         .from('walk_groups')
         .select('*')
         .eq('walk_date', date)
         .eq('sector', sector)
-
-      // For non-admins: only return rows that are either unlocked OR locked by the current user
-      if (!isAdmin && user) {
-        query = query.or(`locked.eq.false,locked_by.eq.${user.id},locked.is.null`)
-      }
 
       const { data, error: loadError } = await query
 

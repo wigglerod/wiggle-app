@@ -26,15 +26,16 @@ export function usePickups(date) {
         .from('walker_notes')
         .select('dog_id, note_type, created_at, walker_name')
         .eq('walk_date', date)
-        .in('note_type', ['pickup', 'returned'])
+        .in('note_type', ['pickup', 'returned', 'not_walking'])
 
       if (data) {
         const map = {}
         for (const row of data) {
           if (!row.dog_id) continue
-          if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, walkerName: row.walker_name }
+          if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
           if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
           if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
+          if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
         }
         // Legacy compat: expose .time on the root for any code still reading pickups[id].time
         for (const id of Object.keys(map)) {
@@ -67,15 +68,16 @@ export function usePickups(date) {
               .from('walker_notes')
               .select('dog_id, note_type, created_at, walker_name')
               .eq('walk_date', date)
-              .in('note_type', ['pickup', 'returned'])
+              .in('note_type', ['pickup', 'returned', 'not_walking'])
               .then(({ data }) => {
                 if (data) {
                   const map = {}
                   for (const row of data) {
                     if (!row.dog_id) continue
-                    if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, walkerName: row.walker_name }
+                    if (!map[row.dog_id]) map[row.dog_id] = { pickedUpAt: null, returnedAt: null, notWalking: false, walkerName: row.walker_name }
                     if (row.note_type === 'pickup') map[row.dog_id].pickedUpAt = row.created_at
                     if (row.note_type === 'returned') map[row.dog_id].returnedAt = row.created_at
+                    if (row.note_type === 'not_walking') map[row.dog_id].notWalking = true
                   }
                   for (const id of Object.keys(map)) map[id].time = map[id].pickedUpAt
                   setPickups(map)
@@ -103,6 +105,15 @@ export function usePickups(date) {
               [row.dog_id]: {
                 ...(prev[row.dog_id] || {}),
                 returnedAt: row.created_at,
+                walkerName: row.walker_name,
+              }
+            }))
+          } else if (row.note_type === 'not_walking') {
+            setPickups(prev => ({
+              ...prev,
+              [row.dog_id]: {
+                ...(prev[row.dog_id] || {}),
+                notWalking: true,
                 walkerName: row.walker_name,
               }
             }))
@@ -246,5 +257,57 @@ export function usePickups(date) {
     else toast.success('Time updated')
   }, [user, profile, date])
 
-  return { pickups, markPickup, markReturned, undoPickup, undoReturned, updateTimestamp }
+  // ── Mark not walking ────────────────────────────────────────────
+  const markNotWalking = useCallback(async (dogId, dogName, groupNum) => {
+    if (!user || !date || !dogId) return
+
+    setPickups(prev => ({
+      ...prev,
+      [dogId]: { ...(prev[dogId] || {}), notWalking: true, walkerName: profile?.full_name || 'Walker' }
+    }))
+
+    const { error } = await supabase.from('walker_notes').insert({
+      dog_id: dogId,
+      dog_name: dogName || 'Unknown',
+      walker_id: user.id,
+      walker_name: profile?.full_name || 'Walker',
+      note_type: 'not_walking',
+      walk_date: date,
+      message: 'Not walking today',
+      group_num: groupNum || null,
+    })
+
+    if (error) {
+      toast.error('Failed to save')
+      setPickups(prev => {
+        const next = { ...prev }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
+        return next
+      })
+    }
+  }, [user, profile, date])
+
+  // ── Undo not walking ──────────────────────────────────────────
+  const undoNotWalking = useCallback(async (dogId) => {
+    if (!user || !date || !dogId) return
+
+    const previous = pickups[dogId]
+    setPickups(prev => {
+      const next = { ...prev }
+      if (next[dogId]) { next[dogId] = { ...next[dogId], notWalking: false } }
+      return next
+    })
+
+    const { error } = await supabase.from('walker_notes').delete()
+      .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'not_walking')
+
+    if (error) {
+      toast.error('Failed to undo')
+      if (previous) setPickups(prev => ({ ...prev, [dogId]: previous }))
+    } else {
+      toast('Not walking undone')
+    }
+  }, [user, date, pickups])
+
+  return { pickups, markPickup, markReturned, undoPickup, undoReturned, updateTimestamp, markNotWalking, undoNotWalking }
 }

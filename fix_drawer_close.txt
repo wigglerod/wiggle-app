@@ -1,0 +1,30 @@
+Read WIGGLE_PROJECT.md first.
+Find DogProfileDrawer. Read the ENTIRE file before touching anything.
+
+━━━ YOUR JOB ━━━
+ADD auto-close behaviour to three specific actions in DogProfileDrawer.
+
+After each of these actions completes successfully, call onClose():
+  1. Mark as Picked Up
+  2. Mark as Back Home
+  3. Not Walking today (already calls onClose — verify it does, do not duplicate)
+
+━━━ DO NOT CLOSE AFTER ━━━
+  - Door code / access reveal — walker is reading the code, drawer stays open
+  - Edit times
+  - Undo pickup
+  - Undo return
+
+WHY: Picked Up, Back Home, and Not Walking are transitions — the walker's
+job with this dog is done and their eyes must return to the group list
+immediately. The door code reveal is an information lookup mid-task.
+Closing it would force the walker to reopen the drawer just to read
+the number they still need.
+
+━━━ DO NOT TOUCH ━━━
+Anything else in the component. Surgical only.
+
+━━━ SUCCESS ━━━
+Tap Picked Up → drawer closes.
+Tap Back Home → drawer closes.
+Tap door code → drawer stays open.
