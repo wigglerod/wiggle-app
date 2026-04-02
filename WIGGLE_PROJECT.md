@@ -105,6 +105,15 @@ Rules:
 full_name, role, sector, email,
 schedule (text "Mon, Tue, Wed" — parse with regex)
 
+Walker shuffle sort order (used by handleCycleSlot):
+  1. Walkers scheduled today in this sector — check if
+     today's short day name (e.g. "Wed") appears in schedule
+  2. Rod (sector = 'both') — appears in both sectors
+  3. Other walkers in sector not scheduled today
+  4. Cycle past end of list → clears the slot
+Exclude from shuffle: role = 'admin', null schedule,
+test@wiggledogwalks.com, Wiggle Pro, Pup Walker.
+
 ---
 
 ## COLOR SYSTEM — NO EXCEPTIONS
@@ -127,6 +136,8 @@ including isCompact (interlock) mode:
 1. Dog name — purple tappable link → opens DogProfileDrawer
    If dogs.notes has content → name color = fuschia #961e78
 2. Address — street number + street name only, no postal code
+   Rule: split on first comma, strip Canadian postal codes.
+   Result example: '4200 Esplanade' not '4200 Esplanade, Montréal, QC H2W 1T2'
 3. Door code — slate pill if exists
 4. Difficulty dot — sage = easy, amber = needs attention
 isCompact may reduce padding/font size ONLY.
@@ -213,13 +224,16 @@ Re-attach swipe handler for interlock layout.
 
 ## FILES IN PROJECT ROOT — KEEP OR DELETE
 KEEP:
-- WIGGLE_PROJECT.md — this file, single source of truth
-- DESIGN_RULES.md — color/component rules for Claude Code
+- WIGGLE_PROJECT.md — single source of truth, read first always
+- WIGGLE_PRINCIPLES.md — the WHY behind every decision
 - WIGGLE_WORKFLOW.md — three-tool workflow guide
+- interlock_final.html — visual reference for interlock layout
+- wiggle_dog_views.html — the three dog views glossary
 
-DELETE (no longer needed):
-- wiggle_back_home_spec.html — implemented, covered here
-- Wiggle_V4_Bible_FINAL.html — retired, replaced by this file
+DELETE (done this session):
+- DESIGN_RULES.md — content absorbed into WIGGLE_PROJECT.md
+- wiggle_back_home_spec.html — feature implemented
+- wiggle_ops_context.md — superseded by WIGGLE_PROJECT.md
 
 ---
 
