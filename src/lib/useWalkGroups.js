@@ -24,6 +24,7 @@ export function useWalkGroups(events, date, sector) {
   const [groupLocks, setGroupLocks] = useState({}) // { groupNum: { locked: bool, locked_by: uuid, locked_by_name: string } }
   const [walkerAssignments, setWalkerAssignments] = useState({}) // { groupNum: [walkerId, ...] }
   const [groupLinks, setGroupLinks] = useState([]) // [{ id, group_a_key, group_b_key }]
+  const [doneGroupNums, setDoneGroupNums] = useState(new Set())
 
   // Refs to avoid stale closures in callbacks
   const groupsRef = useRef(groups)
@@ -101,6 +102,16 @@ export function useWalkGroups(events, date, sector) {
         .eq('walk_date', date)
         .eq('sector', sector)
       setGroupLinks(links || [])
+
+      // Load done group nums from walker_notes — filter to this sector's group nums
+      const { data: doneRows } = await supabase
+        .from('walker_notes')
+        .select('group_num')
+        .eq('note_type', 'group_done')
+        .eq('walk_date', date)
+      setDoneGroupNums(new Set(
+        (doneRows || []).map(r => r.group_num).filter(n => nums.has(n))
+      ))
     }
 
     load()
@@ -170,6 +181,34 @@ export function useWalkGroups(events, date, sector) {
             next.unassigned = allEventIds.filter((id) => !assignedSet.has(id))
             return next
           })
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'walker_notes', filter: `walk_date=eq.${date}` },
+        (payload) => {
+          if (payload.new?.note_type !== 'group_done') return
+          const gn = payload.new.group_num
+          if (groupNumsRef.current.includes(gn)) {
+            setDoneGroupNums(prev => new Set([...prev, gn]))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'walker_notes', filter: `walk_date=eq.${date}` },
+        () => {
+          // payload.old lacks note_type without REPLICA IDENTITY FULL — reload to be safe
+          supabase
+            .from('walker_notes')
+            .select('group_num')
+            .eq('note_type', 'group_done')
+            .eq('walk_date', date)
+            .then(({ data }) => {
+              setDoneGroupNums(new Set(
+                (data || []).map(r => r.group_num).filter(n => groupNumsRef.current.includes(n))
+              ))
+            })
         }
       )
       .subscribe()
@@ -429,6 +468,37 @@ export function useWalkGroups(events, date, sector) {
     else toast.success('Updated')
   }
 
+  // Mark a group as done — inserts a walker_notes row
+  const markGroupDone = useCallback(async (groupNum) => {
+    setDoneGroupNums(prev => new Set([...prev, groupNum]))
+    const { error } = await supabase.from('walker_notes').insert({
+      note_type: 'group_done',
+      message: String(groupNum),
+      walk_date: date,
+      group_num: groupNum,
+      walker_id: user?.id ?? null,
+      walker_name: profile?.full_name ?? null,
+    })
+    if (error) {
+      toast.error('Failed to mark group done')
+      setDoneGroupNums(prev => { const next = new Set(prev); next.delete(groupNum); return next })
+    }
+  }, [date, user, profile])
+
+  // Undo done — deletes the walker_notes row
+  const undoGroupDone = useCallback(async (groupNum) => {
+    setDoneGroupNums(prev => { const next = new Set(prev); next.delete(groupNum); return next })
+    const { error } = await supabase.from('walker_notes')
+      .delete()
+      .eq('note_type', 'group_done')
+      .eq('walk_date', date)
+      .eq('group_num', groupNum)
+    if (error) {
+      toast.error('Failed to undo group done')
+      setDoneGroupNums(prev => new Set([...prev, groupNum]))
+    }
+  }, [date])
+
   // Link two groups (syncPosition: null=side-by-side, number=stagger at that dog index in group A)
   const linkGroups = useCallback(
     async (groupNumA, groupNumB, syncPosition) => {
@@ -459,6 +529,7 @@ export function useWalkGroups(events, date, sector) {
 
   return {
     groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
+    doneGroupNums, markGroupDone, undoGroupDone,
     moveEvent, addGroup, renameGroup, reorderGroup,
     assignWalker, addWalker, removeWalker, setWalkers, linkGroups, unlinkGroups,
     loaded, lastSaved, lockGroup, unlockGroup,
