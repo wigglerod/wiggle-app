@@ -469,7 +469,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
   function handleCycleSlot(groupNum, slotIndex) {
     const currentWIds = walkerAssignments[groupNum] || []
     const filtered = getSortedWalkers(allWalkers, sector, date)
-      .filter(w => w.role !== 'admin' && w.schedule && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
     const otherSlot = slotIndex === 0 ? 1 : 0
     const otherWId = currentWIds[otherSlot] || null
     const sortedIds = filtered.map(w => w.id).filter(id => id !== otherWId)
@@ -1242,18 +1241,36 @@ function SwipeHintBar() {
 
 
 
+// ── Fixed walker display order per sector ─────────────────────────
+const SECTOR_WALKERS = {
+  Laurier: ['Amanda', 'Amelie', 'Rodrigo', 'Maeva', 'Belen'],
+  Plateau: ['Chloe', 'Megan', 'Rodrigo', 'Solene'],
+}
+
 // ── Sort walkers: scheduled today first, then others, alphabetical within each ─
 function getSortedWalkers(allWalkers, sector, date) {
   const dayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })
-  return [...allWalkers].sort((a, b) => {
-    const aToday = !!(a.schedule && a.schedule.includes(dayName))
-    const bToday = !!(b.schedule && b.schedule.includes(dayName))
-    if (aToday && !bToday) return -1
-    if (!aToday && bToday) return 1
-    const aFirst = (a.full_name || '').split(' ')[0]
-    const bFirst = (b.full_name || '').split(' ')[0]
-    return aFirst.localeCompare(bFirst)
-  })
+  const validFirstNames = SECTOR_WALKERS[sector] || []
+  
+  return [...allWalkers]
+    .filter(w => {
+      if (!w.full_name || !w.schedule) return false
+      const first = w.full_name.split(' ')[0]
+      if (!validFirstNames.includes(first)) return false
+      if (w.role === 'admin' || first === 'Gen') return false
+      if (w.full_name === 'test@wiggledogwalks.com' || w.full_name.toLowerCase().includes('test')) return false
+      if (w.full_name === 'Wiggle Pro' || w.full_name === 'Pup Walker') return false
+      return true
+    })
+    .sort((a, b) => {
+      const aToday = a.schedule.includes(dayName)
+      const bToday = b.schedule.includes(dayName)
+      if (aToday && !bToday) return -1
+      if (!aToday && bToday) return 1
+      const aFirst = a.full_name.split(' ')[0]
+      const bFirst = b.full_name.split(' ')[0]
+      return aFirst.localeCompare(bFirst)
+    })
 }
 
 // ── Group header ──────────────────────────────────────────────────
