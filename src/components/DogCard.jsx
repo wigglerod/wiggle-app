@@ -260,7 +260,7 @@ export default function DogCard({
             {dog.level && (
               <span style={{
                 width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                background: dog.level === 'hard' ? '#E8634A' : dog.level === 'medium' ? '#F0C76E' : '#2D8F6F'
+                background: dog.level === 3 ? '#E8634A' : dog.level === 2 ? '#C4851C' : '#2D8F6F'
               }} />
             )}
           </div>
