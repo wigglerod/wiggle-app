@@ -468,8 +468,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
 
   function handleCycleSlot(groupNum, slotIndex) {
     const currentWIds = walkerAssignments[groupNum] || []
-    const sorted = getSortedWalkers(allWalkers, sector)
-    const sortedIds = sorted.map(w => w.id)
+    const filtered = getSortedWalkers(allWalkers, sector)
+      .filter(w => w.role !== 'admin' && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
+    const otherSlot = slotIndex === 0 ? 1 : 0
+    const otherWId = currentWIds[otherSlot] || null
+    const sortedIds = filtered.map(w => w.id).filter(id => id !== otherWId)
     const currentId = currentWIds[slotIndex] || null
 
     // Find next walker in cycle: empty → first → second → ... → last → empty
@@ -726,7 +729,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           allWalkers={allWalkers}
           date={date}
           sector={sector}
-          onOpenPicker={(slotIndex) => { setWalkerPickerNum(num); setWalkerPickerSlotIndex(slotIndex) }}
           onCycleSlot={(slotIndex) => handleCycleSlot(num, slotIndex)}
           isLocked={isGroupLocked}
           lockInfo={lockInfo}
