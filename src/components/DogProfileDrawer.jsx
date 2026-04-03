@@ -8,6 +8,7 @@ import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
 import WalkerNotesSection from './WalkerNotesSection'
 import { useAltAddress, getTodayDayName } from '../lib/useAltAddress'
+import { useOwlNotes } from '../lib/useOwlNotes'
 
 const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
@@ -42,6 +43,27 @@ function mapsUrl(address) {
 export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogNameClick }) {
   const { permissions, profile } = useAuth()
   const canEdit = permissions.canEditDogProfiles
+
+  // Owl notes — hook self-manages sector filtering via useAuth internally
+  const { dogNotes, acknowledgeNote } = useOwlNotes()
+  const activeOwlNotes = dog ? dogNotes(dog.id) : []
+
+  function timeAgo(isoString) {
+    if (!isoString) return ''
+    const diff = Date.now() - new Date(isoString).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    const days = Math.floor(hrs / 24)
+    return `${days}d ago`
+  }
+
+  function daysUntilExpiry(isoString) {
+    if (!isoString) return null
+    const diff = new Date(isoString).getTime() - Date.now()
+    return Math.ceil(diff / 86400000)
+  }
   const [imgError, setImgError] = useState(false)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({})
@@ -407,7 +429,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
           {!editing && (
             <div className="flex flex-col gap-3">
 
-              {/* Notes alert */}
+              {/* Forever notes alert */}
               {dog.notes && (
                 <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
                   <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
@@ -419,6 +441,51 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                       className="text-sm font-medium leading-snug break-words"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* 🦉 Owl Notes — sector-filtered, timed, per-walker acknowledgement */}
+              {activeOwlNotes.length > 0 && (
+                <div style={{ background: '#FFFBF0', borderRadius: 16, border: '1px solid #F0C76E', padding: '10px 14px' }}>
+                  <p style={{ fontSize: 9, fontWeight: 600, color: '#C4851C', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    🦉 Owl Notes
+                  </p>
+                  {activeOwlNotes.map((note, idx) => {
+                    const days = daysUntilExpiry(note.expires_at)
+                    const expiryColor = days !== null && days < 2 ? '#E8634A' : '#8C857E'
+                    return (
+                      <div key={note.id}>
+                        {idx > 0 && <div style={{ height: 1, background: '#F0C76E', margin: '10px 0' }} />}
+                        <p style={{ fontSize: 11, color: '#2D2926', lineHeight: 1.45, marginBottom: 4 }}>
+                          {note.note_text}
+                        </p>
+                        <p style={{ fontSize: 9, color: '#8C857E', marginBottom: 8 }}>
+                          {note.created_by_name || 'Unknown'}
+                          {' · '}{timeAgo(note.created_at)}
+                          {days !== null && (
+                            <> · <span style={{ color: expiryColor }}>expires {days}d</span></>
+                          )}
+                        </p>
+                        <button
+                          onClick={() => acknowledgeNote(note.id)}
+                          style={{
+                            width: '100%',
+                            minHeight: 44,
+                            background: '#2D8F6F',
+                            color: '#fff',
+                            fontFamily: 'inherit',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            border: 'none',
+                            borderRadius: 9,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Got it
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
