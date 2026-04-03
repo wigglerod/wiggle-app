@@ -1,175 +1,37 @@
 # WIGGLE DOG WALKS — DESIGN CONSTITUTION
-### Loaded automatically every Claude Code session.
-### Lives at: ~/Documents/wiggle-v4/CLAUDE.md
-### Do not edit without Rodrigo's approval.
-### Last updated: April 2026
+## Loaded automatically every Claude Code and Antigravity session.
+## Lives at: ~/Documents/wiggle-v4/CLAUDE.md
+## Do not edit without Rodrigo's approval.
+## Last updated: April 3, 2026 — V2 clean slate
 
 ---
 
 ## WHO WE ARE
 
-Wiggle Dog Walks is a boutique dog walking company in Montréal's Plateau and
-Laurier sectors. ~95 active dogs. ~7 walkers. One co-admin (Gen). Founded and
-operated by Rodrigo (Rod).
+Wiggle Dog Walks. Montréal's Plateau and Laurier.
+~95 dogs. ~7 walkers. One co-admin. Founded and operated by Rodrigo.
 
-Brand voice: **"Work smart, play always."**
-Operating philosophy: **Occam's razor. Simplest truth, strongest foundation.**
+Brand voice: "Work smart, play always."
+Philosophy: Occam's razor — simplest truth, strongest foundation.
 
-We occupy a rare white space: boutique neighbourhood operator with tech-forward
-infrastructure and lifestyle-grade branding. We are not a logistics platform.
-We are not a startup. We are a small business built on personality, trust, and
-8 years of relationships with dogs and their families.
-
----
-
-## THE PRODUCT ECOSYSTEM
-
-Four surfaces. One brand. Different audiences, different contexts, same soul.
-
-| Surface | Audience | Purpose | Status |
-|---|---|---|---|
-| **Wiggle App** | Walkers in the field | Real-time ops, one hand, winter coat | Active — V4 |
-| **Tower Control** | Rod + Gen at the desk | Planning, management, oversight | Active — V4 |
-| **Website** | Clients + prospective clients | Brand, trust, booking | Upcoming |
-| **Instagram** | Community, lifestyle, dog culture | Brand voice, reach, warmth | Upcoming |
-
-These are not separate projects. They are one brand speaking in four voices.
-Every design decision made on the app should be coherent with what the website
-will feel like and what an Instagram post will look like. When you build
-anything, ask: does this feel like Wiggle — or does it feel like something else?
-
----
-
-## THE PRINCIPLES
-### The why behind every decision. When no rule exists, come back here.
-
-**Before building anything, ask three questions:**
-1. Which principle does this serve?
-2. Does it contradict any other principle?
-3. What would Rodrigo do?
-
-If you can't answer all three — the scope is not ready.
-
----
-
-### THE ECOSYSTEM
-
-**1. Two Views, One Truth**
-The app and Tower Control are not two systems — they are two views of one
-database. A change in one is instantly visible in the other.
-*Because Rod plans from the desk, walkers execute in the field. Same dogs,
-same truth, different windows. If a feature only works in one view, it is
-incomplete.*
-
-**2. Automate the Admin, Keep the Heart**
-The app exists to remove friction from operations — not to replace the human
-relationships that make Wiggle what it is.
-*Because 8 years of client trust wasn't built by software. It was built by
-walkers who knew every dog by name. Technology serves the relationship.
-Never the other way around.*
-
----
-
-### THE WALK DAY
-
-**3. The Door Is the Context**
-Every decision is filtered through one moment: a walker at a building door,
-winter, one hand occupied, a dog already pulling.
-*Because the worst UX failure isn't ugly — it's a walker fumbling while an
-anxious dog strains at the leash. If it can't be done with one thumb in a
-winter coat, reconsider it.*
-
-**4. Nothing Vanishes**
-No state transition removes a dog from view. Not walking stays amber.
-Returned fades but remains. The count always matches reality.
-*Because a disappearing card creates doubt — "did I miss one?" — and doubt
-at a door with six dogs is dangerous. Visibility is a safety feature.*
-
-**5. Every Action Is Reversible**
-State is additive (insert) and reversible (delete). No destructive writes.
-*Because cold fingers misswipe, new walkers make mistakes. The cost of an
-error must be near zero. If an action cannot be undone, question whether
-it belongs in the app at all.*
-
-**6. Instant Then Correct**
-Every action updates the screen immediately, then saves to the database.
-The UI never waits for the server. Rollback on failure.
-*Because a pause per swipe compounds across 40 dogs on spotty cell service —
-and basements have no signal at all.*
-
----
-
-### THE DOG
-
-**7. The Card Never Lies**
-The dog card always shows name, address, and door code — no layout mode,
-no role, no exception can remove them. isCompact may reduce size only.
-*Because the card is a promise: everything you need to get through that door
-is visible without a single tap.*
-
-**8. The Drawer Is the Control Centre**
-Every action that changes a dog's state for the day lives inside the Dog
-Profile Drawer. The card may offer fast-path shortcuts — swipe gestures,
-inline expand — but only when they perform the identical action as the drawer.
-Same outcome, no divergence. The drawer is the source of truth.
-The card is the fast path to it.
-*Because one dog, one place, always the same gesture. If a shortcut ever
-produces a different outcome than the drawer, fix the shortcut — not the
-drawer.*
-
-**9. Close Means Done With This Dog**
-The drawer closes automatically after status actions: pickup, back home,
-not walking, undo. It stays open after informational taps: notes, edit times.
-Door codes are always visible — no tap-to-reveal, ever.
-*Because when a walker marks a dog as picked up, they are already moving.
-The app should move with them.*
-
-**10. Notes Have a Lifetime**
-Owl notes → this week. Walker-to-walker handoffs.
-Forever notes → never expire. Allergies, building quirks, aggression.
-Walk notes → this walk only. State, times, today's events.
-*Because the right note at the right time is the only note that helps.
-When unsure where a note belongs, ask: "When does this stop being relevant?"
-That is its lifetime.*
-
----
-
-### THE VISUAL LANGUAGE
-
-**11. Every Write Has a Name**
-Every action carries who did it — walker name, walker ID, timestamp.
-No anonymous mutations anywhere in the system.
-*Because "who did this?" lets Rod help when something goes wrong.
-Accountability is care, not surveillance.*
-
-**12. Color Is Signal, Not Decoration**
-Every color has exactly one job. A color that does two jobs does neither.
-*Because when fuschia means "permanent note" and also "random style choice,"
-it stops meaning anything. Protect the signal.*
-
-**13. Warmth Is Structural**
-The palette is warm — peach, cream, coral, amber, sage. Cold grays and
-unassigned colors are visual noise.
-*Because Wiggle is built on personality and trust, not logistics.
-The app should feel like the company feels — approachable, warm, alive.*
+We are not a logistics platform. Not a startup.
+A small business built on personality, trust, and 8 years of
+relationships with dogs and their families.
+The technology serves that. Never the other way around.
 
 ---
 
 ## THE FOUR FILTERS
-### Run before building anything, in this order.
+### Run before building anything. In this order. No exceptions.
 
 **WWRS** — What would the walker need right now, one hand, winter coat?
-If the answer is "not this" — stop. This filter applies to every surface,
-not just the app. A website visitor with 3 seconds on their phone is the
-same test in a different context.
+If the answer is "not this" — stop.
 
 **ONE PLACE** — Does this action or information already have a home?
 If yes — put it there. Do not create a second home.
 
 **SIMPLEST** — What is the smallest version that solves the real problem?
-Strip it to the bone. Ask this BEFORE opening the editor — not after
-you've already committed to a full build. The excitement about a new
-feature is the signal to run SIMPLEST.
+Strip it to the bone. Ask this BEFORE opening the editor.
 
 **BOTH VIEWS** — Does this work for the app AND Tower Control?
 If it only works in one view — it is incomplete.
@@ -177,108 +39,207 @@ If it only works in one view — it is incomplete.
 ---
 
 ## COLOR SYSTEM
-### Every color earns its place. No exceptions across any surface.
+### Every color earns its place. Every color has exactly one job.
 
-Before adding any color to any surface — app, website, Instagram graphic —
-ask: what does this color already mean in the Wiggle universe?
+A color that does two jobs does neither — it becomes noise.
+Before adding any color, ask: what does this color already mean?
 If it has a job → you cannot reassign it.
-If it has no job yet → define one before using it.
+If it has no job → define one before using it.
+Blue is allowed — but only when it has a defined functional purpose.
 
-### Assigned Colors — Do Not Reassign
+### Brand & Functional Colors
 
-| Token | Hex | Job | Surfaces |
-|---|---|---|---|
-| Coral | `#E8634A` | Hero color — primary action, CTA, brand identity | All |
-| Coral Dark | `#C94A34` | Pressed/active state of coral only | All |
-| Purple | `#534AB7` | Tappable links — dog names, walker names | App only |
-| Fuschia | `#961e78` | Dog has a permanent note — pay attention | App only |
-| Sage | `#2D8F6F` | Picked up, positive, done, success | App |
-| Amber | `#C4851C` | Needs attention, warnings, not walking | App |
-| Slate | `#475569` | Utilitarian info — door codes, addresses, metadata | App |
-| Teal-Blue | `#3B82A0` | Plateau sector identity | App + Website map |
-| Forest Green | `#4A9E6F` | Laurier sector identity | App + Website map |
+| Token       | Hex       | Job                                                        |
+|-------------|-----------|------------------------------------------------------------|
+| Coral       | `#E8634A` | Primary action — CTAs, lock slider, brand identity hero    |
+| Coral Dark  | `#C94A34` | Pressed/active state of coral only                         |
+| Coral Light | `#FAECE7` | Coral tint — status highlights, light backgrounds          |
+| Purple      | `#534AB7` | Tappable links — dog names (default), walker names, group structure |
+| Fuschia     | `#961e78` | Dog name when `dogs.notes` has content — pay attention             |
+| Purple bg   | `#EEEDFE` | Purple tint — walker buttons, group tints, interlock bars  |
+| Purple Dark | `#3D3590` | Unlock slider, deep purple accents                         |
+| Sage        | `#2D8F6F` | Picked up, positive, done, success                         |
+| Sage bg     | `#E8F5EF` | Picked up card background                                  |
+| Sage border | `#6DCAA8` | Picked up card border                                      |
+| Amber       | `#C4851C` | Needs attention, not walking, warnings                     |
+| Amber bg    | `#FDF3E3` | Not walking card bg, forever notes bg in drawer            |
+| Amber border| `#F0C76E` | Warning borders                                            |
+| Slate       | `#475569` | Utilitarian info — door codes, addresses, metadata         |
 
 ### Surface Colors
 
-| Token | Hex | Job |
-|---|---|---|
-| Background | `#FFF5F0` | Peach — app bg, website section bg, never white |
-| Card surface | `#FAF7F4` | Cream — cards, sections, never pure white |
-| Border | `#E8E4E0` | Warm gray — never cold gray |
-| Surface alt | `#F0ECE8` | Secondary surfaces |
-| Text primary | `#333333` | Never `#000` |
+| Token       | Hex       | Job                                                        |
+|-------------|-----------|------------------------------------------------------------|
+| Background  | `#FFF5F0` | Peach — app bg, never white                                |
+| Card        | `#FAF7F4` | Cream — all cards and panels, never pure white             |
+| Sand        | `#F0ECE8` | Secondary surfaces, back-home card, done states            |
+| Border      | `#E8E4E0` | Warm gray — all borders, never cold gray                   |
+| Shadow      | `#D5CFC8` | Card bottom shadow — clay 3D effect                        |
 
-### Unassigned (Must earn a job before use)
+### Text Colors
 
-Blue, red — no current role in the Wiggle universe. Do not use decoratively
-on any surface. Define the job first, add it to the table above.
+| Token       | Hex       | Job                                                        |
+|-------------|-----------|------------------------------------------------------------|
+| Text        | `#2D2926` | Primary — warm black. NEVER #000 or #333.                  |
+| Text mid    | `#8C857E` | Secondary text, labels                                     |
+| Text light  | `#B5AFA8` | Tertiary, hints                                            |
+| Text faint  | `#D5CFC8` | Disabled, placeholder                                      |
+
+### Dog Name Color Logic (hard rule)
+
+- Default: black `#2D2926` — no forever note, nothing special
+- Fuschia `#961e78` — dogs.notes has content (permanent standing instructions)
+- This is the ONLY trigger for fuschia on a dog name
+- Purple elsewhere = tappable links, walker names, group structure, interlock
+
+### Sector Colors (map + visual identity only)
+
+- Plateau: Teal-Blue `#3B82A0`
+- Laurier: Forest Green `#4A9E6F`
+- These are reserved for sector identification on maps and visual indicators.
+  Not for general UI use.
 
 ### Hard Rules
 
-- Never use Tailwind's default cold grays (`gray-100`, `gray-200`,
-  `slate-100` without warm override)
-- No pure white (`#ffffff`) anywhere — use cream `#FAF7F4` instead
-- Coral is the CTA on every surface — not blue, not green, not gray
-- The palette is warm. If it feels like a bank app, it is wrong.
+- NEVER use Tailwind cold grays (gray-100, gray-200, slate-100 without warm override)
+- NEVER use pure white (#ffffff) — use cream #FAF7F4
+- Coral is the CTA on every surface — always
+- Background is always warm — if it feels like a bank app, it is wrong
+- Fuschia (#961e78) is reserved for forever notes ONLY (dogs.notes signal). No other use.
 
 ---
 
 ## TYPOGRAPHY
 
-**Font: DM Sans** — weights 400, 500, 600, 700.
-This is the Wiggle voice in text form. Do not introduce other fonts
-without Rodrigo's explicit approval. This applies to the app, website,
-and any graphic templates.
+Font: **DM Sans** — weights 400, 500, 600, 700.
+This is the Wiggle voice in text form.
+Do not introduce other fonts without Rodrigo's explicit approval.
+Applies to the app, website, and all graphic templates.
 
-Minimum touch targets: **44px height** for any tappable element on any
-mobile surface — app or website.
+Minimum touch targets: **44px height** for any tappable element on mobile.
 
 ---
 
-## APP-SPECIFIC RULES
+## DOG CARD — THE MOST IMPORTANT COMPONENT
+### The card is a promise. Everything to get through that door, visible without a tap.
 
-### Dog Card — Non-Negotiable Content
-Every card in every state ALWAYS shows:
-- Dog name (purple `#534AB7` or fuschia `#961e78` if `dogs.notes` has content)
-- Street address (number + street name, no postal code)
-- Door code as slate pill `#475569`
-- Difficulty dot (level 1 = sage, level 2 = amber, level 3 = coral)
+### Always show — no exceptions, no layout mode overrides:
+1. Dog name — tappable → opens DogProfileDrawer
+   - Default: black `#2D2926`
+   - If dogs.notes has content: purple `#534AB7`
+2. Address — street number + street name only (no postal code, no city)
+3. Door code — slate pill `#475569`, white text, only if exists
+4. Difficulty dot — sage = easy, amber = needs attention, coral = caution
 
-`isCompact` mode may reduce padding and font size ONLY.
+`isCompact` mode (interlock): may reduce padding and font size ONLY.
 Never removes name, address, or door code. Ever.
 
 ### Card States
 
-| State | Background | Name | Notes |
-|---|---|---|---|
-| Waiting | `#FAF7F4` cream | Purple | Default |
-| Picked up | `#E8F5EF` sage | Struck through | Show pickup time |
-| Back home | `#F0ECE8` sand, opacity 0.55 | Normal | Show both times |
-| Not walking | `#FDF3E3` amber | Struck through amber | Amber border + badge |
+| State       | Background        | Name color          | Notes                          |
+|-------------|-------------------|---------------------|--------------------------------|
+| Waiting     | `#FAF7F4` cream   | Black or purple     | Default                        |
+| Picked up   | `#E8F5EF` sage    | Struck through      | Show pickup time               |
+| Back home   | `#F0ECE8` sand    | Normal, opacity 0.55| Show both times                |
+| Not walking | `#FDF3E3` amber   | Struck amber        | Amber border + badge           |
 
-### Drawer Rules
-CLOSE after: Picked Up, Back Home, Not Walking, any Undo.
-NEVER CLOSE after: Edit times, Info taps, Note editing.
-Door codes are always visible — no tap-to-reveal, no exceptions.
+### Card Styling
+- Background: cream `#FAF7F4`
+- Border: 1px solid `#E8E4E0`
+- Border-bottom: 2.5px solid `#D5CFC8` (clay shadow effect)
+- Border-radius: 10px
+- Font: DM Sans 12px
+- Padding: 8px 10px
 
-### The Three Dog Views
-- **Dog Card** — the compact row. Always visible. Scan without tapping.
-- **Inline Expand** — tap the caret ▼. Quick action without leaving the group.
-- **Dog Profile Drawer** — tap the dog's name. Full control centre.
-  Every action that changes a dog's state for the day lives here.
+### Address Display
+- 10px, slate `#475569`, font-weight 500
+- Split on first comma, strip Canadian postal codes
+- Result: street number + street name only (e.g. "4200 Esplanade")
 
-### Database Rules
-- Walk state lives in `walker_notes` only — never `walk_logs` (empty, unused)
+### Door Code Pill
+- 9px white text, bold
+- Background: slate `#475569`
+- Padding: 2px 7px, border-radius: 5px
+
+---
+
+## GROUP HEADER RULES
+
+### Walker Buttons (not static text — tappable)
+- Two walker slots per group
+- Tap → opens picker to assign/switch walker
+- Picker shows: scheduled-today walkers first (sage bg), others second (cream bg)
+- Exclude: "Wiggle Pro", "Pup Walker", null names, Gen (admin)
+- Rod (sector: both) appears in both Plateau and Laurier pickers
+
+### Walker Schedule Parsing
+- profiles.schedule = text string "Mon, Tue, Wed"
+- Parse with regex to check today's day name
+- profiles.sector determines which sector they appear in
+
+### Group Header Format
+- Left: group name
+- Right: walker name(s) as purple buttons + dog count
+- Walker names always visible — always on the header line
+
+### Group States
+- Active: coral solid border, cream bg
+- Done: collapsed, tappable to expand, faded
+- Done expanded: all dogs shown in final state, names tappable → drawer with undo
+- Interlock: purple sync bar between linked groups
+
+---
+
+## DOG PROFILE DRAWER — ACTION CENTRE
+### One dog. One place. Every action that changes a dog's state lives here.
+
+### Drawer Close Rules (hard)
+CLOSE after: Picked Up, Back Home, Not Walking, any Undo
+NEVER CLOSE after: edit times, info taps, note viewing
+WHY: Status action = walker moves to next door. App moves with them.
+
+### Actions (contextual by state)
+- Waiting: "Mark as Picked Up"
+- Picked up: "Mark as Back Home" + "Undo pickup"
+- Back home: "Undo return"
+- Not walking: "Undo — pick up after all"
+- Any state: "Not Walking today" if not already set
+
+### Information Sections (order in drawer)
+1. **Walk Times** — pickup/return times, duration, edit buttons
+2. **Forever Notes** — dogs.notes, amber bg, permanent, never expires
+3. **Owl Notes** — staff-written, expires weekly, sector-filtered
+4. **Acuity Notes** — client-written, expires like owl notes
+   (See NOTES_SPEC.md for full build plan)
+
+---
+
+## LOCK SLIDER
+
+- Lock (slide RIGHT): coral gradient
+- Unlock (slide LEFT): purple dark gradient
+- Thumb: light bg with shadow, 44×44px, border-radius 12px
+- Height: 60px total, border-radius 16px
+
+---
+
+## DATABASE RULES
+
+- Walk state lives in `walker_notes` ONLY — never `walk_logs` (empty, unused)
 - `note_type` values: `pickup` | `returned` | `not_walking` | `group_done`
-- Query Supabase FIRST — never ask Rodrigo for data that lives in the DB
+- Query Supabase FIRST — never ask Rodrigo for data in the DB
 - Every write must carry `walker_id`, `walker_name`, `walk_date`
+- `walk_groups.dog_ids` stores dog names as text[] — intentional, names are unique per sector
 
-### Tool Assignment
-| Task | Tool |
-|---|---|
-| Visual fix, drawer behaviour, swipe, card state | Antigravity |
-| Architecture, hook refactor, multi-file restructuring | Claude Code |
-| Strategy, prompt writing, Supabase queries, planning | Claude Chat |
+---
+
+## TOOL ASSIGNMENT
+
+| Task                                         | Tool          |
+|----------------------------------------------|---------------|
+| Visual fix, swipe, card state, drawer        | Antigravity   |
+| Architecture, hooks, multi-file, Tower       | Claude Code   |
+| Strategy, Supabase queries, prompt writing   | Claude Chat   |
 
 Clean build ≠ working feature. Device test is the only proof.
 Test at: https://wiggle-app-dusky.vercel.app
@@ -286,85 +247,59 @@ Login: test@wiggledogwalks.com / WiggleTest2026!
 
 ---
 
-## WEBSITE-SPECIFIC RULES (Upcoming)
+## TECHNICAL REFERENCE
 
-The Wiggle website is a **client-facing trust surface** — a neighbourhood
-institution's front door, not a landing page.
+- Stack: React 19, Vite, Tailwind CSS, Framer Motion, @dnd-kit,
+  Supabase realtime, Workbox PWA, Sonner toast
+- Code: ~/Documents/wiggle-v4/
+- Supabase: ifhniwjdrsswgemmqddn
+- Production: wiggle-app-dusky.vercel.app
+- Sectors: Plateau (#3B82A0) — 56 dogs | Laurier (#4A9E6F) — 39 dogs
+- Roles: Chief Pup (admin) | Wiggle Pro (senior_walker) | Pup Walker (junior_walker)
+- Acuity: User ID 36833686 | Type IDs: 80336576 Plateau, 80336804 Laurier, 81191222 Private
+- Tower: ~/Documents/wiggle-v4/apps-script/Code.js
 
-The warmth of the app palette applies directly. Peach background, cream
-sections, coral as the primary CTA. These are not just app choices —
-they are Wiggle's visual identity. The website must feel like the same
-company as the app.
-
-Photography leads. Dogs, walkers, streets of Plateau and Laurier.
-Lifestyle-grade, not stock-photo corporate. Coral and warm tones should
-complement the photography — never clash with it.
-
-Booking flow is the primary CTA. Every section has a path to "start a walk."
-The coral button is that action — always. Never blue, never green for CTAs.
-
-Mobile-first always. Wiggle clients manage their dogs from their phones.
-If the homepage doesn't work at 390px, it doesn't work.
-
-Bilingual: site should support EN/FR toggle. Plan for it from day one.
-
----
-
-## INSTAGRAM-SPECIFIC RULES (Upcoming)
-
-Wiggle's Instagram is a **lifestyle and community channel** — not a
-promotions feed. The brand voice is "Work smart, play always." Content
-should feel effortless, warm, and rooted in the neighbourhood.
-
-Coral `#E8634A` is the brand accent in every graphic. When a post uses a
-brand color, it is coral. This is the thread that connects every surface.
-
-DM Sans for any text overlaid on imagery. Never decorative fonts.
-
-Dog names and dog personalities are the content. The app knows every dog
-by name. Instagram should feel like it does too. Mia energy. Neighbourhood
-energy. Not influencer energy.
-
-When building Instagram graphics or templates, use the same color tokens.
-Amber on Instagram should feel like it could belong in the app — same
-warmth, same signal, same brand.
+Do not add npm packages without asking Rodrigo.
+Do not introduce new font families.
+Do not use cold gray Tailwind classes.
+Do not remove dog name, address, or door code from any card state.
+Do not use fuschia for anything except forever notes (dogs.notes signal).
 
 ---
 
 ## THE DRIFT CHECK
-### Run before every PR, every design review, every new section or graphic.
+### Run before every PR, design review, or new component.
 
-- [ ] Background is warm — peach `#FFF5F0` or cream `#FAF7F4`, never white
-- [ ] Every color used has a defined job in the color table above
-- [ ] No color is doing two different jobs on the same screen
+- [ ] Background is warm — peach or cream, never white
+- [ ] Every color has a defined job in the table above
+- [ ] No color is doing two jobs on the same screen
 - [ ] No cold Tailwind grays without warm override
-- [ ] Dog names are purple or fuschia — never black, never gray
-- [ ] All touch targets ≥ 44px on any mobile surface
-- [ ] Door codes always visible as slate pill — never hidden behind a tap
-- [ ] Font is DM Sans — not Inter, not system-ui, not anything else
+- [ ] Dog name is purple (default) or fuschia (forever note) — nothing else
+- [ ] All touch targets ≥ 44px
+- [ ] Door codes always visible as slate pill — never hidden
+- [ ] Font is DM Sans — nothing else
 - [ ] Coral is the CTA — not blue, not green, not gray
-- [ ] The screen passes WWRS: one hand, one eye on the dog
-- [ ] Does this feel like Wiggle — or does it feel like something else?
+- [ ] Screen passes WWRS: one hand, one eye on the dog
+- [ ] Does this feel like Wiggle — or something else?
 
 ---
 
-## TECHNICAL REFERENCE
+## WEBSITE (upcoming)
 
-**Stack:** React + Vite + Tailwind CSS + Supabase + Vercel
-**Code:** ~/Documents/wiggle-v4/
-**Supabase:** ifhniwjdrsswgemmqddn
-**Production:** wiggle-app-dusky.vercel.app
-**Sectors:** Plateau (#3B82A0) — 56 dogs | Laurier (#4A9E6F) — 39 dogs
-**Roles:** Chief Pup (admin) | Wiggle Pro (senior_walker) | Pup Walker (junior_walker)
-**Scheduling:** Acuity Scheduling — User ID 36833686
-**Tower Control:** ~/Documents/wiggle-v4/apps-script/Code.js
+Client-facing trust surface. Neighbourhood institution's front door.
+Peach background, cream sections, coral CTA — same palette as the app.
+Photography leads — dogs, walkers, Plateau and Laurier streets.
+Mobile-first always. Bilingual EN/FR from day one.
+Coral is the only booking CTA. Never blue, never green.
 
-Do not add new npm packages without asking Rodrigo first.
-Do not introduce new font families.
-Do not use cold gray Tailwind classes.
-Do not remove dog name, address, or door code from any card state.
+## INSTAGRAM (upcoming)
+
+Lifestyle and community channel. Not a promotions feed.
+Coral accent in every graphic. DM Sans for text overlays.
+Dog names and personalities are the content. Neighbourhood energy.
+Same color tokens as the app — warmth carries across every surface.
 
 ---
 
-*This file is a living document. Update it when the design system evolves —
-not when you feel like improvising. Work smart, play always. 🐾*
+*This file is a living document. Update when the design system evolves.
+Not when you feel like improvising. Work smart, play always. 🐾*

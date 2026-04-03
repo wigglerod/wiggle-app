@@ -15,6 +15,7 @@ export default function WalkerNotesSection({ dogId }) {
         .from('walker_notes')
         .select('*')
         .eq('dog_id', dogId)
+        .eq('note_type', 'note')
         .order('created_at', { ascending: false })
         .limit(5)
       setNotes(data || [])
