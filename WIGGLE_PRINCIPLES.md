@@ -109,12 +109,16 @@ isCompact may reduce size. It may never remove content.
 
 ### 8. The Drawer Is the Control Centre
 Every action that changes a dog's state for the day
-lives inside the Dog Profile Drawer — and nowhere else.
+lives inside the Dog Profile Drawer.
+
+The card may offer fast-path shortcuts — swipe gestures,
+inline expand buttons — but only when they perform the
+identical action as the drawer. Same outcome, no divergence.
 
 Because one dog, one place, always the same gesture.
-Splitting actions across surfaces breaks muscle memory.
-If you are about to add a dog action somewhere other than
-the drawer, stop. You are breaking this principle.
+The drawer is the source of truth. The card is the fast path to it.
+If a shortcut ever produces a different outcome than the drawer,
+the shortcut is wrong — fix it to match the drawer, not the other way.
 
 ### 9. Close Means Done With This Dog
 The drawer closes automatically after status actions:
