@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { useAuth } from '../context/AuthContext'
+import NoteComposer from './NoteComposer'
 
 function nameToColor(name) {
   const colors = ['#7F77DD','#378ADD','#BA7517','#1D9E75','#D85A30','#5DCAA5','#534AB7','#993C1D'];
@@ -30,8 +33,10 @@ export default function DogCard({
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showComposer, setShowComposer] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const { user, profile } = useAuth();
   const cardRef = useRef(null);
   const touchRef = useRef({ x: 0, y: 0, claimed: false });
 
@@ -340,6 +345,7 @@ export default function DogCard({
 
   // ── NORMAL MODE ──────────────────────────────────────────────
   return (
+    <>
     <div style={{ marginBottom: 3, position: 'relative' }}>
       {/* Swipe backdrop — behind the card */}
       {swiping && swipeX < 0 && (
@@ -601,7 +607,7 @@ export default function DogCard({
               </button>
             )}
             <button
-              onClick={(e) => { e.stopPropagation(); /* PR 4: note composer */ }}
+              onClick={(e) => { e.stopPropagation(); setExpanded(false); setShowComposer(true); }}
               style={{
                 flex: 1, minHeight: 44, borderRadius: 9,
                 background: 'transparent', color: '#E8634A',
@@ -615,5 +621,17 @@ export default function DogCard({
         </div>
       )}
     </div>
+
+    {/* NoteComposer — slides up from bottom */}
+    <AnimatePresence>
+      {showComposer && (
+        <NoteComposer
+          dog={dog}
+          onClose={() => setShowComposer(false)}
+          onSent={() => setShowComposer(false)}
+        />
+      )}
+    </AnimatePresence>
+  </>
   );
 }
