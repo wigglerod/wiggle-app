@@ -47,7 +47,6 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
-  const [photoPulse, setPhotoPulse] = useState(false)
   const scrollRef = useRef(null)
 
   // Alt addresses
@@ -61,7 +60,6 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
     setImgError(false)
     setEditing(false)
     setSaveError(null)
-    setPhotoPulse(false)
   }, [dog])
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -139,8 +137,6 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
 
   function handlePhotoUploaded(d) {
     setImgError(false)
-    setPhotoPulse(true)
-    setTimeout(() => setPhotoPulse(false), 800)
     onDogUpdated?.(d)
   }
 
@@ -232,7 +228,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
 
           {/* Centered photo + name */}
           <div className="flex flex-col items-center mb-6">
-            <div className={`relative w-[120px] h-[120px] flex-shrink-0 ${photoPulse ? 'photo-pulse' : ''}`}>
+            <div className="relative w-[120px] h-[120px] flex-shrink-0">
               <div className="w-[120px] h-[120px] rounded-full overflow-hidden bg-[#FFF4F1] flex items-center justify-center shadow-lg ring-4 ring-white">
                 {photoUrl ? (
                   <img
@@ -606,31 +602,6 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                       {dog.phone && (
                         <a href={`tel:${dog.phone}`} className="text-sm text-[#E8634A] font-medium block mt-0.5">
                           {dog.phone}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Contact & Instagram — admin only */}
-              {permissions.canViewClientInfo && (dog.contact_method || dog.ig_handle) && (
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm flex-shrink-0 mt-0.5">📱</span>
-                    <div>
-                      <p className="text-xs font-semibold text-[#E8634A] uppercase tracking-wide mb-0.5">Contact</p>
-                      {dog.contact_method && (
-                        <p className="text-sm text-gray-700">{dog.contact_method}</p>
-                      )}
-                      {dog.ig_handle && (
-                        <a
-                          href={`https://instagram.com/${dog.ig_handle.replace(/^@/, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-[#E8634A] font-medium block mt-0.5"
-                        >
-                          @{dog.ig_handle.replace(/^@/, '')}
                         </a>
                       )}
                     </div>

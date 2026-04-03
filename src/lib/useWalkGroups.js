@@ -374,25 +374,6 @@ export function useWalkGroups(events, date, sector) {
     [date, sector, user]
   )
 
-  // Backward-compat: assign single walker (replaces all)
-  const assignWalker = useCallback(
-    async (groupNum, walkerId) => {
-      if (walkerId) {
-        setWalkerAssignments((prev) => ({ ...prev, [groupNum]: [walkerId] }))
-        await _persistWalkerIds(groupNum, [walkerId])
-      } else {
-        setWalkerAssignments((prev) => {
-          const next = { ...prev }
-          delete next[groupNum]
-          return next
-        })
-        await _persistWalkerIds(groupNum, [])
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [date, sector, user]
-  )
-
   // Set exact walker list (replaces all) — used for slot-based picker
   const setWalkers = useCallback(
     async (groupNum, walkerIds) => {
@@ -460,7 +441,7 @@ export function useWalkGroups(events, date, sector) {
   return {
     groups, groupNums, groupNames, walkerAssignments, groupLinks, groupLocks,
     moveEvent, addGroup, renameGroup, reorderGroup,
-    assignWalker, addWalker, removeWalker, setWalkers, linkGroups, unlinkGroups,
+    addWalker, removeWalker, setWalkers, linkGroups, unlinkGroups,
     loaded, lastSaved, lockGroup, unlockGroup,
   }
 }

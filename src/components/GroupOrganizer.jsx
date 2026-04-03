@@ -553,9 +553,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     if (!time) return null
     return new Date(time).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' })
   }
-  // Legacy alias
-  const formatPickupTime = formatWalkTime
-
   // ── Render a DogCard for an event ──────────────────────────────
   function renderDogCard(ev, id, groupNum, idx, isLocked, isCurrent = false, isCompact = false, interlockOwner = null) {
     const dog = ev.dog || {}
@@ -594,7 +591,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             setSwipeNoteDog({ id: dogId, dog_name: dog.dog_name || ev.displayName, photo_url: dog.photo_url })
             setSwipeNoteGroupName(gName)
           }}
-          onUndoPickup={isPickedUp ? () => undoPickup(dogId) : undefined}
           onTapName={() => enrichDogClick(ev, groupNum, dogPickup, dogId, date)}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
           showDragHandle={!isLocked && !isCompact}
@@ -1077,20 +1073,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             : '\u{1F512} Lock All Groups \u2014 Start Walking'}
         </button>
       )}
-
-      {/* End of day celebration */}
-      <EndOfDayCelebration
-        groupNums={groupNums}
-        groupNames={groupNames}
-        groupLocks={groupLocks}
-        groups={groups}
-        eventsMap={eventsMap}
-        pickups={pickups}
-        doneGroupNums={doneGroupNums}
-        walkerAssignments={walkerAssignments}
-        userId={user?.id}
-        date={date}
-      />
 
       {/* + Add group button */}
       {!anyGroupLocked && (
@@ -1775,89 +1757,6 @@ function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, picku
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-// ── End of day celebration ─────────────────────────────────────────
-function EndOfDayCelebration({ groupNums, groupNames, groupLocks, groups, eventsMap, pickups, doneGroupNums, walkerAssignments, userId, date }) {
-  const [noteCount, setNoteCount] = useState(0)
-  const [issueCount, setIssueCount] = useState(0)
-
-  const myLockedNums = groupNums.filter(n => {
-    const wIds = walkerAssignments[n] || []
-    return groupLocks[n] && (wIds.includes(userId) || wIds.length === 0)
-  })
-
-  const allDone = myLockedNums.length > 0 && myLockedNums.every(n => {
-    const ids = (groups[n] || []).map(String)
-    return (ids.length > 0 && ids.every(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.returnedAt })) || doneGroupNums.has(n)
-  })
-
-  // Fetch note/issue counts
-  useEffect(() => {
-    if (!allDone || !date) return
-    async function fetchCounts() {
-      const { data } = await supabase
-        .from('walker_notes')
-        .select('note_type, tags')
-        .eq('walk_date', date)
-        .eq('walker_id', userId)
-      if (!data) return
-      const redTags = ['Seems off', 'Reactive', 'Limping', 'Refuse to walk', 'Wounded', 'Soft stool / diarrhea', 'DM Me']
-      let notes = 0, issues = 0
-      for (const row of data) {
-        if (row.note_type === 'note') notes++
-        if (row.tags && row.tags.some(t => redTags.includes(t))) issues++
-      }
-      setNoteCount(notes)
-      setIssueCount(issues)
-    }
-    fetchCounts()
-  }, [allDone, date, userId])
-
-  if (!allDone) return null
-
-  const totalDogs = myLockedNums.reduce((s, n) => s + (groups[n] || []).length, 0)
-
-  // Per-group durations + total time
-  const groupStats = myLockedNums.map(n => {
-    const ids = (groups[n] || []).map(String)
-    const pickupTimes = ids.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.pickedUpAt ? new Date(p.pickedUpAt).getTime() : null }).filter(Boolean)
-    const returnTimes = ids.map(id => { const ev = eventsMap.get(id); const p = ev?.dog?.id && pickups[ev.dog.id]; return p?.returnedAt ? new Date(p.returnedAt).getTime() : null }).filter(Boolean)
-    const duration = pickupTimes.length > 0 && returnTimes.length > 0 ? Math.round((Math.max(...returnTimes) - Math.min(...pickupTimes)) / 60000) : 0
-    return { num: n, name: groupNames[n] || `Group ${n}`, duration, pickupTimes, returnTimes }
-  })
-
-  const allPickupTimes = groupStats.flatMap(g => g.pickupTimes)
-  const allReturnTimes = groupStats.flatMap(g => g.returnTimes)
-  const totalTime = allPickupTimes.length > 0 && allReturnTimes.length > 0 ? Math.round((Math.max(...allReturnTimes) - Math.min(...allPickupTimes)) / 60000) : 0
-
-  return (
-    <div style={{ textAlign: 'center', padding: '30px 14px' }}>
-      <div style={{ fontSize: 36, letterSpacing: 8, marginBottom: 12 }}>{'\u{1F43E}'} {'\u{1F43E}'} {'\u{1F43E}'}</div>
-      <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>All walks done!</div>
-      <div style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>
-        {myLockedNums.length} group{myLockedNums.length > 1 ? 's' : ''} {'\u00b7'} {totalDogs} dog{totalDogs > 1 ? 's' : ''} {'\u00b7'} {totalTime} min
-      </div>
-
-      {/* Per-group stats */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: 12, border: '0.5px solid #e8e5e0', textAlign: 'left', marginBottom: 8 }}>
-        {groupStats.map(g => (
-          <div key={g.num} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
-            <span>{'\u2713'} {g.name}</span>
-            <span style={{ color: '#aaa' }}>{g.duration} min</span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>
-        {noteCount} note{noteCount !== 1 ? 's' : ''} logged {'\u00b7'} {issueCount} issue{issueCount !== 1 ? 's' : ''} flagged
-      </div>
-
-      <div style={{ background: '#fff', borderRadius: 14, padding: 16, border: '0.5px solid #e8e5e0' }}>
-        <span style={{ color: '#aaa', fontSize: 13 }}>See you tomorrow!</span>
-      </div>
     </div>
   )
 }

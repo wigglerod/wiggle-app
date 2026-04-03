@@ -26,7 +26,6 @@ export default function DogCard({
   onSwipeRight,          // Note swipe (right)
   onTapName,
   onTapAddress,
-  onUndoPickup,          // kept for compat but undo now lives in profile
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
