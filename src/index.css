@@ -68,6 +68,15 @@ input, textarea, select {
   display: inline-block;
 }
 
+/* Owl walk — left-to-right patrol on name line, flips at each edge */
+@keyframes owlWalk {
+  0%   { left: 0;                 transform: scaleX(1); }
+  44%  { left: calc(100% - 14px); transform: scaleX(1); }
+  46%  { left: calc(100% - 14px); transform: scaleX(-1); }
+  90%  { left: 0;                 transform: scaleX(-1); }
+  100% { left: 0;                 transform: scaleX(1); }
+}
+
 /* Photo upload success pulse */
 @keyframes photo-pulse {
   0% { box-shadow: 0 0 0 0 rgba(232, 99, 74, 0.5); }

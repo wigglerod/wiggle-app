@@ -26,6 +26,7 @@ export default function DogCard({
   onSwipeRight,          // Note swipe (right)
   onTapName,
   onTapAddress,
+  onAcknowledgeOwl,      // () => void — called when walker taps 'Got it'
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -120,6 +121,23 @@ export default function DogCard({
   const initial = dog.dog_name ? dog.dog_name.charAt(0).toUpperCase() : '?';
   const bgColor = nameToColor(dog.dog_name || '');
   const levelDot = dog.level === 3 ? '#EF4444' : dog.level === 2 ? '#FBBF24' : '#1D9E75';
+
+  // Owl note is only "active" when dog is in waiting state
+  const hasOwlNotes = !!owlNote && !isPickedUp && !isReturned && !isNotWalking;
+
+  // Helper: days-ago string for owl note meta
+  function timeAgo(iso) {
+    if (!iso) return ''
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+  function daysUntil(iso) {
+    if (!iso) return null
+    return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
+  }
 
   // ── Derive visual state ────────────────────────────────────────
   // State 3: Returned home
@@ -242,20 +260,37 @@ export default function DogCard({
                 <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{initial}</span>
               )}
             </div>
-            <span
-              onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
-              style={{
-                fontWeight: 600, fontSize: 11, overflow: 'hidden',
-                textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
-                textDecorationColor: nameColor,
-                color: nameColor,
-                borderBottom: isNotWalking ? '1px dashed #F0C76E' : (hasNotes && !isPickedUp && !isReturned ? '1px dashed #961e78' : '1px dashed #AFA9EC'),
-                cursor: onTapName ? 'pointer' : 'default',
-              }}
-            >
-              {dog.dog_name}
-            </span>
+            {/* Name + owl track wrapper */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden' }}>
+              <span
+                onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
+                style={{
+                  fontWeight: 600, fontSize: 11, overflow: 'hidden',
+                  textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1,
+                  textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
+                  textDecorationColor: nameColor,
+                  color: nameColor,
+                  borderBottom: isNotWalking ? '1px dashed #F0C76E' : (hasNotes && !isPickedUp && !isReturned ? '1px dashed #961e78' : '1px dashed #AFA9EC'),
+                  cursor: onTapName ? 'pointer' : 'default',
+                }}
+              >
+                {dog.dog_name}
+              </span>
+              {/* ★ star — only when dog has BOTH forever note AND owl note */}
+              {hasNotes && hasOwlNotes && (
+                <span style={{ fontSize: '9px', color: '#961e78', flexShrink: 0, lineHeight: 1 }}>★</span>
+              )}
+              {/* 🦉 animated owl walk track */}
+              {hasOwlNotes && (
+                <div style={{ flex: 1, position: 'relative', height: 16, overflow: 'hidden', minWidth: 16 }}>
+                  <span style={{
+                    position: 'absolute', fontSize: 9, top: 3,
+                    animation: 'owlWalk 3.6s linear infinite',
+                    display: 'inline-block',
+                  }}>🦉</span>
+                </div>
+              )}
+            </div>
             {dog.level && (
               <span style={{
                 width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
@@ -397,23 +432,39 @@ export default function DogCard({
           background: levelDot,
         }} />
 
-        {/* Dog name — tap opens profile (ALWAYS purple link, every state) */}
-        <span
-          onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
-          style={{
-            fontSize: 14, fontWeight: 600,
-            color: isNotWalking ? '#C4851C' : (dog.notes ? '#961e78' : '#534AB7'),
-            textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
-            textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
-            borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
-            letterSpacing: '-0.01em',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            flexShrink: 1, minWidth: 0,
-            cursor: onTapName ? 'pointer' : 'default',
-          }}
-        >
-          {dog.dog_name}
-        </span>
+        {/* Dog name line — name + optional ★ + animated owl track */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
+          <span
+            onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
+            style={{
+              fontSize: 14, fontWeight: 600,
+              color: isNotWalking ? '#C4851C' : (dog.notes ? '#961e78' : '#534AB7'),
+              textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
+              textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
+              borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
+              letterSpacing: '-0.01em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              flexShrink: 1, minWidth: 0,
+              cursor: onTapName ? 'pointer' : 'default',
+            }}
+          >
+            {dog.dog_name}
+          </span>
+          {/* ★ only when dog has BOTH forever note AND active owl note */}
+          {dog.notes && hasOwlNotes && (
+            <span style={{ fontSize: 10, color: '#961e78', flexShrink: 0, lineHeight: 1 }}>★</span>
+          )}
+          {/* 🦉 animated owl walk — fills remaining space to the right of name */}
+          {hasOwlNotes && (
+            <div style={{ flex: 1, position: 'relative', height: 18, overflow: 'hidden', minWidth: 20 }}>
+              <span style={{
+                position: 'absolute', fontSize: 11, top: 3,
+                animation: 'owlWalk 3.6s linear infinite',
+                display: 'inline-block',
+              }}>🦉</span>
+            </div>
+          )}
+        </div>
 
         {/* Not walking label */}
         {isNotWalking && (
@@ -426,8 +477,8 @@ export default function DogCard({
           </span>
         )}
 
-        {/* Address — visible in all states */}
-        {!isNotWalking && dog.address && (
+        {/* Address — right-aligned, only visible when name line doesn't need the space */}
+        {!isNotWalking && !hasOwlNotes && dog.address && (
           <span style={{
             flex: 1, fontSize: 10,
             color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
@@ -466,10 +517,7 @@ export default function DogCard({
             </span>
           )}
 
-          {/* Owl indicator dot */}
-          {owlNote && !expanded && !isPickedUp && !isReturned && !isNotWalking && (
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FAC775', flexShrink: 0 }} />
-          )}
+          {/* Owl dot removed — animated owl on name line replaces this */}
 
           {/* Expand chevron — only when waiting */}
           {!isPickedUp && !isReturned && !isNotWalking && (
@@ -487,82 +535,83 @@ export default function DogCard({
       {/* ── EXPANDED PANEL (waiting state only) ─────────────────── */}
       {expanded && !isPickedUp && !isReturned && (
         <div style={{
-          padding: '10px 14px 12px',
-          background: '#fafaf8',
+          background: '#FAF7F4',
           borderRadius: '0 0 12px 12px',
           border: '0.5px solid #E8E4E0',
           borderTop: 'none',
+          overflow: 'hidden',
         }}>
-          {/* Address row */}
-          {dog.address && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span
-                onClick={(e) => { e.stopPropagation(); onTapAddress?.() }}
-                style={{ fontSize: 13, color: '#185FA5', fontWeight: 500, cursor: 'pointer', flex: 1 }}
-              >
-                {dog.address} ›
+
+          {/* ★ Forever note — fuschia bg, no Got it */}
+          {dog.notes && (
+            <div style={{
+              padding: '8px 14px',
+              background: '#fdf4fb',
+              borderBottom: '1px solid #e8d0e3',
+              display: 'flex', alignItems: 'flex-start', gap: 6,
+            }}>
+              <span style={{ fontSize: 10, color: '#961e78', flexShrink: 0, marginTop: 1 }}>★</span>
+              <span style={{ fontSize: 11, color: '#961e78', fontWeight: 600, lineHeight: 1.4 }}>
+                {dog.notes}
               </span>
             </div>
           )}
 
-          {/* Owl note */}
+          {/* 🦉 Owl note — amber bg, Got it button */}
           {owlNote && (
             <div style={{
-              padding: '8px 12px', background: '#FAEEDA',
-              border: '0.5px solid #FAC775', borderRadius: 8,
-              fontSize: 12, color: '#633806', marginBottom: 8, lineHeight: 1.5,
+              padding: '8px 14px',
+              background: '#FFFBF0',
+              borderBottom: '1px solid #F0C76E',
             }}>
-              🦉 {owlNote.note_text}
-              {owlNote.created_by_name && (
-                <span style={{ color: '#a08050', marginLeft: 6, fontSize: 10 }}>
-                  — {owlNote.created_by_name}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, flexShrink: 0, marginTop: 1 }}>🦉</span>
+                <span style={{ fontSize: 11, color: '#2D2926', lineHeight: 1.4 }}>
+                  {owlNote.note_text}
                 </span>
-              )}
+              </div>
+              <p style={{ fontSize: 9, color: '#8C857E', margin: '0 0 0 16px' }}>
+                {owlNote.created_by_name || 'Unknown'}
+                {' · '}{timeAgo(owlNote.created_at)}
+                {daysUntil(owlNote.expires_at) !== null && (
+                  <> · <span style={{ color: daysUntil(owlNote.expires_at) <= 2 ? '#E8634A' : '#8C857E' }}>
+                    expires {daysUntil(owlNote.expires_at)}d
+                  </span></>
+                )}
+              </p>
             </div>
           )}
 
-          {/* Alt address */}
-          {altAddress && (
-            <div style={{ padding: '6px 10px', background: '#FAEEDA', borderRadius: 8, fontSize: 11, color: '#854F0B', marginBottom: 8 }}>
-              📍 Different address today
-            </div>
-          )}
-
-          {/* Action buttons */}
-          {isLocked && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              {onSwipeLeft && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onSwipeLeft(); setExpanded(false) }}
-                  style={{
-                    flex: 1, padding: '12px 14px', borderRadius: 10,
-                    background: 'linear-gradient(180deg, #2D8F6F 0%, #1f6e53 100%)',
-                    color: '#fff', border: 'none',
-                    borderBottom: '3px solid #155240',
-                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(45,143,111,0.3)',
-                  }}
-                >
-                  ✓ Picked up
-                </button>
-              )}
-              {onSwipeRight && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onSwipeRight() }}
-                  style={{
-                    flex: 1, padding: '12px 14px', borderRadius: 10,
-                    background: 'linear-gradient(180deg, #E8634A 0%, #d4552d 100%)',
-                    color: '#fff', border: 'none',
-                    borderBottom: '3px solid #b8461f',
-                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(232,99,74,0.3)',
-                  }}
-                >
-                  ✏ Add note
-                </button>
-              )}
-            </div>
-          )}
+          {/* Bottom button row — Got it (if owl) + ✎ Note (always) */}
+          <div style={{
+            display: 'flex', gap: 6, padding: '8px 10px',
+            background: '#FAF7F4',
+          }}>
+            {owlNote && onAcknowledgeOwl && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAcknowledgeOwl(); setExpanded(false); }}
+                style={{
+                  flex: 1, minHeight: 44, borderRadius: 9,
+                  background: '#2D8F6F', color: '#fff',
+                  border: 'none', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                ✓ Got it
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); /* PR 4: note composer */ }}
+              style={{
+                flex: 1, minHeight: 44, borderRadius: 9,
+                background: 'transparent', color: '#E8634A',
+                border: '1.5px solid #E8634A', fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              ✎ Note
+            </button>
+          </div>
         </div>
       )}
     </div>
