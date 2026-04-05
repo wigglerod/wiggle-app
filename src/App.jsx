@@ -13,6 +13,7 @@ const Admin = lazy(() => import('./pages/Admin'))
 const DogsPage = lazy(() => import('./pages/DogsPage'))
 const Schedule = lazy(() => import('./pages/Schedule'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const TowerMiniGen = lazy(() => import('./pages/TowerMiniGen'))
 
 function LazyFallback() {
   return (
@@ -134,6 +135,16 @@ function AnimatedRoutes() {
                     <SettingsPage />
                   </Suspense>
                 </SettingsRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tower/mini-gen"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LazyFallback />}>
+                  <TowerMiniGen />
+                </Suspense>
               </ProtectedRoute>
             }
           />
