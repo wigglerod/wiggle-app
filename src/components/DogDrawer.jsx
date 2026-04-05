@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
-import WalkerNotesSection from './WalkerNotesSection'
 import { useAltAddress } from '../lib/useAltAddress'
 import { usePickups } from '../lib/usePickups'
 
@@ -826,42 +825,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 </div>
               )}
 
-              {/* BFF as pill badges */}
-              {dog?.bff && (
-                <div className="bg-pink-50 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base flex-shrink-0">💕</span>
-                    <p className="text-xs font-semibold text-pink-400 uppercase tracking-wide">Best Friends</p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {dog.bff.split(/[,&]/).filter(s => s.trim()).map((name, i) => (
-                      <span key={i} className="bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full">
-                        {name.trim()}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Goals */}
-              {dog?.goals && (
-                <div className="bg-green-50 rounded-2xl p-4">
-                  <div className="flex items-start gap-2">
-                    <span className="text-base flex-shrink-0">🎯</span>
-                    <div>
-                      <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-0.5">Goals</p>
-                      <SmartTextDisplay
-                        text={dog.goals}
-                        onDogClick={onDogNameClick}
-                        className="text-sm text-gray-700 leading-snug"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Walker notes */}
-              {dog?.id && <WalkerNotesSection dogId={dog.id} />}
 
               {/* Acuity booking info (no profile) */}
               {!dog && (permissions.canViewClientInfo ? (event.email || event.ownerName) : false) && (
