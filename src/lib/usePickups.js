@@ -172,10 +172,11 @@ export function usePickups(date) {
   const undoPickup = useCallback(async (dogId) => {
     if (!user || !date || !dogId) return false
 
+    // Delete pickup AND any returned row — a return without a pickup is invalid state
     const { error } = await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId)
-      .eq('note_type', 'pickup')
       .eq('walk_date', date)
+      .in('note_type', ['pickup', 'returned'])
 
     if (error) {
       toast.error('Failed to undo pickup')
@@ -183,13 +184,13 @@ export function usePickups(date) {
     } else {
       setPickups(prev => {
         const next = { ...prev }
-        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null } }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null, returnedAt: null } }
         return next
       })
       toast('Pickup undone')
       notifySync(prev => {
         const next = { ...prev }
-        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null } }
+        if (next[dogId]) { next[dogId] = { ...next[dogId], pickedUpAt: null, time: null, returnedAt: null } }
         return next
       })
       return true

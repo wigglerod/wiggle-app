@@ -644,6 +644,9 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.pickedUpAt }).length
     const returnedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id]?.returnedAt }).length
     const total = dogIds.length
+
+    // Owl note count for group header badge
+    const owlCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && owlDogIdSet.has(ev.dog.id) }).length
     const allPickedUp = total > 0 && pickedCount === total
     const allReturned = total > 0 && returnedCount === total
 
@@ -741,6 +744,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             : !isGroupLocked && anyGroupLocked ? 'upnext'
             : null
           }
+          owlCount={owlCount}
         />
 
         {/* Swipe hint bar (first locked group only) */}
@@ -1256,7 +1260,7 @@ function getSortedWalkers(allWalkers, sector, date) {
 }
 
 // ── Group header ──────────────────────────────────────────────────
-function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCycleSlot, onOpenPicker, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge }) {
+function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCycleSlot, onOpenPicker, isLocked, lockInfo, dogCount, pickedCount, isTarget, selectedDogName, onTargetTap, onRename, isLinked, onLinkTap, statusBadge, owlCount = 0 }) {
   const [editing, setEditing] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const lpTimer = useRef(null)
@@ -1382,6 +1386,11 @@ function GroupHeader({ gName, num, wNames, wIds, allWalkers, date, sector, onCyc
         )}
         {statusBadge === 'upnext' && (
           <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
+        )}
+        {owlCount > 0 && (
+          <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, fontWeight: 600, background: '#FFFBF0', color: '#C4851C', border: '1px solid #F0C76E', whiteSpace: 'nowrap' }}>
+            🦉 {owlCount}
+          </span>
         )}
         <span style={{ fontSize: 11, color: '#bbb' }}>
           {isLocked ? `${pickedCount}/${dogCount}` : `${dogCount} dogs`}

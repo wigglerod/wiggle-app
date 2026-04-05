@@ -306,7 +306,7 @@ export default function DogCard({
           
           {/* Row 2: Address, Door code, Times */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%', justifyContent: 'space-between', paddingLeft: Object.keys(dog).length > 0 ? 18 : 0 }}>
-            {!isNotWalking && dog.address && (
+            {dog.address && (
               <span style={{
                 flex: 1, fontSize: 10,
                 color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
@@ -483,8 +483,8 @@ export default function DogCard({
           </span>
         )}
 
-        {/* Address — right-aligned, only visible when name line doesn't need the space */}
-        {!isNotWalking && !hasOwlNotes && dog.address && (
+        {/* Address — always visible per design constitution */}
+        {dog.address && (
           <span style={{
             flex: 1, fontSize: 10,
             color: (isPickedUp || isReturned) ? '#B5AFA8' : '#475569',
@@ -512,8 +512,8 @@ export default function DogCard({
             </span>
           )}
 
-          {/* Door code — visible when waiting or picked up (not returned, too faded) */}
-          {!isReturned && dog.door_code && (
+          {/* Door code — always visible per design constitution */}
+          {dog.door_code && (
             <span style={{
               fontSize: 9, color: '#fff', fontWeight: 700,
               background: isPickedUp ? '#6DCAA8' : '#475569',
