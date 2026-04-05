@@ -2,7 +2,7 @@
 ## Loaded automatically every Claude Code and Antigravity session.
 ## Lives at: ~/Documents/wiggle-v4/CLAUDE.md
 ## Do not edit without Rodrigo's approval.
-## Last updated: April 3, 2026 — V2 clean slate
+## Last updated: April 5, 2026 — color system clarified, fuschia/purple ruling final
 
 ---
 
@@ -49,22 +49,24 @@ Blue is allowed — but only when it has a defined functional purpose.
 
 ### Brand & Functional Colors
 
-| Token       | Hex       | Job                                                        |
-|-------------|-----------|------------------------------------------------------------|
-| Coral       | `#E8634A` | Primary action — CTAs, lock slider, brand identity hero    |
-| Coral Dark  | `#C94A34` | Pressed/active state of coral only                         |
-| Coral Light | `#FAECE7` | Coral tint — status highlights, light backgrounds          |
-| Purple      | `#534AB7` | Tappable links — dog names (default), walker names, group structure |
-| Fuschia     | `#961e78` | Dog name when `dogs.notes` has content — pay attention             |
-| Purple bg   | `#EEEDFE` | Purple tint — walker buttons, group tints, interlock bars  |
-| Purple Dark | `#3D3590` | Unlock slider, deep purple accents                         |
-| Sage        | `#2D8F6F` | Picked up, positive, done, success                         |
-| Sage bg     | `#E8F5EF` | Picked up card background                                  |
-| Sage border | `#6DCAA8` | Picked up card border                                      |
-| Amber       | `#C4851C` | Needs attention, not walking, warnings                     |
-| Amber bg    | `#FDF3E3` | Not walking card bg, forever notes bg in drawer            |
-| Amber border| `#F0C76E` | Warning borders                                            |
-| Slate       | `#475569` | Utilitarian info — door codes, addresses, metadata         |
+| Token         | Hex       | Job                                                              |
+|---------------|-----------|------------------------------------------------------------------|
+| Coral         | `#E8634A` | Primary action — CTAs, lock slider, brand identity hero          |
+| Coral Dark    | `#C94A34` | Pressed/active state of coral only                               |
+| Coral Light   | `#FAECE7` | Coral tint — status highlights, light backgrounds                |
+| Purple        | `#534AB7` | Dog name signal (has forever note) · walker names · group structure |
+| Purple bg     | `#EEEDFE` | Purple tint — walker buttons, group tints, interlock bars        |
+| Purple Dark   | `#3D3590` | Unlock slider, deep purple accents                               |
+| Fuschia       | `#961e78` | Forever note CONTENT — section bg, expand block, editor sheet    |
+| Fuschia bg    | `#fdf4fb` | Forever note section backgrounds                                 |
+| Fuschia border| `#e8d0e3` | Forever note section borders                                     |
+| Sage          | `#2D8F6F` | Picked up, positive, done, success                               |
+| Sage bg       | `#E8F5EF` | Picked up card background                                        |
+| Sage border   | `#6DCAA8` | Picked up card border                                            |
+| Amber         | `#C4851C` | Needs attention, not walking, warnings · owl note labels         |
+| Amber bg      | `#FDF3E3` | Not walking card bg · owl note sections                          |
+| Amber border  | `#F0C76E` | Warning borders · owl note borders                               |
+| Slate         | `#475569` | Utilitarian info — door codes, addresses, metadata               |
 
 ### Surface Colors
 
@@ -85,12 +87,24 @@ Blue is allowed — but only when it has a defined functional purpose.
 | Text light  | `#B5AFA8` | Tertiary, hints                                            |
 | Text faint  | `#D5CFC8` | Disabled, placeholder                                      |
 
-### Dog Name Color Logic (hard rule)
+### Dog Name Color Logic — FINAL RULING (hard rule, no exceptions)
 
-- Default: black `#2D2926` — no forever note, nothing special
-- Fuschia `#961e78` — dogs.notes has content (permanent standing instructions)
-- This is the ONLY trigger for fuschia on a dog name
-- Purple elsewhere = tappable links, walker names, group structure, interlock
+Purple and Fuschia have two DIFFERENT jobs. They are not interchangeable.
+
+**Purple `#534AB7` on dog name** = "this dog has a forever note — tap to see it"
+- This is the SIGNAL. It lives on the name text only.
+- Fires when `dogs.notes` is not null AND not empty string.
+- Also used for: walker names, group structure, interlock — never reassigned.
+
+**Fuschia `#961e78` on sections/content** = "this IS the forever note content"
+- This is the CONTENT color. It lives on section backgrounds, expand blocks, editor sheets.
+- Never appears on dog name text. Never appears on cards.
+- Fuschia on a name = wrong. Fuschia on a drawer section = correct.
+
+Summary:
+- Dog name → **purple** when forever note exists
+- Forever note section/expand/editor → **fuschia** bg and borders
+- These two colors coexist. They serve different purposes. Neither is retired.
 
 ### Sector Colors (map + visual identity only)
 
@@ -105,7 +119,8 @@ Blue is allowed — but only when it has a defined functional purpose.
 - NEVER use pure white (#ffffff) — use cream #FAF7F4
 - Coral is the CTA on every surface — always
 - Background is always warm — if it feels like a bank app, it is wrong
-- Fuschia (#961e78) is reserved for forever notes ONLY (dogs.notes signal). No other use.
+- Purple on dog name = forever note signal. Fuschia on sections = forever note content.
+  Both are active. Neither is retired. Do not confuse them.
 
 ---
 
@@ -126,7 +141,7 @@ Minimum touch targets: **44px height** for any tappable element on mobile.
 ### Always show — no exceptions, no layout mode overrides:
 1. Dog name — tappable → opens DogProfileDrawer
    - Default: black `#2D2926`
-   - If dogs.notes has content: purple `#534AB7`
+   - If dogs.notes has content: **purple `#534AB7`** (the signal)
 2. Address — street number + street name only (no postal code, no city)
 3. Door code — slate pill `#475569`, white text, only if exists
 4. Difficulty dot — sage = easy, amber = needs attention, coral = caution
@@ -207,10 +222,11 @@ WHY: Status action = walker moves to next door. App moves with them.
 
 ### Information Sections (order in drawer)
 1. **Walk Times** — pickup/return times, duration, edit buttons
-2. **Forever Notes** — dogs.notes, amber bg, permanent, never expires
-3. **Owl Notes** — staff-written, expires weekly, sector-filtered
-4. **Acuity Notes** — client-written, expires like owl notes
-   (See NOTES_SPEC.md for full build plan)
+2. **★ Forever Notes** — dogs.notes, fuschia bg `#fdf4fb`, permanent, never expires
+   - Admin (chief_pup) sees Edit button. Walkers see read-only + "admin-only" label.
+3. **🦉 Owl Notes** — staff-written, expires weekly, sector-filtered, amber bg
+4. **📅 Acuity Notes** — client-written, expires today, blue bg (Phase 2 — not built yet)
+5. **📝 Activity Notes** — walker_notes note_type='note', permanent history
 
 ---
 
@@ -226,10 +242,12 @@ WHY: Status action = walker moves to next door. App moves with them.
 ## DATABASE RULES
 
 - Walk state lives in `walker_notes` ONLY — never `walk_logs` (empty, unused)
-- `note_type` values: `pickup` | `returned` | `not_walking` | `group_done`
+- `note_type` values: `pickup` | `returned` | `not_walking` | `group_done` | `note` | `resolver_flag`
 - Query Supabase FIRST — never ask Rodrigo for data in the DB
 - Every write must carry `walker_id`, `walker_name`, `walk_date`
 - `walk_groups.dog_ids` stores dog names as text[] — intentional, names are unique per sector
+- `owl_notes` requires `target_sector` filter — never query without it or notes bleed across sectors
+- Mini Gen writes to `mini_gen_drafts` ONLY — never directly to `walk_groups`
 
 ---
 
@@ -258,12 +276,14 @@ Login: test@wiggledogwalks.com / WiggleTest2026!
 - Roles: Chief Pup (admin) | Wiggle Pro (senior_walker) | Pup Walker (junior_walker)
 - Acuity: User ID 36833686 | Type IDs: 80336576 Plateau, 80336804 Laurier, 81191222 Private
 - Tower: ~/Documents/wiggle-v4/apps-script/Code.js
+- Mini Gen: api/mini-gen.js — POST /api/mini-gen — writes to mini_gen_drafts + walker_notes
+- Gen UUID: db94d31c-90b7-410e-9ce1-e8f79a752925
 
 Do not add npm packages without asking Rodrigo.
 Do not introduce new font families.
 Do not use cold gray Tailwind classes.
 Do not remove dog name, address, or door code from any card state.
-Do not use fuschia for anything except forever notes (dogs.notes signal).
+Purple on dog name = forever note signal. Fuschia on sections = forever note content.
 
 ---
 
@@ -274,7 +294,8 @@ Do not use fuschia for anything except forever notes (dogs.notes signal).
 - [ ] Every color has a defined job in the table above
 - [ ] No color is doing two jobs on the same screen
 - [ ] No cold Tailwind grays without warm override
-- [ ] Dog name is purple (default) or fuschia (forever note) — nothing else
+- [ ] Dog name is black (default) or purple (has forever note) — never fuschia
+- [ ] Forever note sections use fuschia bg — never amber or purple
 - [ ] All touch targets ≥ 44px
 - [ ] Door codes always visible as slate pill — never hidden
 - [ ] Font is DM Sans — nothing else
