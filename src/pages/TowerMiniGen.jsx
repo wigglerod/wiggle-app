@@ -152,7 +152,7 @@ function FlagCard({ flag }) {
 /* ── main page ──────────────────────────────────────── */
 
 export default function TowerMiniGen() {
-  const { profile, isLoading: authLoading } = useAuth()
+  const { profile, session, isLoading: authLoading } = useAuth()
   const [drafts, setDrafts] = useState([])
   const [flags, setFlags] = useState([])
   const [statusLine, setStatusLine] = useState(null)
@@ -233,8 +233,9 @@ export default function TowerMiniGen() {
   }
 
   /* ── auth guard ── */
-  if (authLoading) return null
-  if (!profile || profile.role !== 'admin') return <Navigate to="/login" replace />
+  if (authLoading || (session && !profile)) return null
+  if (!session) return <Navigate to="/login" replace />
+  if (profile?.role !== 'admin') return <Navigate to="/" replace />
 
   /* ── layout ── */
   return (
