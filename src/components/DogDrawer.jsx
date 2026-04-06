@@ -671,7 +671,35 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                 <LiveWalkTimes walkInfo={event._walkInfo} onClose={onClose} />
               )}
 
+              {/* ── ★ Forever Notes — always read-only in walk drawer ─── */}
+              {dogNotes && (
+                <div style={{
+                  background: '#fdf4fb',
+                  borderRadius: 14,
+                  border: '1px solid #e8d0e3',
+                  padding: '10px 14px',
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                }}>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: '#961e78', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                    ★ Forever
+                  </p>
+                  <SmartTextDisplay
+                    text={dogNotes}
+                    onDogClick={onDogNameClick}
+                    className="text-sm font-medium leading-snug break-words"
+                    style={{ color: '#961e78', fontSize: 12, fontWeight: 600, lineHeight: 1.5 }}
+                  />
+                  {!isAdmin && (
+                    <p style={{ fontSize: 10, color: '#B5AFA8', fontStyle: 'italic', marginTop: 4, marginBottom: 0 }}>
+                      admin-only · read-only for walkers
+                    </p>
+                  )}
+                </div>
+              )}
+
               {owlNotes && owlNotes.length > 0 && (
+
                 <div className="flex flex-col gap-2">
                   {owlNotes.map((note) => (
                     <div key={note.id} className="bg-[#E8634A]/10 border border-[#E8634A]/30 rounded-2xl px-4 py-3">
@@ -694,21 +722,6 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
                       </button>
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Notes alert */}
-              {dogNotes && (
-                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
-                  <span className="text-lg flex-shrink-0 mt-0.5">{'\u26A0\uFE0F'}</span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <SmartTextDisplay
-                      text={dogNotes}
-                      onDogClick={onDogNameClick}
-                      className="text-sm font-medium leading-snug break-words"
-                    />
-                  </div>
                 </div>
               )}
 
