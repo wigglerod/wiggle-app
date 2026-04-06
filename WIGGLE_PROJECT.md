@@ -1,6 +1,6 @@
 # WIGGLE PROJECT — Master Context
 ## Read this before touching anything. Every tool. Every session.
-## Last updated: April 6, 2026 — Tower V4 live
+## Last updated: April 6, 2026 — Bug sweep confirmed clean. Tower V4 live.
 
 ---
 
@@ -78,7 +78,7 @@ Never claim something works without device verification.
 ## TEST CREDENTIALS
 
 - test@wiggledogwalks.com / WiggleTest2026!
-- Role: senior_walker, Sector: Plateau
+- Role: admin, Sector: both (upgraded Apr 6 2026)
 - Use for ALL Antigravity automated testing
 - Never appears in walker assignment dropdowns
 
@@ -86,13 +86,14 @@ Never claim something works without device verification.
 
 ## DATABASE — KEY TABLES
 
-### dogs (95 rows)
+### dogs (95 rows — confirmed Apr 6 2026)
 dog_name, sector, owner_first, owner_last, email, phone,
 address, door_code, notes, photo_url, breed, level,
 ig_handle, contact_method, building_access, unit_number
 
 dogs.notes = Forever Notes — permanent standing instructions.
 Never expires. When not null → dog name shows in purple on card.
+24 dogs currently have forever notes.
 
 ### walk_groups
 id, walk_date, group_num, group_name, dog_ids (text[]),
@@ -117,7 +118,7 @@ note_type values:
 ### walk_logs — EMPTY, unused
 Do not write any walk state here. Use walker_notes exclusively.
 
-### owl_notes
+### owl_notes (7 active as of Apr 6 2026)
 Staff notes. Written by Rod, Gen, or any walker.
 Expires weekly. Sector-filtered — walkers only see their sector.
 HARD RULE: query must always include AND target_sector = walker_sector.
@@ -134,7 +135,11 @@ Mini Gen writes here. Gen approves via Tower /tower/dashboard.
 Approved rows → promoted to walk_groups via api/tower-approve.js.
 Cron: POST /api/mini-gen at 8 AM EDT weekdays. Gen can trigger manually.
 
-### acuity_name_map (43 rows — 3 added Apr 6: Mousse, Scotch, Eva)
+NOTE: As of Apr 6, old pending drafts from Mar 30–Apr 2 remain in the table
+as 'pending' (stale past dates). They are harmless. Future: add a cleanup
+job to auto-reject past-date pending drafts. Not urgent.
+
+### acuity_name_map (77 rows — confirmed Apr 6 2026)
 acuity_name = OWNER name from Acuity
 dog_name = canonical DOG name from dogs table
 acuity_email = owner email for disambiguation
@@ -152,9 +157,11 @@ Alternate pickup addresses for dogs.
 Table exists, currently empty.
 Surfaced in Tower /tower/schedule.
 
-### profiles (14 rows)
-full_name, role, sector, email,
-schedule (text "Mon, Tue, Wed" — parse with regex)
+### profiles (12 rows — confirmed Apr 6 2026)
+full_name, role, sector, email, email_alt, schedule
+(text "Mon, Tue, Wed" — parse with regex)
+Duplicate accounts cleaned April 6. email_alt column added.
+Admin role value: 'admin' (never 'chief_pup' in DB).
 
 ### group_links
 Interlock data. sync_position (int) = how many dogs Walker A
@@ -229,28 +236,30 @@ INFORMATION SECTIONS (order in drawer):
 
 ---
 
-## CURRENT BUGS — START NEXT SESSION HERE
+## CURRENT BUGS
 
-All go to Antigravity. Use test@wiggledogwalks.com.
-One bug at a time. Phone test between each. Never localhost.
+None confirmed as of April 6, 2026.
 
-BUG 1 — Undo pickup state not updating live
-usePickups.js undoPickup() deletes DB row but does not
-update local React state. Fix: refresh local state after DB delete.
+The four bugs previously listed were fixed by Antigravity session April 6:
+Commit: `fix: undo pickup clears return state + drawer cleanup + card visibility + owl badge`
 
-BUG 2 — Back home drawer not auto-closing
-DogProfileDrawer.jsx markBackHome() not calling onClose()
-after success. Fix: call onClose() after await resolves.
+What was verified:
+- ✅ Undo pickup → card resets to waiting state, drawer closes
+- ✅ Back home → drawer auto-closes after markBackHome()
+- ✅ Not Walking undo → drawer closes, card resets
+- ✅ isCompact interlock → size reduction only, name/address/door code never stripped
+- ✅ Dog name color → purple (not fuschia) per CLAUDE.md final ruling
+- ✅ Swipe gesture works in interlock layout
 
-BUG 3 — Not Walking unverified
-Test last, after bugs 1 and 2 confirmed working.
+### Known non-user-facing issue
+schedule-verify cron (`/api/cron/schedule-verify`) logs an error on every run.
+Does not affect walkers or Gen. Investigate when time allows.
+Error details: truncated in logs — full message needed for diagnosis.
 
-BUG 4 — Interlock cards broken
-DogCard.jsx isCompact mode strips name, address, door code.
-Swipe gesture broken in interlock layout.
-Fix: isCompact reduces size only, never removes content.
+---
 
-TOWER — Beast actions not wired
+## TOWER — BEAST ACTIONS NOT WIRED
+
 Beast confirm UI works. "Do it" button does nothing yet.
 Next: wire to real Supabase writes (owl note + not walking).
 Each action needs its own api/tower-beast-action.js endpoint.
@@ -288,6 +297,8 @@ DELETE anything not in this list.
 
 ## LONG-TERM — DO NOT BUILD DURING APP SESSIONS
 
+- Mini Gen drafts cleanup: auto-reject past-date pending rows (cron or on-run)
+- schedule-verify cron error: investigate and fix
 - Supabase trigger: auto-populate acuity_name_map on new dog insert
 - Map Health panel in Tower /tower/schedule
 - 9 AM check: propose new map entries from unresolved bookings
