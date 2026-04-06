@@ -1,21 +1,24 @@
 # WIGGLE PROJECT — Master Context
-## Read this before touching ANYTHING. Every tool. Every session.
-### Read WIGGLE_PRINCIPLES.md before making any architectural decision.
-## Last updated: April 2, 2026 — end of session
+## Read this before touching anything. Every tool. Every session.
+## Last updated: April 6, 2026 — Tower V4 live
 
 ---
 
 ## THE BUSINESS
+
 - Wiggle Dog Walks — Montréal, QC
 - Owner: Rodrigo (Rod) — Chief Pup role in the app
 - Co-admin: Gen (Geneviève) — daily Tower Control user
 - ~95 active dogs, ~7 walkers
-- Two sectors: Plateau and Laurier
+- Two sectors: Plateau (56 dogs) and Laurier (39 dogs)
 - Scheduling platform: Acuity Scheduling (NOT Google Calendar)
+- Brand voice: "Work smart, play always."
+- Operating philosophy: Occam's razor — simplest truth, strongest foundation.
 
 ---
 
 ## THE PICTURE ON THE BOX
+
 A walker stands at a door in winter, one hand free.
 The dog profile is the complete action centre — one screen,
 everything needed to manage a dog's entire day.
@@ -24,38 +27,58 @@ placing and how it connects to the whole before writing code.
 
 ---
 
-## THE THREE TOOLS
-- Claude Chat: strategy, Supabase/Vercel MCP queries, prompt writing
-- Antigravity: ALL visual fixes, interactive behaviour, anything
-  that requires seeing and tapping to verify. Opens browser,
-  takes screenshots, iterates visually.
-- Claude Code: architecture, multi-file restructuring, non-visual work
+## THE PRODUCT ECOSYSTEM
 
-### TOOL RULE — NON NEGOTIABLE
-Any fix involving user interaction (tapping, state changes,
-drawer open/close, card state updates) goes to Antigravity.
-Claude Code edits blind. Vercel logs only show server errors —
-a clean build does NOT mean the feature works on device.
+Four surfaces. One brand. Same soul.
+
+| Surface       | Audience             | Purpose                              | Status        |
+|---------------|----------------------|--------------------------------------|---------------|
+| Wiggle App    | Walkers in the field | Real-time ops, one hand, winter coat | Active — V4   |
+| Tower Control | Rod + Gen at desk    | Planning, management, oversight      | LIVE — V4     |
+| Website       | Clients + prospects  | Brand, trust, booking                | Upcoming      |
+| Instagram     | Community, lifestyle | Brand voice, reach, warmth           | Upcoming      |
+
+These are not separate projects. They are one brand in four voices.
+Every decision made on one surface must be coherent with the others.
+
+---
+
+## THE THREE TOOLS
+
+- **Claude Chat** — strategy, Supabase/Vercel MCP queries, spec writing, prompt writing
+- **Antigravity** — ALL visual work, interactive behaviour, anything requiring browser verification
+- **Claude Code** — architecture, multi-file restructuring, non-visual work, Tower Control
+
+### TOOL RULE — NON-NEGOTIABLE
+
+Any fix involving user interaction (tapping, state changes, drawer open/close,
+card state updates) goes to Antigravity. Claude Code edits blind.
+A clean build does NOT mean the feature works on device.
 Never claim something works without device verification.
 
 ---
 
 ## INFRASTRUCTURE
-- App: wiggle-app-dusky.vercel.app (React PWA, Vite, Tailwind,
-  Framer Motion, @dnd-kit, Supabase realtime, Workbox PWA)
+
+- App: wiggle-app-dusky.vercel.app (React PWA, Vite, Tailwind, Framer Motion,
+  @dnd-kit, Supabase realtime, Workbox PWA)
 - App code: ~/Documents/wiggle-v4/
 - Supabase project ID: ifhniwjdrsswgemmqddn
 - Vercel project ID: prj_8xMbgRMgEXcF0DE44u70SOFeL8ma
 - Team ID: team_UWOcgVnP9qC84S65WA0vSAbr
-- Tower Control: ~/Documents/wiggle-app/apps-script/Code.js
-- Clasp push: npx @google/clasp push from regular Terminal ONLY
+- Tower Control: wiggle-app-dusky.vercel.app/tower (React, same codebase)
+- Tower code: ~/Documents/wiggle-v4/src/pages/Tower*.jsx
+- Tower tabs: /tower/dashboard · /tower/weekly · /tower/schedule
+              /tower/dogs · /tower/staff · /tower/billing (placeholder)
+- Tower auth: role = 'admin' in profiles table (not chief_pup)
+- Apps Script (legacy Code.js): no longer Tower — ignore
 
 ---
 
 ## TEST CREDENTIALS
+
 - test@wiggledogwalks.com / WiggleTest2026!
 - Role: senior_walker, Sector: Plateau
-- Created April 2 — confirmed exists in auth.users and profiles
 - Use for ALL Antigravity automated testing
 - Never appears in walker assignment dropdowns
 
@@ -68,151 +91,175 @@ dog_name, sector, owner_first, owner_last, email, phone,
 address, door_code, notes, photo_url, breed, level,
 ig_handle, contact_method, building_access, unit_number
 
+dogs.notes = Forever Notes — permanent standing instructions.
+Never expires. When not null → dog name shows in purple on card.
+
 ### walk_groups
-id, walk_date, group_num, group_name, dog_ids (uuid[]),
+id, walk_date, group_num, group_name, dog_ids (text[]),
 walker_ids (uuid[]), sector, locked, locked_by,
 locked_by_name, dog_order (jsonb)
+dog_ids stores dog NAMES as text[] — not UUIDs. Intentional.
 Query must return ALL rows where walk_date = today
 and dog_ids is not empty. No other filters.
-NOTE: useWalkGroups.js fixed April 2 — removed incorrect
-isAdmin locked-group filter hiding groups from senior_walkers.
 
-### walker_notes (ALL walk state lives here)
+### walker_notes — ALL walk state lives here
 id, dog_id, dog_name, walker_id, walker_name,
 note_type, message, walk_date, group_num, tags, created_at
+
 note_type values:
-  'pickup'      — dog has been picked up
-  'returned'    — dog is back home
-  'not_walking' — dog is not walking today
-DO NOT use walk_logs for live walk state — it is empty.
+  'pickup'         — dog has been picked up
+  'returned'       — dog is back home
+  'not_walking'    — dog is not walking today
+  'note'           — walker activity note (permanent history)
+  'group_done'     — group marked as done
+  'resolver_flag'  — Mini Gen conflict flag (Tower only)
 
-### walk_logs (EMPTY — unused by app)
-Do not write any walk state here.
-Use walker_notes exclusively.
+### walk_logs — EMPTY, unused
+Do not write any walk state here. Use walker_notes exclusively.
 
-### acuity_name_map (fully cleaned April 2)
+### owl_notes
+Staff notes. Written by Rod, Gen, or any walker.
+Expires weekly. Sector-filtered — walkers only see their sector.
+HARD RULE: query must always include AND target_sector = walker_sector.
+Never query without it or notes bleed across sectors.
+Schema: id, note_text, target_type, target_dog_id, target_dog_name,
+  target_sector, created_by, created_by_name, acknowledged_by,
+  acknowledged_by_name, acknowledged_at, note_date, expires_at,
+  created_at, scheduled_date, last_acknowledged_date
+
+### mini_gen_drafts
+walk_date, sector, dog_names (text[]), dog_uuids (uuid[]),
+flags (jsonb), status ('pending' | 'approved' | 'rejected'), run_date
+Mini Gen writes here. Gen approves via Tower /tower/dashboard.
+Approved rows → promoted to walk_groups via api/tower-approve.js.
+Cron: POST /api/mini-gen at 8 AM EDT weekdays. Gen can trigger manually.
+
+### acuity_name_map (43 rows — 3 added Apr 6: Mousse, Scotch, Eva)
 acuity_name = OWNER name from Acuity
 dog_name = canonical DOG name from dogs table
 acuity_email = owner email for disambiguation
-Rules:
 - Same-home pairs get two rows per booking name
-  (e.g. Amber Rose → Romeo AND Amber Rose → Miyagi)
 - Email disambiguates duplicate acuity_names
-  (e.g. two Lunas, two Peppers, two Cleos, two Buddys)
 - Never store descriptions as dog_name
-- All entries verified clean as of April 2
+
+### dog_conflicts
+Two dogs that cannot walk together.
+1 confirmed row: Mochi ↔ Chaska.
+Surfaced in Tower /tower/schedule.
+
+### dog_alt_addresses
+Alternate pickup addresses for dogs.
+Table exists, currently empty.
+Surfaced in Tower /tower/schedule.
 
 ### profiles (14 rows)
 full_name, role, sector, email,
 schedule (text "Mon, Tue, Wed" — parse with regex)
 
-### HARD RULE: Before asking Rod ANY question about dogs, walkers,
-groups, or schedules — query Supabase first. If the answer is
-in the DB, answer it directly. Never ask Rod for data that
-exists in the database.
+### group_links
+Interlock data. sync_position (int) = how many dogs Walker A
+picks up before Walker B starts.
 
-Walker shuffle sort order (used by handleCycleSlot):
-  1. Walkers scheduled today in this sector — check if
-     today's short day name (e.g. "Wed") appears in schedule
-  2. Rod (sector = 'both') — appears in both sectors
-  3. Other walkers in sector not scheduled today
-  4. Cycle past end of list → clears the slot
-Exclude from shuffle: role = 'admin', null schedule,
-test@wiggledogwalks.com, Wiggle Pro, Pup Walker.
----
-
-## COLOR SYSTEM — NO EXCEPTIONS
-- Coral #E8634A — primary action, CTAs, lock slider
-- Purple #534AB7 — dog name links, walker names on headers
-- Sage #2D8F6F — picked up state, positive, done
-- Amber #C4851C — not_walking state, warnings, attention
-- Slate #475569 — door codes, addresses
-- Fuschia #961e78 — dog name ONLY when dogs.notes has content
-- NO BLUE anywhere in the app. Ever.
-- Background: Peach #FFF5F0
-- Cards: Cream #FAF7F4 (never pure white)
-- Borders: #E8E4E0 (warm gray, never cold gray)
+### HARD RULE
+Before asking Rod ANY question about dogs, walkers, groups,
+or schedules — query Supabase first. If the answer is in the DB,
+answer it directly. Never ask Rod for data that exists in the database.
 
 ---
 
-## DOG CARD — ALWAYS SHOW (non negotiable)
+## COLOR SYSTEM — SEE CLAUDE.md FOR FULL SPEC
+
+Quick reference:
+- Coral #E8634A — primary action, CTAs, brand identity
+- Purple #534AB7 — dog name signal: this dog has a forever note (dogs.notes not null)
+- Fuschia #961e78 — forever note CONTENT: section bg, expand block, editor (NOT the name)
+  Purple on name = "there's a note." Fuschia on section = "here it is." Both active.
+- Sage #2D8F6F — picked up, positive, done
+- Amber #C4851C — needs attention, not walking, warnings · owl note labels
+- Slate #475569 — door codes, addresses, utilitarian info
+- Black #2D2926 — default dog name color (no forever note)
+- Blue — allowed when it has a defined functional purpose
+- Beast orange #E8762B — Run Mini Gen button in Tower ONLY
+
+Tower design system uses COOL GRAY (not warm peach/cream). Never let
+app warmth bleed into Tower surfaces.
+
+---
+
+## DOG CARD — ALWAYS SHOW (non-negotiable)
+
 Mini card must ALWAYS show regardless of layout mode
 including isCompact (interlock) mode:
-1. Dog name — purple tappable link → opens DogProfileDrawer
-   If dogs.notes has content → name color = fuschia #961e78
+1. Dog name — tappable → opens DogProfileDrawer
+   Default color: black (#2D2926)
+   If dogs.notes has content → name color: purple (#534AB7)
 2. Address — street number + street name only, no postal code
-   Rule: split on first comma, strip Canadian postal codes.
-   Result example: '4200 Esplanade' not '4200 Esplanade, Montréal, QC H2W 1T2'
 3. Door code — slate pill if exists
 4. Difficulty dot — sage = easy, amber = needs attention
+
 isCompact may reduce padding/font size ONLY.
 NEVER removes name, address, or door code. Ever.
 
 Card states:
-- Waiting: cream bg, purple name
-- Picked up: sage bg #E8F5EF, name struck through, pickup time
-- Back home: sand bg #F0ECE8, opacity 0.55, both times shown
-- Not walking: amber bg #FDF3E3, amber border, name struck
-  through in amber, "Not walking" badge
+- Waiting:      cream bg #FAF7F4, black name
+- Picked up:    sage bg #E8F5EF, name struck through, pickup time
+- Back home:    sand bg #F0ECE8, opacity 0.55, both times shown
+- Not walking:  amber bg #FDF3E3, amber border, name struck in amber
 
 ---
 
 ## DOG PROFILE DRAWER — ACTION CENTRE
-CLOSE drawer after: Picked Up, Back Home, Not Walking, any Undo
-NEVER CLOSE after: door code reveal, edit times, info taps
+
+CLOSE after: Picked Up, Back Home, Not Walking, any Undo
+NEVER CLOSE after: edit times, info taps, note viewing
 WHY: Status actions = done with this dog, move on.
-Door code = still needed to enter the building.
 
 NOT WALKING:
 - Writes walker_notes note_type='not_walking'
 - Card stays visible in amber state — does NOT disappear
 - Undo deletes the row, resets card, closes drawer
 
-INFORMATION SECTIONS:
+INFORMATION SECTIONS (order in drawer):
 1. Walk Times — pickup/return times, duration, edit buttons
-2. Forever Notes — dogs.notes, amber bg, permanent
-3. Owl Notes — owl_notes table, walker-to-walker
-4. Acuity notes — not yet built
-
----
-
-## WHAT WAS BUILT — APRIL 2, 2026
-1. Not Walking button — built, writes to walker_notes,
-   card stays visible in amber with strikethrough
-2. Done groups expandable — tap to expand, all dogs shown
-   in final state, names tappable → profile with undo
-3. useWalkGroups query fixed — all walkers see all groups
-4. acuity_name_map fully cleaned — zero broken entries
-5. Test user created — test@wiggledogwalks.com / WiggleTest2026!
+2. Forever Notes — dogs.notes, fuschia bg #fdf4fb, permanent, never expires
+   Admin sees Edit button. Walkers see read-only + "admin-only" label.
+3. Owl Notes — staff-written, expires weekly, sector-filtered, amber bg
+4. Acuity Notes — client-written, from Acuity booking (Phase 2 — not built yet)
+5. Activity Notes — walker_notes note_type='note', permanent history, neutral bg
 
 ---
 
 ## CURRENT BUGS — START NEXT SESSION HERE
+
 All go to Antigravity. Use test@wiggledogwalks.com.
-Run test_all_actions.txt.
+One bug at a time. Phone test between each. Never localhost.
 
 BUG 1 — Undo pickup state not updating live
 usePickups.js undoPickup() deletes DB row but does not
-update local React state. Reopen profile still shows
-picked up. Fix: refresh local state after DB delete.
+update local React state. Fix: refresh local state after DB delete.
 
 BUG 2 — Back home drawer not auto-closing
 DogProfileDrawer.jsx markBackHome() not calling onClose()
 after success. Fix: call onClose() after await resolves.
 
 BUG 3 — Not Walking unverified
-Cannot confirm until bugs 1 and 2 are fixed.
-Test last after 1 and 2 confirmed working.
+Test last, after bugs 1 and 2 confirmed working.
 
 BUG 4 — Interlock cards broken
 DogCard.jsx isCompact mode strips name, address, door code.
 Swipe gesture broken in interlock layout.
 Fix: isCompact reduces size only, never removes content.
-Re-attach swipe handler for interlock layout.
+
+TOWER — Beast actions not wired
+Beast confirm UI works. "Do it" button does nothing yet.
+Next: wire to real Supabase writes (owl note + not walking).
+Each action needs its own api/tower-beast-action.js endpoint.
+Beast NEVER executes without CONFIRM block — rule stays forever.
 
 ---
 
 ## PROMPT RULES — EVERY PROMPT EVERY TIME
+
 1. Job first. Why inside the job. Rules after. Test at end.
 2. Verify the thing EXISTS before writing rules for it.
 3. Query Supabase FIRST. Never ask Rod for data in the DB.
@@ -220,35 +267,34 @@ Re-attach swipe handler for interlock layout.
    connects to the whole before writing anything.
 5. Clean build ≠ working feature. Device test is the only proof.
 6. Antigravity for anything visual or interactive. Always.
-7. WWRS filter: "What would the walker need right now,
-   one hand, winter coat?" Every decision goes through this.
+7. WWRS: "What would the walker need right now, one hand, winter coat?"
 8. Surgical edits only. Read the full file first.
-   Do not restructure. Do not reformat. Find the spot, done.
 
 ---
 
-## FILES IN PROJECT ROOT — KEEP OR DELETE
-KEEP:
-- WIGGLE_PROJECT.md — single source of truth, read first always
-- WIGGLE_PRINCIPLES.md — the WHY behind every decision
-- WIGGLE_WORKFLOW.md — three-tool workflow guide
-- interlock_final.html — visual reference for interlock layout
-- wiggle_dog_views.html — the three dog views glossary
+## PROJECT FILES — CANONICAL SET
 
-DELETE (done this session):
-- DESIGN_RULES.md — content absorbed into WIGGLE_PROJECT.md
-- wiggle_back_home_spec.html — feature implemented
-- wiggle_ops_context.md — superseded by WIGGLE_PROJECT.md
+| File                | Purpose                                          |
+|---------------------|--------------------------------------------------|
+| WIGGLE_PROJECT.md   | This file — master ops context                   |
+| WIGGLE_PRINCIPLES.md| The why behind every decision                    |
+| WIGGLE_WORKFLOW.md  | Three-tool workflow guide                        |
+| CLAUDE.md           | Design constitution + code rules (Claude Code)   |
+| NOTES_SPEC.md       | Notes system full spec (build reference)         |
+
+DELETE anything not in this list.
 
 ---
 
-## LONG-TERM — TOWER CONTROL ONLY
-Do not build any of these during app sessions.
-- Supabase trigger: auto-populate acuity_name_map on new
-  dog insert using owner_first + email from dogs table
-- Map Health panel in Tower Control
-- 9 AM Monday trigger: re-register after clasp push
-- 9 AM check: propose map entries from unresolved bookings
-- Admin dashboard: 9 AM trigger health status
-- Gmail Action Queue
-- Tower rebuild: single scrollable page
+## LONG-TERM — DO NOT BUILD DURING APP SESSIONS
+
+- Supabase trigger: auto-populate acuity_name_map on new dog insert
+- Map Health panel in Tower /tower/schedule
+- 9 AM check: propose new map entries from unresolved bookings
+- Gmail Action Queue in Tower
+- TELUS SMS inbox in Tower (webhook → Supabase → Tower messages panel)
+- Beast actions: wire "Do it" to real Supabase writes (owl note, not walking)
+- Billing tab: placeholder until billing table exists in Supabase
+- Promote step UI: push approved mini_gen_drafts → walk_groups in bulk
+- Acuity Notes (Phase 2): blue bg cards from owner bookings in the walker app
+- Goals and Check for Friends: deferred until one month of real walk data
