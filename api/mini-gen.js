@@ -11,7 +11,13 @@ import { getAdminClient } from './lib/supabase-admin.js'
 export default async function handler(req, res) {
   console.log(`[mini-gen] ${req.method} ${req.url} hit at ${new Date().toISOString()}`)
 
-  if (req.method !== 'POST') {
+  // Vercel Cron sends GET — allow it if CRON_SECRET matches
+  if (req.method === 'GET') {
+    const secret = process.env.CRON_SECRET
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+      return res.status(405).json({ error: 'POST only' })
+    }
+  } else if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST only' })
   }
 
@@ -72,24 +78,26 @@ export default async function handler(req, res) {
     const unresolved = [] // { ownerName, email, date, sector, bestGuess, confidence }
 
     for (const booking of bookings) {
-      const result = resolveName(booking, nameMap || [], allDogs || [])
-      if (result.resolved) {
-        resolved.push({
-          dogName: result.dogName,
-          dogUuid: result.dogUuid,
-          sector: booking.sector,
-          date: booking.date,
-          ownerName: booking.ownerName,
-        })
-      } else {
-        unresolved.push({
-          ownerName: booking.ownerName,
-          email: booking.email,
-          date: booking.date,
-          sector: booking.sector,
-          bestGuess: result.bestGuess,
-          confidence: result.confidence,
-        })
+      const results = resolveName(booking, nameMap || [], allDogs || [])
+      for (const result of results) {
+        if (result.resolved) {
+          resolved.push({
+            dogName: result.dogName,
+            dogUuid: result.dogUuid,
+            sector: booking.sector,
+            date: booking.date,
+            ownerName: booking.ownerName,
+          })
+        } else {
+          unresolved.push({
+            ownerName: booking.ownerName,
+            email: booking.email,
+            date: booking.date,
+            sector: booking.sector,
+            bestGuess: result.bestGuess,
+            confidence: result.confidence,
+          })
+        }
       }
     }
 
@@ -453,9 +461,11 @@ async function fetchAcuityWeek(minDate, maxDate) {
  *
  * Strategy (in order):
  * 1. Exact match: firstName against acuity_name_map.acuity_name
+ *    Returns ALL matching dogs (same-household pairs like Romeo + Miyagi).
  * 2. Email match: booking.email against acuity_name_map.acuity_email
- *    (disambiguates Pepper, Luna, etc.)
  * 3. Fuzzy match: firstName against dogs.owner_first
+ *
+ * Always returns an array of results.
  */
 function resolveName(booking, nameMap, allDogs) {
   const firstName = booking.firstName.trim().toLowerCase()
@@ -464,32 +474,22 @@ function resolveName(booking, nameMap, allDogs) {
   // Helper: look up dog UUID from dogs table by dog_name
   const findDog = (dogName) => allDogs.find((d) => d.dog_name === dogName)
 
-  // 1. Exact match on firstName against acuity_name_map.acuity_name
+  // 1. Exact match — collect ALL dogs for this acuity_name (household pairs)
   const exactMatches = nameMap.filter(
     (m) => m.acuity_name.toLowerCase() === firstName
   )
 
-  if (exactMatches.length === 1) {
-    // Unambiguous single match
-    const dog = findDog(exactMatches[0].dog_name)
-    if (dog) return { resolved: true, dogName: dog.dog_name, dogUuid: dog.id }
-    return { resolved: false, bestGuess: exactMatches[0].dog_name, confidence: 'LOW' }
-  }
-
-  if (exactMatches.length > 1) {
-    // Ambiguous — disambiguate by email
-    const emailHit = exactMatches.find(
-      (m) => m.acuity_email && m.acuity_email.toLowerCase() === email
-    )
-    if (emailHit) {
-      const dog = findDog(emailHit.dog_name)
-      if (dog) return { resolved: true, dogName: dog.dog_name, dogUuid: dog.id }
-      return { resolved: false, bestGuess: emailHit.dog_name, confidence: 'LOW' }
+  if (exactMatches.length >= 1) {
+    const results = []
+    for (const match of exactMatches) {
+      const dog = findDog(match.dog_name)
+      if (dog) {
+        results.push({ resolved: true, dogName: dog.dog_name, dogUuid: dog.id })
+      } else {
+        results.push({ resolved: false, bestGuess: match.dog_name, confidence: 'LOW' })
+      }
     }
-    // Email didn't help — take first match but flag as low confidence
-    const dog = findDog(exactMatches[0].dog_name)
-    if (dog) return { resolved: false, bestGuess: dog.dog_name, confidence: 'LOW' }
-    return { resolved: false, bestGuess: exactMatches[0].dog_name, confidence: 'LOW' }
+    return results
   }
 
   // 2. Email match — booking.email against acuity_name_map.acuity_email
@@ -498,8 +498,8 @@ function resolveName(booking, nameMap, allDogs) {
   )
   if (emailMatch) {
     const dog = findDog(emailMatch.dog_name)
-    if (dog) return { resolved: true, dogName: dog.dog_name, dogUuid: dog.id }
-    return { resolved: false, bestGuess: emailMatch.dog_name, confidence: 'MEDIUM' }
+    if (dog) return [{ resolved: true, dogName: dog.dog_name, dogUuid: dog.id }]
+    return [{ resolved: false, bestGuess: emailMatch.dog_name, confidence: 'MEDIUM' }]
   }
 
   // 3. Fuzzy match — firstName against dogs.owner_first
@@ -508,15 +508,15 @@ function resolveName(booking, nameMap, allDogs) {
     return of && of === firstName
   })
   if (ownerMatches.length === 1) {
-    return { resolved: false, bestGuess: ownerMatches[0].dog_name, confidence: 'MEDIUM' }
+    return [{ resolved: false, bestGuess: ownerMatches[0].dog_name, confidence: 'MEDIUM' }]
   }
 
   // Try dog_name direct match (e.g. booking firstName = "Halloumi")
   const dogNameMatch = allDogs.find((d) => d.dog_name.toLowerCase() === firstName)
   if (dogNameMatch) {
-    return { resolved: false, bestGuess: dogNameMatch.dog_name, confidence: 'MEDIUM' }
+    return [{ resolved: false, bestGuess: dogNameMatch.dog_name, confidence: 'MEDIUM' }]
   }
 
   // No match at all
-  return { resolved: false, bestGuess: null, confidence: 'NONE' }
+  return [{ resolved: false, bestGuess: null, confidence: 'NONE' }]
 }

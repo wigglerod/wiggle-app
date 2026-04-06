@@ -14,29 +14,54 @@ function fmtDate(d) {
   })
 }
 
-/* ── sub-components ─────────────────────────────────── */
-
-function DogChip({ name }) {
-  return (
-    <span
-      className="inline-block px-2 py-0.5 rounded-[10px] text-[10px] font-medium border"
-      style={{
-        background: '#F0ECE8',
-        borderColor: '#E8E4E0',
-        color: '#534AB7',
-      }}
-    >
-      {name}
-    </span>
-  )
+/** Turn a raw flag object from mini_gen_drafts.flags into plain language. */
+function formatFlag(flag) {
+  if (flag.type === 'conflict') {
+    return {
+      message: `${flag.dog1} and ${flag.dog2} are both booked in the same sector`,
+      instruction: `Move ${flag.dog1} or ${flag.dog2} to a different day`,
+      borderColor: '#E8634A',
+      bg: '#FAECE7',
+    }
+  }
+  if (flag.type === 'vacation') {
+    return {
+      message: `${flag.dogName} is booked but shouldn't be walking`,
+      instruction: `This dog is on vacation — remove from this day`,
+      borderColor: '#C4851C',
+      bg: '#FDF3E3',
+    }
+  }
+  if (flag.type === 'unresolved') {
+    return {
+      message: `"${flag.ownerName}" couldn't be matched to a dog`,
+      instruction: `Add ${flag.ownerName} to the name map in /tower/schedule`,
+      borderColor: '#475569',
+      bg: '#F0ECE8',
+    }
+  }
+  if (flag.type === 'capacity') {
+    return {
+      message: `${flag.count} dogs — ${flag.level === 'critical' ? 'way over' : 'near'} capacity`,
+      instruction: `Consider moving some dogs to balance the load`,
+      borderColor: '#534AB7',
+      bg: '#EEEDFE',
+    }
+  }
+  return {
+    message: flag.reason || JSON.stringify(flag),
+    instruction: 'Review this flag manually',
+    borderColor: '#475569',
+    bg: '#F0ECE8',
+  }
 }
 
-function DraftCard({ draft, onAction }) {
-  const [busy, setBusy] = useState(null) // 'approve' | 'reject'
+/* ── sub-components ─────────────────────────────────── */
+
+function FlaggedDraftCard({ draft, onAction }) {
+  const [busy, setBusy] = useState(null)
   const sectorColor = draft.sector === 'Plateau' ? '#3B82A0' : '#4A9E6F'
-  const dogs = draft.dog_names || []
   const flags = draft.flags || []
-  const hasFlags = Array.isArray(flags) && flags.length > 0
 
   async function handleAction(action) {
     setBusy(action)
@@ -65,8 +90,8 @@ function DraftCard({ draft, onAction }) {
         borderBottom: '2.5px solid #D5CFC8',
       }}
     >
-      {/* header row */}
-      <div className="flex items-center justify-between mb-2">
+      {/* header */}
+      <div className="flex items-center justify-between mb-3">
         <span className="text-[13px] font-bold" style={{ color: sectorColor, fontFamily: 'DM Sans, sans-serif' }}>
           {fmtDate(draft.walk_date)} · {draft.sector.toUpperCase()}
         </span>
@@ -90,61 +115,22 @@ function DraftCard({ draft, onAction }) {
         </div>
       </div>
 
-      {/* dog chips */}
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {dogs.map((name) => (
-          <DogChip key={name} name={name} />
-        ))}
+      {/* flag details */}
+      <div className="flex flex-col gap-2">
+        {flags.map((flag, i) => {
+          const { message, instruction, borderColor, bg } = formatFlag(flag)
+          return (
+            <div
+              key={i}
+              className="p-3 rounded-lg"
+              style={{ background: bg, borderLeft: `4px solid ${borderColor}` }}
+            >
+              <p className="text-[12px] font-medium" style={{ color: '#2D2926' }}>{message}</p>
+              <p className="text-[11px] mt-1" style={{ color: '#8C857E' }}>{instruction}</p>
+            </div>
+          )
+        })}
       </div>
-
-      {/* footer */}
-      <div className="flex items-center justify-between">
-        {hasFlags ? (
-          <span className="text-[11px] font-bold" style={{ color: '#C4851C' }}>
-            ⚠ {flags.length} flag{flags.length !== 1 ? 's' : ''} — see below
-          </span>
-        ) : (
-          <span className="text-[11px]" style={{ color: '#2D8F6F' }}>
-            ✓ No flags for this day
-          </span>
-        )}
-        <span className="text-[11px]" style={{ color: '#8C857E' }}>
-          {dogs.length} dog{dogs.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function FlagCard({ flag }) {
-  const tags = flag.tags || []
-  let borderColor = '#475569'
-  let bg = '#F0ECE8'
-
-  if (tags.includes('conflict'))   { borderColor = '#E8634A'; bg = '#FAECE7' }
-  if (tags.includes('vacation'))   { borderColor = '#C4851C'; bg = '#FDF3E3' }
-  if (tags.includes('capacity'))   { borderColor = '#534AB7'; bg = '#EEEDFE' }
-  if (tags.includes('unresolved')) { borderColor = '#475569'; bg = '#F0ECE8' }
-
-  return (
-    <div
-      className="p-3 rounded-lg"
-      style={{
-        background: bg,
-        borderLeft: `4px solid ${borderColor}`,
-      }}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[13px] font-bold" style={{ color: '#534AB7', fontFamily: 'DM Sans, sans-serif' }}>
-          {flag.dog_name}
-        </span>
-        <span className="text-[11px]" style={{ color: '#8C857E' }}>
-          {fmtDate(flag.walk_date)}
-        </span>
-      </div>
-      <p className="text-[12px]" style={{ color: '#5A6270', fontFamily: 'DM Mono, monospace' }}>
-        {flag.message}
-      </p>
     </div>
   )
 }
@@ -154,17 +140,16 @@ function FlagCard({ flag }) {
 export default function TowerMiniGen() {
   const { profile, session, isLoading: authLoading } = useAuth()
   const [drafts, setDrafts] = useState([])
-  const [flags, setFlags] = useState([])
   const [statusLine, setStatusLine] = useState(null)
   const [running, setRunning] = useState(false)
   const [runSummary, setRunSummary] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [approvingClean, setApprovingClean] = useState(false)
 
   /* ── data fetch ─── */
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      // drafts
       const { data: draftRows } = await supabase
         .from('mini_gen_drafts')
         .select('*')
@@ -174,31 +159,11 @@ export default function TowerMiniGen() {
 
       setDrafts(draftRows || [])
 
-      // status bar — latest run_date
       if (draftRows && draftRows.length > 0) {
         const latest = draftRows[0]
-        setStatusLine(`Last run: ${fmtDate(latest.run_date || latest.walk_date)} · ${draftRows.length} draft day${draftRows.length !== 1 ? 's' : ''} pending`)
+        setStatusLine(`Last run: ${fmtDate(latest.run_date || latest.walk_date)}`)
       } else {
         setStatusLine(null)
-      }
-
-      // flags
-      const minWalkDate = draftRows && draftRows.length > 0
-        ? draftRows.reduce((m, d) => (d.walk_date < m ? d.walk_date : m), draftRows[0].walk_date)
-        : null
-
-      if (minWalkDate) {
-        const { data: flagRows } = await supabase
-          .from('walker_notes')
-          .select('dog_name, message, walk_date, tags, created_at')
-          .eq('note_type', 'resolver_flag')
-          .gte('walk_date', minWalkDate)
-          .order('walk_date')
-          .order('tags')
-
-        setFlags(flagRows || [])
-      } else {
-        setFlags([])
       }
     } catch (e) {
       toast.error('Failed to load data')
@@ -209,6 +174,12 @@ export default function TowerMiniGen() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  /* ── derived state ── */
+  const cleanDrafts = drafts.filter(d => !d.flags || d.flags.length === 0)
+  const flaggedDrafts = drafts.filter(d => d.flags && d.flags.length > 0)
+  const cleanCount = cleanDrafts.length
+  const flagCount = flaggedDrafts.reduce((n, d) => n + d.flags.length, 0)
+
   /* ── run Mini Gen ── */
   async function runMiniGen() {
     setRunning(true)
@@ -218,10 +189,8 @@ export default function TowerMiniGen() {
       if (!res.ok) throw new Error(await res.text())
       const json = await res.json()
       setRunSummary(
-        `Last run: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} · ` +
         `${json.resolved ?? '?'} resolved · ${json.unresolved ?? 0} unresolved · ` +
-        `${json.conflicts ?? 0} conflict${(json.conflicts ?? 0) !== 1 ? 's' : ''} · ` +
-        `${json.vacationConflicts ?? 0} vacation conflict${(json.vacationConflicts ?? 0) !== 1 ? 's' : ''}`
+        `${json.conflicts ?? 0} conflict${(json.conflicts ?? 0) !== 1 ? 's' : ''}`
       )
       await fetchData()
       toast.success('Mini Gen complete')
@@ -229,6 +198,30 @@ export default function TowerMiniGen() {
       toast.error(e.message || 'Mini Gen failed')
     } finally {
       setRunning(false)
+    }
+  }
+
+  /* ── bulk approve clean days ── */
+  async function approveAllClean() {
+    setApprovingClean(true)
+    try {
+      const results = await Promise.all(
+        cleanDrafts.map(d =>
+          fetch('/api/tower-approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: d.id, status: 'approved' }),
+          })
+        )
+      )
+      const failed = results.filter(r => !r.ok).length
+      if (failed) throw new Error(`${failed} approvals failed`)
+      toast.success(`Approved ${cleanCount} clean day${cleanCount !== 1 ? 's' : ''}`)
+      await fetchData()
+    } catch (e) {
+      toast.error(e.message || 'Bulk approve failed')
+    } finally {
+      setApprovingClean(false)
     }
   }
 
@@ -241,19 +234,19 @@ export default function TowerMiniGen() {
   return (
     <div className="min-h-screen" style={{ background: '#FFF5F0', fontFamily: 'DM Sans, sans-serif' }}>
 
-      {/* ── 1. HEADER BAR ── */}
+      {/* ── HEADER BAR ── */}
       <header
         className="flex items-center justify-between px-5"
         style={{ background: '#2D2926', height: 56 }}
       >
         <span className="text-[16px] font-bold" style={{ color: '#E8634A' }}>
-          🐾 Tower Control
+          Tower Control
         </span>
         <button
           onClick={runMiniGen}
           disabled={running}
           className="px-4 py-2 rounded-lg text-[13px] font-bold text-white disabled:opacity-60"
-          style={{ background: '#E8762B' }}
+          style={{ background: '#E8634A' }}
         >
           {running ? (
             <span className="flex items-center gap-2">
@@ -264,12 +257,12 @@ export default function TowerMiniGen() {
               Running…
             </span>
           ) : (
-            '🦍 Run Mini Gen'
+            'Run Mini Gen'
           )}
         </button>
       </header>
 
-      {/* ── run summary (appears after Run) ── */}
+      {/* ── RUN SUMMARY (after Run) ── */}
       {runSummary && (
         <div
           className="px-5 py-2 text-[12px]"
@@ -279,60 +272,63 @@ export default function TowerMiniGen() {
         </div>
       )}
 
-      {/* ── 2. STATUS BAR ── */}
+      {/* ── ① SUMMARY BAR ── */}
       <div
-        className="px-5 py-3 text-[12px]"
-        style={{ background: '#FAF7F4', borderBottom: '1px solid #E8E4E0', color: '#475569' }}
+        className="px-5 py-3 text-[13px] font-medium"
+        style={{ background: '#FAF7F4', borderBottom: '1px solid #E8E4E0', color: '#2D2926' }}
       >
-        {loading ? 'Loading…' : statusLine || "Mini Gen hasn't run yet. Press Run Mini Gen to start."}
+        {loading
+          ? 'Loading…'
+          : drafts.length === 0
+            ? (statusLine || "Mini Gen hasn't run yet. Press Run Mini Gen to start.")
+            : (
+              <>
+                <span style={{ color: '#2D8F6F' }}>
+                  ✓ {cleanCount} day{cleanCount !== 1 ? 's' : ''} clean
+                </span>
+                {flagCount > 0 && (
+                  <span style={{ color: '#C4851C' }}>
+                    {' · '}{flagCount} flag{flagCount !== 1 ? 's' : ''} need attention
+                  </span>
+                )}
+              </>
+            )
+        }
       </div>
 
-      {/* ── main content ── */}
+      {/* ── MAIN CONTENT ── */}
       <div className="max-w-5xl mx-auto px-5 py-6">
 
-        {/* ── 3. DRAFT TABLE ── */}
-        <section className="mb-8">
-          <h2
-            className="text-[10px] font-bold uppercase tracking-wider mb-3"
-            style={{ color: '#E8634A' }}
-          >
-            📋 MINI GEN DRAFT
-          </h2>
+        {/* ── ② CLEAN DAYS — bulk approve ── */}
+        {cleanCount > 0 && (
+          <section className="mb-6">
+            <button
+              onClick={approveAllClean}
+              disabled={approvingClean}
+              className="w-full py-3 rounded-[10px] text-[13px] font-bold text-white disabled:opacity-60"
+              style={{ background: '#2D8F6F' }}
+            >
+              {approvingClean ? 'Approving…' : `Approve all clean days (${cleanCount})`}
+            </button>
+          </section>
+        )}
 
-          {drafts.length === 0 && !loading ? (
-            <p className="text-[13px] italic text-center py-8" style={{ color: '#8C857E' }}>
-              No pending drafts. Run Mini Gen to generate this week's schedule.
-            </p>
-          ) : (
+        {/* ── ③ FLAGGED DAYS ── */}
+        {flaggedDrafts.length > 0 && (
+          <section>
+            <h2
+              className="text-[10px] font-bold uppercase tracking-wider mb-3"
+              style={{ color: '#C4851C' }}
+            >
+              NEEDS ATTENTION
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {drafts.map((d) => (
-                <DraftCard key={d.id} draft={d} onAction={fetchData} />
+              {flaggedDrafts.map(d => (
+                <FlaggedDraftCard key={d.id} draft={d} onAction={fetchData} />
               ))}
             </div>
-          )}
-        </section>
-
-        {/* ── 4. FLAG LIST ── */}
-        <section>
-          <h2
-            className="text-[10px] font-bold uppercase tracking-wider mb-3"
-            style={{ color: '#E8634A' }}
-          >
-            🚩 FLAGS
-          </h2>
-
-          {flags.length === 0 ? (
-            <p className="text-[13px] italic text-center py-8" style={{ color: '#2D8F6F' }}>
-              ✓ Mini Gen found no issues this week.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {flags.map((f) => (
-                <FlagCard key={f.id || `${f.dog_name}-${f.walk_date}`} flag={f} />
-              ))}
-            </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </div>
   )
