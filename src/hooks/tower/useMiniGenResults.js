@@ -17,8 +17,8 @@ export default function useMiniGenResults() {
     setError(null)
     try {
       // Only show drafts for today or later — past-date pending rows are stale
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-      console.log('[useMiniGenResults] querying for:', today)
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Toronto' })
+      console.log('[v3] useMiniGenResults querying for:', today)
 
       // Pending drafts ordered by walk_date then sector
       const { data: draftRows, error: draftErr } = await supabase

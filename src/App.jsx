@@ -13,6 +13,7 @@ const Admin = lazy(() => import('./pages/Admin'))
 const DogsPage = lazy(() => import('./pages/DogsPage'))
 const Schedule = lazy(() => import('./pages/Schedule'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const Tower = lazy(() => import('./pages/Tower'))
 const TowerMiniGen = lazy(() => import('./pages/TowerMiniGen'))
 
 function LazyFallback() {
@@ -49,6 +50,13 @@ function SettingsRoute({ children }) {
   const { permissions, isLoading } = useAuth()
   if (isLoading) return null
   if (!permissions?.canAccessSettings) return <Navigate to="/" replace />
+  return children
+}
+
+function TowerRoute({ children }) {
+  const { permissions, profile, isLoading, session } = useAuth()
+  if (isLoading || (session && !profile)) return null
+  if (!permissions?.canAccessTower) return <Navigate to="/" replace />
   return children
 }
 
@@ -142,9 +150,23 @@ function AnimatedRoutes() {
             path="/tower/mini-gen"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LazyFallback />}>
-                  <TowerMiniGen />
-                </Suspense>
+                <TowerRoute>
+                  <Suspense fallback={<LazyFallback />}>
+                    <TowerMiniGen />
+                  </Suspense>
+                </TowerRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tower/*"
+            element={
+              <ProtectedRoute>
+                <TowerRoute>
+                  <Suspense fallback={<LazyFallback />}>
+                    <Tower />
+                  </Suspense>
+                </TowerRoute>
               </ProtectedRoute>
             }
           />
@@ -156,6 +178,7 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  console.log('[v3.0.0-fixed] App loaded at:', new Date().toString())
   return (
     <BrowserRouter>
       <UpdateBanner />

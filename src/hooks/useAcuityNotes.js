@@ -8,8 +8,8 @@ export function useAcuityNotes(dogId) {
   useEffect(() => {
     if (!dogId) { setLoading(false); return }
 
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' })
-    console.log('[useAcuityNotes] querying for:', today)
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Toronto' })
+    console.log('[v3] useAcuityNotes querying for:', today)
 
     supabase
       .from('acuity_notes')
