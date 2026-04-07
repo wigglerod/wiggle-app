@@ -178,7 +178,6 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
-  console.log('[v5.0.0-final-final] App loaded at:', new Date().toString())
   return (
     <BrowserRouter>
       <UpdateBanner />

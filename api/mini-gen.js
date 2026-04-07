@@ -456,12 +456,14 @@ async function fetchAcuityWeek(minDate, maxDate) {
 /**
  * Resolve an Acuity booking to a dog name + UUID.
  *
- * Lookup key: booking.firstName (Acuity stores owner first name,
- * acuity_name_map.acuity_name stores first name only — not full name).
+ * Lookup key: booking.firstName OR booking.ownerName against
+ * acuity_name_map.acuity_name (map may store first name only OR full name,
+ * depending on whether the entry was seeded or added via Tower inline fix).
  *
  * Strategy (in order):
- * 1. Exact match: firstName against acuity_name_map.acuity_name
+ * 1. Name map match: ownerName OR firstName against acuity_name_map.acuity_name
  *    Returns ALL matching dogs (same-household pairs like Romeo + Miyagi).
+ *    A name map hit is always RESOLVED — never a flag.
  * 2. Email match: booking.email against acuity_name_map.acuity_email
  * 3. Fuzzy match: firstName against dogs.owner_first
  *
@@ -469,15 +471,18 @@ async function fetchAcuityWeek(minDate, maxDate) {
  */
 function resolveName(booking, nameMap, allDogs) {
   const firstName = booking.firstName.trim().toLowerCase()
+  const ownerName = booking.ownerName.trim().toLowerCase()
   const email = booking.email.trim().toLowerCase()
 
   // Helper: look up dog UUID from dogs table by dog_name
   const findDog = (dogName) => allDogs.find((d) => d.dog_name === dogName)
 
-  // 1. Exact match — collect ALL dogs for this acuity_name (household pairs)
-  const exactMatches = nameMap.filter(
-    (m) => m.acuity_name.toLowerCase() === firstName
-  )
+  // 1. Name map match — try full ownerName AND firstName (covers both seeded
+  //    first-name entries and Tower inline-fix full-name entries)
+  const exactMatches = nameMap.filter((m) => {
+    const mapName = m.acuity_name.toLowerCase()
+    return mapName === ownerName || mapName === firstName
+  })
 
   if (exactMatches.length >= 1) {
     const results = []

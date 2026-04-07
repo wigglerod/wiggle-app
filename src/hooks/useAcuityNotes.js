@@ -9,7 +9,6 @@ export function useAcuityNotes(dogId) {
     if (!dogId) { setLoading(false); return }
 
     const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Toronto' })
-    console.log('[v3] useAcuityNotes querying for:', today)
 
     supabase
       .from('acuity_notes')

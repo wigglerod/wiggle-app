@@ -40,7 +40,7 @@ navigator.serviceWorker?.addEventListener('controllerchange', () => {
   window.location.reload()
 })
 
-console.log(`[Wiggle] v${__APP_VERSION__} - [v4.0.0-robust-final]`)
+console.log(`[Wiggle] v${__APP_VERSION__}`)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

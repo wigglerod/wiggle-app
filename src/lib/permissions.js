@@ -20,8 +20,8 @@ export function getPermissions(role) {
     canCreateOwlNotes: isSeniorOrAbove,
     canAddOwlNotes: isSeniorOrAbove,
 
-    // SENIOR WALKER + ADMIN (Tower Control)
-    canAccessTower: isSeniorOrAbove,
+    // ADMIN ONLY (Tower Control)
+    canAccessTower: isChiefPup,
     canEditDogProfiles: isChiefPup,
     canViewClientInfo: isChiefPup,
     canViewAllSectors: isChiefPup,
