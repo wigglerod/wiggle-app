@@ -147,12 +147,12 @@ export default async function handler(req, res) {
 
     for (const [key, count] of Object.entries(daySectorCounts)) {
       const [date, sector] = key.split('_')
-      if (count >= 20) {
+      if (count >= 25) {
         capacityWarnings.push({
           date,
           sector,
           count,
-          level: count >= 25 ? 'critical' : 'warn',
+          level: count >= 30 ? 'critical' : 'warn',
         })
       }
     }
