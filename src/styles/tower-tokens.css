@@ -1,0 +1,87 @@
+/*
+ * Tower Control — Design Tokens
+ * All variables prefixed --tower- to avoid collision with walker app.
+ * Import this file in Tower components only. Walker components never import it.
+ */
+
+:root {
+  /* ── Backgrounds ── */
+  --tower-bg-page: #F4F6F8;
+  --tower-bg-surface: #FFFFFF;
+  --tower-bg-surface-alt: #F0F2F5;
+  --tower-bg-surface-hover: #E8ECF0;
+
+  /* ── Borders ── */
+  --tower-border-default: #E2E6EA;
+  --tower-border-strong: #C8CDD4;
+  --tower-border-focus: #534AB7;
+
+  /* ── Text ── */
+  --tower-text-primary: #1A1D23;
+  --tower-text-secondary: #5A6270;
+  --tower-text-muted: #9AA3AE;
+  --tower-text-inverse: #FFFFFF;
+
+  /* ── Brand: Coral ── */
+  --tower-coral: #E8634A;
+  --tower-coral-dark: #C94A34;
+  --tower-coral-light: #FAECE7;
+
+  /* ── Brand: Purple ── */
+  --tower-purple: #534AB7;
+  --tower-purple-light: #EEEDFE;
+
+  /* ── Brand: Sage ── */
+  --tower-sage: #2D8F6F;
+  --tower-sage-light: #E8F5EF;
+
+  /* ── Brand: Amber ── */
+  --tower-amber: #C4851C;
+  --tower-amber-light: #FDF3E3;
+
+  /* ── Brand: Slate ── */
+  --tower-slate: #475569;
+  --tower-slate-light: #EEF1F5;
+
+  /* ── Brand: Fuschia ── */
+  --tower-fuschia: #961e78;
+  --tower-fuschia-light: #fdf4fb;
+
+  /* ── Beast (Tower accent orange) ── */
+  --tower-orange: #E8762B;
+  --tower-orange-dark: #C45D1A;
+  --tower-orange-light: #FEF5ED;
+
+  /* ── Sectors ── */
+  --tower-plateau-blue: #3B82A0;
+  --tower-plateau-blue-light: #EBF4F8;
+  --tower-laurier-green: #4A9E6F;
+  --tower-laurier-green-light: #EBF6F0;
+
+  /* ── Status ── */
+  --tower-red: #D94F3D;
+  --tower-red-light: #FEF2F0;
+  --tower-yellow: #E6A817;
+  --tower-yellow-light: #FEF9ED;
+  --tower-green: #3D9970;
+  --tower-green-light: #F0FAF5;
+
+  /* ── Card ── */
+  --tower-card-bg: var(--tower-bg-surface);
+  --tower-card-border: var(--tower-border-default);
+  --tower-card-radius: 10px;
+  --tower-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  /* ── Typography ── */
+  --tower-font: 'DM Sans', sans-serif;
+  --tower-text-xs: 10px;
+  --tower-text-sm: 11px;
+  --tower-text-base: 12px;
+  --tower-text-md: 13px;
+  --tower-text-lg: 16px;
+  --tower-text-xl: 22px;
+  --tower-font-regular: 400;
+  --tower-font-medium: 500;
+  --tower-font-semibold: 600;
+  --tower-font-bold: 700;
+}
