@@ -19,7 +19,7 @@ function formatFlag(flag) {
   if (flag.type === 'conflict') {
     return {
       message: `${flag.dog1} and ${flag.dog2} are both booked in the same sector`,
-      instruction: `Move ${flag.dog1} or ${flag.dog2} to a different day`,
+      instruction: 'Resolve in Acuity — rebook one dog on a different day, then Run Mini Gen again.',
       borderColor: '#E8634A',
       bg: '#FAECE7',
     }
@@ -27,7 +27,7 @@ function formatFlag(flag) {
   if (flag.type === 'vacation') {
     return {
       message: `${flag.dogName} is booked but shouldn't be walking`,
-      instruction: `This dog is on vacation — remove from this day`,
+      instruction: null,
       borderColor: '#C4851C',
       bg: '#FDF3E3',
     }
@@ -35,7 +35,7 @@ function formatFlag(flag) {
   if (flag.type === 'unresolved') {
     return {
       message: `"${flag.ownerName}" couldn't be matched to a dog`,
-      instruction: `Add ${flag.ownerName} to the name map in /tower/schedule`,
+      instruction: null,
       borderColor: '#475569',
       bg: '#F0ECE8',
     }
@@ -57,6 +57,149 @@ function formatFlag(flag) {
 }
 
 /* ── sub-components ─────────────────────────────────── */
+
+function UnresolvedFixForm({ flag, onFixed }) {
+  const [query, setQuery] = useState('')
+  const [dogs, setDogs] = useState([])
+  const [showDrop, setShowDrop] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [mapped, setMapped] = useState(false)
+
+  useEffect(() => {
+    supabase.from('dogs').select('dog_name').order('dog_name').then(({ data }) => {
+      if (data) setDogs(data.map(d => d.dog_name))
+    })
+  }, [])
+
+  const filtered = query.length >= 1
+    ? dogs.filter(n => n.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+    : []
+
+  async function handleSave() {
+    if (!query.trim()) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/tower-add-name-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acuity_name: flag.ownerName, dog_name: query.trim() }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Save failed')
+      setMapped(true)
+      toast.success(`Mapped "${flag.ownerName}" → ${query.trim()}`)
+      onFixed()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (mapped) {
+    return <p className="text-[11px] font-medium mt-2" style={{ color: '#2D8F6F' }}>✓ Mapped</p>
+  }
+
+  return (
+    <div className="mt-2 relative">
+      <label className="text-[10px] font-medium" style={{ color: '#475569' }}>Which dog is this?</label>
+      <div className="flex gap-2 mt-1">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); setShowDrop(true) }}
+            onFocus={() => query.length >= 1 && setShowDrop(true)}
+            onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+            placeholder="Search dog name…"
+            className="w-full px-2 py-1.5 rounded-md text-[12px]"
+            style={{ border: '1px solid #E8E4E0', background: '#FAF7F4', color: '#2D2926', fontFamily: 'DM Sans, sans-serif' }}
+          />
+          {showDrop && filtered.length > 0 && (
+            <div
+              className="absolute left-0 right-0 top-full mt-1 rounded-md shadow-md z-10 overflow-hidden"
+              style={{ background: '#FAF7F4', border: '1px solid #E8E4E0' }}
+            >
+              {filtered.map(name => (
+                <button
+                  key={name}
+                  className="block w-full text-left px-3 py-2 text-[12px] hover:bg-[#F0ECE8]"
+                  style={{ color: '#2D2926', fontFamily: 'DM Sans, sans-serif' }}
+                  onMouseDown={() => { setQuery(name); setShowDrop(false) }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || !query.trim()}
+          className="px-3 py-1.5 rounded-md text-[11px] font-bold text-white disabled:opacity-50 whitespace-nowrap"
+          style={{ background: '#2D8F6F' }}
+        >
+          {saving ? '…' : 'Save to name map'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function VacationRemoveBtn({ draft, flag, onFixed }) {
+  const [busy, setBusy] = useState(false)
+  const [removed, setRemoved] = useState(false)
+
+  async function handleRemove() {
+    setBusy(true)
+    try {
+      const { data: current, error: readErr } = await supabase
+        .from('mini_gen_drafts')
+        .select('dog_names, dog_uuids, flags')
+        .eq('id', draft.id)
+        .single()
+      if (readErr) throw readErr
+
+      const idx = current.dog_names.indexOf(flag.dogName)
+      const newNames = current.dog_names.filter(n => n !== flag.dogName)
+      const newUuids = idx >= 0
+        ? current.dog_uuids.filter((_, i) => i !== idx)
+        : current.dog_uuids
+      const newFlags = (current.flags || []).filter(
+        f => !(f.type === 'vacation' && f.dogName === flag.dogName)
+      )
+
+      const { error: updateErr } = await supabase
+        .from('mini_gen_drafts')
+        .update({ dog_names: newNames, dog_uuids: newUuids, flags: newFlags })
+        .eq('id', draft.id)
+      if (updateErr) throw updateErr
+
+      setRemoved(true)
+      toast.success(`Removed ${flag.dogName} from this day`)
+      onFixed()
+    } catch (e) {
+      toast.error(e.message || 'Remove failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (removed) {
+    return <p className="text-[11px] font-medium mt-2" style={{ color: '#2D8F6F' }}>✓ Removed</p>
+  }
+
+  return (
+    <button
+      onClick={handleRemove}
+      disabled={busy}
+      className="mt-2 px-3 py-1.5 rounded-md text-[11px] font-bold text-white disabled:opacity-50"
+      style={{ background: '#C4851C' }}
+    >
+      {busy ? '…' : 'Remove from this day'}
+    </button>
+  )
+}
 
 function FlaggedDraftCard({ draft, onAction }) {
   const [busy, setBusy] = useState(null)
@@ -126,7 +269,15 @@ function FlaggedDraftCard({ draft, onAction }) {
               style={{ background: bg, borderLeft: `4px solid ${borderColor}` }}
             >
               <p className="text-[12px] font-medium" style={{ color: '#2D2926' }}>{message}</p>
-              <p className="text-[11px] mt-1" style={{ color: '#8C857E' }}>{instruction}</p>
+              {instruction && (
+                <p className="text-[11px] mt-1" style={{ color: '#8C857E' }}>{instruction}</p>
+              )}
+              {flag.type === 'unresolved' && (
+                <UnresolvedFixForm flag={flag} onFixed={onAction} />
+              )}
+              {flag.type === 'vacation' && (
+                <VacationRemoveBtn draft={draft} flag={flag} onFixed={onAction} />
+              )}
             </div>
           )
         })}

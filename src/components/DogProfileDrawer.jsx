@@ -8,6 +8,8 @@ import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
 import { useAltAddress, getTodayDayName } from '../lib/useAltAddress'
 import { useOwlNotes } from '../lib/useOwlNotes'
+import ForeverNoteEditor from './ForeverNoteEditor'
+import { useAcuityNotes } from '../hooks/useAcuityNotes'
 
 const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
@@ -47,6 +49,9 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   const { dogNotes, acknowledgeNote } = useOwlNotes()
   const activeOwlNotes = dog ? dogNotes(dog.id) : []
 
+  // Acuity notes — today's owner note from booking
+  const { note: acuityNote } = useAcuityNotes(dog?.id)
+
   function timeAgo(isoString) {
     if (!isoString) return ''
     const diff = Date.now() - new Date(isoString).getTime()
@@ -69,6 +74,8 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const scrollRef = useRef(null)
+  const [showForeverEditor, setShowForeverEditor] = useState(false)
+  const [localNotes, setLocalNotes] = useState(dog?.notes ?? null)
 
   // Alt addresses
   const { altAddresses, todayAlt, refetch: refetchAlt } = useAltAddress(dog?.id)
@@ -81,6 +88,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
     setImgError(false)
     setEditing(false)
     setSaveError(null)
+    setLocalNotes(dog?.notes ?? null)
   }, [dog])
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -428,19 +436,65 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
           {!editing && (
             <div className="flex flex-col gap-3">
 
-              {/* Forever notes alert */}
-              {dog.notes && (
-                <div className="bg-[#E8634A] text-white rounded-2xl px-4 py-3 flex gap-3 items-start max-h-[200px] overflow-y-auto scroll-container">
-                  <span className="text-lg flex-shrink-0 mt-0.5">⚠️</span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-0.5">Notes</p>
-                    <SmartTextDisplay
-                      text={dog.notes}
-                      onDogClick={onDogNameClick}
-                      className="text-sm font-medium leading-snug break-words"
-                    />
+              {/* Forever notes — admin can edit, walkers see read-only */}
+              {localNotes && (
+                <div style={{
+                  background: '#fdf4fb',
+                  borderRadius: 16,
+                  border: '1px solid #e8d0e3',
+                  padding: '10px 14px',
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                }}>
+                  {/* Section label row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: '#961e78', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+                      ★ Forever
+                    </p>
+                    {profile?.role === 'admin' && (
+                      <button
+                        onClick={() => setShowForeverEditor(true)}
+                        style={{
+                          border: '1px solid #961e78',
+                          color: '#961e78',
+                          background: 'transparent',
+                          borderRadius: 6,
+                          padding: '3px 9px',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: "'DM Sans', sans-serif",
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
+                  <SmartTextDisplay
+                    text={localNotes}
+                    onDogClick={onDogNameClick}
+                    className="text-sm font-medium leading-snug break-words"
+                    style={{ color: '#961e78', fontSize: 12 }}
+                  />
+                  {profile?.role !== 'admin' && (
+                    <p style={{ fontSize: 10, color: '#B5AFA8', fontStyle: 'italic', marginTop: 4, marginBottom: 0 }}>
+                      admin-only
+                    </p>
+                  )}
                 </div>
+              )}
+
+              {/* Forever note editor sheet */}
+              {showForeverEditor && (
+                <ForeverNoteEditor
+                  dog={dog}
+                  currentNotes={localNotes}
+                  onClose={() => setShowForeverEditor(false)}
+                  onSaved={(newNotes) => {
+                    setLocalNotes(newNotes)
+                    setShowForeverEditor(false)
+                  }}
+                />
               )}
 
               {/* 🦉 Owl Notes — sector-filtered, timed, per-walker acknowledgement */}
@@ -485,6 +539,45 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                       </div>
                     )
                   })}
+                </div>
+              )}
+
+              {/* 📅 Acuity Notes — owner-written, today only, blue bg */}
+              {acuityNote && (
+                <div style={{
+                  background: '#EFF6FF',
+                  borderRadius: 16,
+                  border: '1px solid #BFDBFE',
+                  padding: '10px 14px',
+                }}>
+                  <p style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: '#3B82F6',
+                    marginBottom: 4,
+                  }}>
+                    📅 From Owner — today only
+                  </p>
+                  <p style={{
+                    fontSize: 12,
+                    color: '#1E40AF',
+                    lineHeight: '1.55',
+                    fontWeight: 500,
+                    margin: 0,
+                  }}>
+                    {acuityNote.note_text}
+                  </p>
+                  <p style={{
+                    fontSize: 9,
+                    color: '#93C5FD',
+                    marginTop: 4,
+                    marginBottom: 0,
+                    fontStyle: 'italic',
+                  }}>
+                    From Acuity booking · expires tonight
+                  </p>
                 </div>
               )}
 
