@@ -286,7 +286,8 @@ Beast NEVER executes without CONFIRM block — rule stays forever.
 | File                | Purpose                                          |
 |---------------------|--------------------------------------------------|
 | WIGGLE_PROJECT.md   | This file — master ops context                   |
-| WIGGLE_PRINCIPLES.md| The why behind every decision                    |
+| WIGGLE_PRINCIPLES.md| Universal principles across HQ and Studio        |
+| HQ_PRINCIPLES.md    | Walker-app specific principles (The Neighbourhood HQ) |
 | WIGGLE_WORKFLOW.md  | Three-tool workflow guide                        |
 | CLAUDE.md           | Design constitution + code rules (Claude Code)   |
 | NOTES_SPEC.md       | Notes system full spec (build reference)         |

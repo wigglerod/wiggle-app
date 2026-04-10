@@ -13,6 +13,7 @@
 The existing walker app at `wiggle-app-dusky.vercel.app` is **untouchable**. It keeps running for walkers throughout this build. Wiggle World eventually replaces it. Not yet.
 
 **Full architecture, all design tokens, all rules → `WIGGLE_WORLD_SPEC.md`**
+**Universal principles → `WIGGLE_PRINCIPLES.md`. Walker-app principles → `HQ_PRINCIPLES.md`.**
 
 ---
 
@@ -102,6 +103,6 @@ Tower Control V4 is live — do not regress it. Do not build billing, maps, SMS,
 
 ## Where to go when you're unsure
 
-`WIGGLE_WORLD_SPEC.md` → `wiggle-principles/SKILL.md` → make the call Rod would make.
+`WIGGLE_WORLD_SPEC.md` → `WIGGLE_PRINCIPLES.md` → `HQ_PRINCIPLES.md` (if it's a walker-app call) → make the call Rod would make.
 
 The mantra: **Work smart. Play always.**

@@ -1,201 +1,35 @@
-# WIGGLE PRINCIPLES
-## The why behind every decision.
-## When a rule doesn't exist for your situation, come back here.
-## Last updated: April 3, 2026 — V2 clean slate
+WIGGLE PRINCIPLES
+The why behind every decision across Wiggle World.
+When a rule doesn't exist for your situation, come back here.
 
----
+How to use this file
+Rules tell you what to do. Principles tell you why — so you can make the right call on the things no rule anticipated. Before building anything, ask: which principle does this serve, does it contradict another, and what would Rod do? If you can't answer all three, the scope isn't ready.
+For walker-app-specific principles → HQ_PRINCIPLES.md.
 
-## How to use this file
+THE FOUNDATION
+1. Two views, one truth. The Neighbourhood HQ and the Studio are not two systems. They are two views of one database. A change in one is instantly visible in the other. If a feature only works in one view, it is incomplete.
+2. Automate the admin, keep the heart. The product exists to remove friction from operations — not to replace the human relationships that built Wiggle. Eight years of client trust wasn't built by software. Technology serves the relationship, never the reverse.
+3. Warm in the field, cool at the desk. HQ is warm peach and cream because walkers need the app to feel alive in a cold hallway. The Studio is cool gray because Gen is planning, not walking — she needs density, not warmth. Same data, different energy. Never let one bleed into the other.
 
-Rules tell you what to do.
-Principles tell you why — so you can make the right call on things
-no rule anticipated.
+THE AI LAYER
+4. Every agent stops and waits. No AI in Wiggle World touches production data without a human pressing a button. Mini Gen writes to mini_gen_drafts and waits for Gen. Beast surfaces suggestions and waits for confirm. This is not a Phase 1 rule that relaxes later — it is the only AI architecture Wiggle will ever use.
+5. Automate the boring, never the judgment. Agents handle pattern work: name resolution, draft groups, flag detection, conflict surfacing. Agents never make the call on what's right for a dog, a walker, or a client. That's human work. It stays human work.
 
-Before building anything, ask:
-1. Which principle does this serve?
-2. Does it contradict any other principle?
-3. What would Rodrigo do?
+THE CRAFT
+6. Occam's razor — with a catch. The simplest answer that solves the real problem is the right one. But simple doesn't mean skipping steps. Sometimes the simplest path is the longer one that stays honest and builds on a solid foundation. Don't add complexity nobody asked for. Don't strip the steps that keep the work true. If it feels too clean to be right, it probably is.
+7. One puzzle piece at a time. Every change is one piece. State what piece is being placed and how it connects to the whole before writing code. Measure once, cut once. A clean build is not proof a feature works — only testing on the real thing is.
+8. Every write has a name. Every mutation in the database carries who did it and when. No anonymous writes anywhere in the system. Accountability is care, not surveillance — it's how Rod helps when something goes wrong.
+9. Color is signal, not decoration. Every color has exactly one job across the whole ecosystem. Purple means forever note. Sage means done. Amber means attention. Coral means action. A color that does two jobs does neither — it becomes noise.
+10. Nothing is destructive. State is additive and reversible. Delete is a pattern, not a permanent loss. Cold fingers misswipe. New walkers make mistakes. The cost of an error must be near zero at every layer of the product.
 
-If you can't answer all three, the scope is not ready.
+THE FOUR FILTERS
+Run every decision through these, in order.
+ONE PLACE — Does this action or information already have a home? If yes, put it there. Don't create a second home.
+SIMPLEST — What's the smallest version that solves the real problem? Build that first.
+BOTH VIEWS — Does this work in HQ and the Studio? If only one, it's incomplete.
+WWRS (HQ-specific) — What would the walker need right now, one hand, winter coat? Apply this filter to every walker-facing decision. For Studio decisions, replace with: would Gen want this in her face at 7:58am, or would it be noise?
 
----
-
-## THE ECOSYSTEM
-
-### 1. Two Views, One Truth
-The app and Tower Control are not two systems.
-They are two views of one database.
-A change in one is instantly visible in the other.
-
-Because Rod plans from the desk, walkers execute in the field.
-Same dogs, same truth, different windows.
-If a feature only works in one view, it is incomplete.
-
-### 2. Automate the Admin, Keep the Heart
-The app exists to remove friction from operations —
-not to replace the human relationships that make Wiggle what it is.
-
-Because 8 years of client trust wasn't built by software.
-It was built by walkers who knew every dog by name.
-Technology serves the relationship. Never the other way around.
-
----
-
-## THE WALK DAY
-
-### 3. The Door Is the Context
-Every decision is filtered through one moment:
-a walker at a building door, winter, one hand occupied,
-a dog already pulling.
-
-If it can't be done with one thumb in a winter coat, reconsider it.
-The worst UX failure isn't ugly — it's a walker fumbling
-while an anxious dog strains at the leash.
-
-### 4. Nothing Vanishes
-No state transition removes a dog from view.
-Not walking stays amber. Returned fades but remains.
-The count always matches reality.
-
-A disappearing card creates doubt — "did I miss one?" —
-and doubt at a door with six dogs is dangerous.
-Visibility is a safety feature.
-
-### 5. Every Action Is Reversible
-State is additive (insert) and reversible (delete).
-No destructive writes anywhere in the app.
-
-Cold fingers misswipe. New walkers make mistakes.
-The cost of an error must be near zero.
-If an action cannot be undone, question whether it belongs here.
-
-### 6. Instant Then Correct
-Every action updates the screen immediately,
-then saves to the database. The UI never waits for the server.
-Rollback on failure.
-
-A pause per swipe compounds across 40 dogs on spotty cell service.
-Basements have no signal at all.
-The walker's experience cannot depend on network latency.
-
----
-
-## THE DOG
-
-### 7. The Card Never Lies
-The dog card always shows name, address, and door code —
-no layout mode, no role, no exception can remove them.
-
-The card is a promise: everything you need to get through that door
-is visible without a single tap.
-isCompact may reduce size. It may never remove content.
-
-### 8. The Drawer Is the Control Centre
-Every action that changes a dog's state for the day
-lives inside the Dog Profile Drawer — and nowhere else.
-
-One dog, one place, always the same gesture.
-Splitting actions across surfaces breaks muscle memory.
-If you're about to add a dog action somewhere other than the drawer,
-stop. You are breaking this principle.
-
-### 9. Close Means Done With This Dog
-The drawer closes automatically after status actions:
-pickup, back home, not walking, undo.
-It stays open after informational taps: notes, edit times.
-
-When a walker marks a dog as picked up,
-they are already moving to the next door.
-The app should move with them, not wait for a manual close.
-
-### 10. Notes Have a Lifetime
-- Forever Notes → never expire. Allergies, aggression, building quirks.
-- Owl Notes → this week. Staff-to-staff handoffs.
-- Acuity Notes → this booking. Owner's immediate-need message.
-- Walk Notes → today only. State, times, events.
-
-The right note at the right time is the only note that helps.
-When unsure where a note belongs, ask:
-"When does this stop being relevant?" — that is its lifetime.
-
----
-
-## THE VISUAL LANGUAGE
-
-### 11. Every Write Has a Name
-Every action carries who did it — walker name, walker ID, timestamp.
-No anonymous mutations anywhere in the system.
-
-"Who did this?" lets Rod help when something goes wrong.
-Accountability is care, not surveillance.
-7 walkers, 95 dogs, one operation — attribution is how it stays coherent.
-
-### 12. Color Is Signal, Not Decoration
-Every color has exactly one job.
-A color that does two jobs does neither — it becomes noise.
-
-Before adding any color, ask: what does this color already mean?
-If it has a job → you cannot reassign it.
-If it has no job → define one before using it.
-A color is allowed if it has purpose: functional, aesthetic, or guides the walker.
-
-Current color jobs:
-- Coral #E8634A → primary action, something to tap
-- Purple #534AB7 → this dog has a forever note / group structure / walker identity
-- Sage #2D8F6F → picked up, positive, done
-- Amber #C4851C → needs attention, not walking, warning
-- Slate #475569 → utilitarian info, door codes, addresses
-- Black #2D2926 → default dog name, primary text
-
-### 13. Warmth Is Structural
-The palette is warm — peach, cream, coral, amber, sage.
-Cold grays are visual noise. Pure white is not Wiggle.
-
-Wiggle is built on personality and trust, not logistics.
-The app should feel like the company feels —
-approachable, warm, and alive.
-If it feels like a bank app, it is wrong.
-
----
-
-## THE FOUR FILTERS
-### Run every decision through these, in order.
-
-**WWRS** — What would the walker need right now, one hand, winter coat?
-If the answer is "not this" — stop.
-
-**ONE PLACE** — Does this action or information already have a home?
-If yes — put it there. Do not create a second home.
-
-**SIMPLEST** — What is the smallest version that solves the real problem?
-Strip it to the bone. Build that first.
-
-**BOTH VIEWS** — Does this work for the app AND Tower Control?
-If it only works in one — it is incomplete.
-
----
-
-## REAL SITUATIONS — HOW TO APPLY THESE
-
-**"Should this go in the app or Tower Control?"**
-App = walkers in the field, real-time, one hand.
-Tower = Rod and Gen at the desk, planning, managing.
-If it requires a keyboard or takes more than 2 taps — it's probably Tower.
-
-**"Where does this new action go?"**
-Affects a specific dog's state today → Dog Profile Drawer.
-Affects a group → group header or Tower Control.
-Affects the whole day → Tower Control.
-
-**"Should we add this feature?"**
-Run WWRS. Run SIMPLEST. If it passes both — scope it.
-If it fails either — defer it or kill it.
-
-**"This drawer is getting long — should we split it?"**
-No. The drawer is the control centre because everything is in one place.
-The solution to a long drawer is better hierarchy inside it,
-not a second screen.
-
-**"A walker is confused by the app closing after pickup."**
-That is working as designed. Close means done with this dog.
-If it feels wrong, the onboarding needs to be better — not the behavior.
+WHEN PRINCIPLES COLLIDE
+Two views vs. warm/cool: the surfaces look different but share signal colors (purple, sage, amber, coral). Signal wins. Atmosphere bends.
+Occam vs. foundation: if a shortcut violates "every write has a name," "agents stop and wait," or "nothing is destructive," it's not simpler — it's a lie. Take the longer path.
+Automate vs. keep the heart: if automation would remove a moment where a human relationship is built or repaired, don't automate it. The boring stays automated. The meaningful stays human.
