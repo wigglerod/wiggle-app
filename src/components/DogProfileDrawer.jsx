@@ -15,7 +15,7 @@ const EDIT_FIELDS = [
   { key: 'breed',     label: 'Breed' },
   { key: 'address',   label: 'Address' },
   { key: 'door_code', label: 'Door / Access Code' },
-  { key: 'notes',     label: 'Notes', multiline: true, smart: true },
+  { key: 'notes',     label: 'Notes', multiline: true },
   { key: 'bff',       label: 'Best Friends (BFF)', smart: true },
   { key: 'goals',     label: 'Goals', multiline: true, smart: true },
 ]
@@ -394,6 +394,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                       value={form[key] || ''}
                       onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                       rows={2}
+                      placeholder={key === 'notes' ? "Standing instructions for every walker — allergies, building quirks, behavioral notes…" : undefined}
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#E8634A] resize-none"
                     />
                   ) : smart ? (
@@ -437,7 +438,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
             <div className="flex flex-col gap-3">
 
               {/* Forever notes — admin can edit, walkers see read-only */}
-              {localNotes && (
+              {(localNotes?.trim() || profile?.role === 'admin') && (
                 <div style={{
                   background: '#fdf4fb',
                   borderRadius: 16,
@@ -449,7 +450,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                   {/* Section label row */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <p style={{ fontSize: 9, fontWeight: 700, color: '#961e78', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-                      ★ Forever
+                      ★ Forever Note
                     </p>
                     {profile?.role === 'admin' && (
                       <button
@@ -470,15 +471,16 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
                       </button>
                     )}
                   </div>
-                  <SmartTextDisplay
-                    text={localNotes}
-                    onDogClick={onDogNameClick}
-                    className="text-sm font-medium leading-snug break-words"
-                    style={{ color: '#961e78', fontSize: 12 }}
-                  />
-                  {profile?.role !== 'admin' && (
-                    <p style={{ fontSize: 10, color: '#B5AFA8', fontStyle: 'italic', marginTop: 4, marginBottom: 0 }}>
-                      admin-only
+                  {localNotes?.trim() ? (
+                    <SmartTextDisplay
+                      text={localNotes}
+                      onDogClick={onDogNameClick}
+                      className="text-sm font-medium leading-snug break-words"
+                      style={{ color: '#961e78', fontSize: 12 }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: 11, color: 'rgba(150,30,120,0.45)', fontStyle: 'italic', margin: 0 }}>
+                      No forever note. Tap Edit to add one.
                     </p>
                   )}
                 </div>

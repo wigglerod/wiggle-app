@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 const EXAMPLE_PILLS = [
   'Reactive',
@@ -13,6 +14,7 @@ const EXAMPLE_PILLS = [
 ]
 
 export default function ForeverNoteEditor({ dog, currentNotes, onClose, onSaved }) {
+  const { profile } = useAuth()
   const [text, setText] = useState(currentNotes || '')
   const [saving, setSaving] = useState(false)
 
@@ -29,7 +31,11 @@ export default function ForeverNoteEditor({ dog, currentNotes, onClose, onSaved 
     setSaving(true)
     const { error } = await supabase
       .from('dogs')
-      .update({ notes: text.trim() || null })
+      .update({
+        notes: text.trim() || null,
+        updated_by: profile?.full_name || profile?.email || 'Unknown',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', dog.id)
     setSaving(false)
     if (error) {
