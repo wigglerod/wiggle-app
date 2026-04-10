@@ -1,6 +1,6 @@
 # WIGGLE PROJECT — Master Context
 ## Read this before touching anything. Every tool. Every session.
-## Last updated: April 6, 2026 — Bug sweep confirmed clean. Tower V4 live.
+## Last updated: April 7, 2026 — All V4 bugs resolved. Tower V4 live. Next: Wiggle World Phase 1 scaffold.
 
 ---
 
@@ -292,6 +292,15 @@ Beast NEVER executes without CONFIRM block — rule stays forever.
 | NOTES_SPEC.md       | Notes system full spec (build reference)         |
 
 DELETE anything not in this list.
+
+---
+
+## NEXT: WIGGLE WORLD PHASE 1 SCAFFOLD
+
+New repo: `wiggle-world/` — same Supabase project (`ifhniwjdrsswgemmqddn`).
+Claude Code prompt for the scaffold exists in Wiggle Ops folder.
+The Neighbourhood HQ builds inside this scaffold.
+Tower Control stays in wiggle-v4 — live, do not regress.
 
 ---
 

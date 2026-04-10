@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle — Notes Complete</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #FFF5F0;
+  color: #2D2926;
+  padding: 28px 16px 60px;
+}
+.page-title { text-align: center; margin-bottom: 8px; }
+.page-title h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.page-title p  { font-size: 12px; color: #8C857E; margin-top: 4px; }
+
+.section { max-width: 900px; margin: 40px auto 0; }
+.section-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #E8634A;
+  border-bottom: 1px solid #E8E4E0; padding-bottom: 6px; margin-bottom: 20px;
+}
+.section-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.section-sub   { font-size: 12px; color: #8C857E; margin-bottom: 18px; line-height: 1.55; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+.col-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #8C857E; margin-bottom: 8px; }
+
+/* ── OWL ANIMATION ── */
+@keyframes owl-line {
+  0%   { left: 0;    transform: scaleX(1);  }
+  44%  { left: calc(100% - 14px); transform: scaleX(1);  }
+  46%  { left: calc(100% - 14px); transform: scaleX(-1); }
+  90%  { left: 0;    transform: scaleX(-1); }
+  100% { left: 0;    transform: scaleX(1);  }
+}
+.owl-track {
+  flex: 1; position: relative; height: 18px; overflow: hidden; min-width: 20px;
+}
+.owl-runner {
+  position: absolute; font-size: 11px; top: 3px;
+  animation: owl-line 3.6s linear infinite;
+}
+
+/* ── DOG CARD ── */
+.dog-card {
+  border-radius: 10px; border: 1px solid #E8E4E0;
+  border-bottom: 2.5px solid #D5CFC8; background: #FAF7F4; overflow: hidden;
+}
+.dog-card.has-forever { border-color: #961e78; border-bottom-color: #c99bbf; background: #fdf4fb; }
+.dog-card.has-owl     { border-color: #C4851C; border-bottom-color: #e0b96e; background: #FFFBF0; }
+.dog-card.flagged     { border-color: #E8634A; border-bottom-color: #C94A34; background: #FFF5F0; }
+
+.card-main { display: flex; align-items: center; gap: 7px; padding: 8px 10px; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: #F0ECE8; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-sage  { background: #2D8F6F; }
+.dot-amber { background: #C4851C; }
+.dog-info { flex: 1; min-width: 0; }
+.name-line { display: flex; align-items: center; gap: 4px; }
+.dog-name {
+  font-size: 13px; font-weight: 600; color: #534AB7;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; flex-shrink: 0;
+}
+.dog-name.fuschia { color: #961e78; }
+.star-icon { font-size: 10px; color: #961e78; flex-shrink: 0; }
+.dog-addr { font-size: 10px; color: #475569; font-weight: 500; margin-top: 1px; }
+.door-pill {
+  font-size: 9px; font-weight: 700; background: #475569; color: #fff;
+  padding: 2px 5px; border-radius: 4px; flex-shrink: 0;
+}
+.caret { font-size: 9px; color: #aaa; flex-shrink: 0; cursor: pointer; }
+.flag-icon { font-size: 12px; flex-shrink: 0; }
+
+/* ── INLINE EXPAND ── */
+.expand-zone { border-top: 1px solid rgba(0,0,0,0.06); }
+.note-block { display: flex; gap: 8px; padding: 9px 10px; align-items: flex-start; }
+.note-block.forever { background: #fdf4fb; border-bottom: 1px solid #e8d0e3; }
+.note-block.owl     { background: #FFFBF0; border-bottom: 1px solid #F0C76E; }
+.note-block.acuity  { background: #EFF6FF; border-bottom: 1px solid #BFDBFE; }
+.note-icon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+.note-body { flex: 1; }
+.note-text { font-size: 11px; color: #2D2926; line-height: 1.5; font-weight: 500; }
+.note-text.f { color: #961e78; font-weight: 600; }
+.note-meta { font-size: 9px; color: #8C857E; margin-top: 2px; }
+.expire { color: #E8634A; font-weight: 600; }
+
+.expand-actions { display: flex; gap: 6px; padding: 8px 10px; background: #FAF7F4; }
+.xbtn {
+  flex: 1; border-radius: 7px; padding: 9px 4px;
+  font-size: 11px; font-weight: 700; text-align: center;
+  font-family: 'DM Sans', sans-serif; border: none; cursor: pointer;
+}
+.xbtn-gotit  { background: #2D8F6F; color: #fff; }
+.xbtn-note   { background: #FFF5F0; color: #E8634A; border: 1px solid #E8634A; }
+
+/* ── PHONE ── */
+.phone {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-bottom: 3px solid #D5CFC8; border-radius: 16px; overflow: hidden;
+}
+.phone-inner { padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+.grp-hdr { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 4px; }
+.grp-left { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.walker-btn {
+  font-size: 10px; font-weight: 600; background: #EEEDFE; color: #534AB7;
+  border: 1px solid #534AB7; padding: 2px 8px; border-radius: 20px;
+}
+.owl-badge { font-size: 10px; font-weight: 700; color: #C4851C; background: #FDF3E3; border: 1px solid #C4851C; padding: 2px 6px; border-radius: 20px; }
+
+/* ── DRAWER ── */
+.drawer {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-bottom: 3px solid #D5CFC8; border-radius: 16px; overflow: hidden;
+}
+.drawer-handle { width: 32px; height: 3px; border-radius: 2px; background: #D5CFC8; margin: 9px auto 4px; }
+.drawer-hdr {
+  padding: 8px 14px 12px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid #E8E4E0;
+}
+.drawer-avatar {
+  width: 46px; height: 46px; border-radius: 50%; background: #F0ECE8; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  border: 1.5px solid #E8E4E0;
+}
+.drawer-name { font-size: 16px; font-weight: 700; color: #534AB7; }
+.drawer-name.fuschia { color: #961e78; }
+.drawer-breed { font-size: 11px; color: #8C857E; margin-top: 1px; }
+.drawer-badge { margin-top: 4px; display: flex; gap: 5px; }
+.badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+.badge-group { background: #EEEDFE; color: #534AB7; border: 1px solid #534AB7; }
+
+.d-actions { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.btn-full {
+  width: 100%; border-radius: 9px; padding: 11px; font-size: 12px; font-weight: 700;
+  text-align: center; font-family: 'DM Sans', sans-serif; border: none; cursor: pointer;
+}
+.btn-pickup { background: #2D8F6F; color: #fff; }
+.btn-nw     { background: #FDF3E3; color: #C4851C; border: 1px solid #C4851C; }
+
+.d-row { border-top: 1px solid #E8E4E0; padding: 8px 14px; }
+.d-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #E8634A; margin-bottom: 3px; }
+.d-val   { font-size: 12px; color: #2D2926; }
+.d-muted { font-size: 11px; color: #B5AFA8; font-style: italic; }
+
+.d-forever { border-top: 1px solid #e8d0e3; padding: 8px 14px; background: #fdf4fb; }
+.d-forever .d-lbl { color: #961e78; }
+.d-forever-content { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.d-forever-text { color: #961e78; font-weight: 600; font-size: 12px; line-height: 1.5; flex: 1; }
+.edit-btn {
+  font-size: 10px; font-weight: 600; color: #961e78; background: none;
+  border: 1px solid #961e78; border-radius: 6px; padding: 3px 8px;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; flex-shrink: 0; opacity: 0.6;
+}
+.admin-only-note { font-size: 9px; color: #B5AFA8; font-style: italic; margin-top: 3px; }
+
+.d-owl { border-top: 1px solid #F0C76E; padding: 8px 14px; background: #FFFBF0; }
+.d-owl .d-lbl { color: #C4851C; }
+.d-acuity { border-top: 1px solid #BFDBFE; padding: 8px 14px; background: #EFF6FF; }
+.d-acuity .d-lbl { color: #3B82F6; }
+.d-activity { border-top: 1px solid #E8E4E0; padding: 8px 14px; }
+.d-activity .d-lbl { color: #475569; }
+
+.note-item { margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+.note-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.note-item-text { font-size: 11px; color: #2D2926; line-height: 1.5; }
+.note-item-meta { font-size: 9px; color: #8C857E; margin-top: 1px; }
+.note-expire { color: #E8634A; font-weight: 600; }
+.note-flagged { color: #E8634A; font-weight: 700; }
+
+/* ── NOTE COMPOSER ── */
+.composer {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-bottom: 3px solid #D5CFC8; border-radius: 16px; overflow: hidden;
+}
+.composer-handle { width: 32px; height: 3px; border-radius: 2px; background: #D5CFC8; margin: 9px auto 6px; }
+.composer-title { font-size: 13px; font-weight: 700; padding: 0 14px 10px; border-bottom: 1px solid #E8E4E0; }
+.composer-title span { font-size: 11px; font-weight: 400; color: #8C857E; margin-left: 6px; }
+.quick-options { padding: 10px 14px; display: flex; flex-direction: column; gap: 7px; }
+.quick-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #8C857E; margin-bottom: 1px; }
+.quick-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px;
+  border: 1px solid #E8E4E0; background: #F0ECE8; color: #2D2926; cursor: pointer;
+}
+.chip.selected { background: #EEEDFE; border-color: #534AB7; color: #534AB7; }
+.chip.warn-chip { background: #FDF3E3; border-color: #C4851C; color: #C4851C; }
+.chip.flag-chip { background: #FFF5F0; border-color: #E8634A; color: #E8634A; }
+.free-text {
+  background: #FFF5F0; border: 1px solid #E8E4E0; border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; color: #2D2926; min-height: 44px;
+  font-family: 'DM Sans', sans-serif; width: 100%; resize: none;
+}
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 4px 0;
+}
+.toggle-info { flex: 1; }
+.toggle-name { font-size: 11px; font-weight: 600; color: #2D2926; }
+.toggle-desc { font-size: 9px; color: #8C857E; margin-top: 1px; }
+.toggle {
+  width: 32px; height: 18px; border-radius: 9px; background: #E8E4E0;
+  position: relative; cursor: pointer; flex-shrink: 0;
+}
+.toggle.on { background: #C4851C; }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%; background: #fff;
+}
+.toggle.on::after { left: 16px; }
+.send-btn {
+  width: calc(100% - 28px); margin: 4px 14px 12px;
+  background: #E8634A; color: #fff; border: none; border-radius: 9px;
+  padding: 11px; font-size: 12px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer;
+}
+
+/* ── FOREVER NOTE EDITOR ── */
+.forever-editor {
+  background: #fdf4fb; border: 1.5px solid #961e78;
+  border-bottom: 3px solid #c99bbf; border-radius: 16px; overflow: hidden;
+}
+.forever-editor-hdr {
+  padding: 12px 14px; border-bottom: 1px solid #e8d0e3;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.forever-editor-title { font-size: 13px; font-weight: 700; color: #961e78; }
+.forever-editor-sub   { font-size: 10px; color: #B5AFA8; margin-top: 2px; }
+.admin-badge {
+  font-size: 10px; font-weight: 600; background: #961e78; color: #fff;
+  padding: 2px 8px; border-radius: 20px;
+}
+.forever-textarea {
+  width: 100%; padding: 12px 14px; font-size: 12px; color: #961e78; font-weight: 500;
+  background: #fdf4fb; border: none; border-bottom: 1px solid #e8d0e3;
+  font-family: 'DM Sans', sans-serif; resize: none; min-height: 70px;
+  line-height: 1.6; outline: none;
+}
+.forever-actions { padding: 10px 14px; display: flex; gap: 8px; }
+.forever-cancel {
+  flex: 1; border-radius: 8px; padding: 10px; font-size: 12px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; border: 1px solid #E8E4E0; background: #FAF7F4;
+  color: #8C857E; cursor: pointer;
+}
+.forever-save {
+  flex: 2; border-radius: 8px; padding: 10px; font-size: 12px; font-weight: 700;
+  font-family: 'DM Sans', sans-serif; border: none; background: #961e78;
+  color: #fff; cursor: pointer;
+}
+.forever-examples { padding: 10px 14px; border-top: 1px solid #e8d0e3; }
+.example-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #B5AFA8; margin-bottom: 6px; }
+.example-pill {
+  display: inline-block; font-size: 10px; font-weight: 500; padding: 3px 9px;
+  border-radius: 20px; border: 1px solid #e8d0e3; background: #fdf4fb;
+  color: #961e78; margin: 0 4px 4px 0; cursor: pointer;
+}
+
+/* ── TOWER FLAG PANEL ── */
+.tower-panel {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-bottom: 3px solid #D5CFC8; border-radius: 14px; overflow: hidden;
+}
+.tower-hdr {
+  background: #2D2926; padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.tower-title { font-size: 12px; font-weight: 700; color: #fff; }
+.tower-sub   { font-size: 10px; color: #8C857E; }
+.tower-flag-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid #E8E4E0;
+}
+.tower-flag-item:last-child { border-bottom: none; }
+.tower-flag-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #E8634A;
+  flex-shrink: 0; margin-top: 4px;
+}
+.tower-flag-dot.resolved { background: #2D8F6F; }
+.tower-flag-body { flex: 1; }
+.tower-flag-who  { font-size: 11px; font-weight: 700; color: #2D2926; }
+.tower-flag-dog  { font-size: 10px; color: #534AB7; font-weight: 600; }
+.tower-flag-msg  { font-size: 11px; color: #555; margin-top: 2px; line-height: 1.4; }
+.tower-flag-time { font-size: 9px; color: #B5AFA8; margin-top: 2px; }
+.tower-flag-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.tower-btn {
+  font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+  border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.tower-btn-ask  { background: #EEEDFE; color: #534AB7; }
+.tower-btn-done { background: #E8F5EF; color: #2D8F6F; }
+.tower-badge {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; color: #E8634A;
+  background: #FFF5F0; border: 1px solid #E8634A;
+  padding: 2px 8px; border-radius: 20px;
+}
+
+/* ── OWL PATH DIAGRAM ── */
+.owl-path {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-radius: 12px; padding: 16px 18px;
+}
+.path-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+.path-row:last-child { margin-bottom: 0; }
+.path-arrow { color: #E8634A; font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.path-step { flex: 1; }
+.path-title { font-size: 12px; font-weight: 700; color: #2D2926; }
+.path-desc  { font-size: 11px; color: #555; margin-top: 2px; line-height: 1.5; }
+.path-tag {
+  display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 7px;
+  border-radius: 20px; margin-left: 6px; vertical-align: middle;
+}
+.t-owl  { background: #FDF3E3; color: #C4851C; border: 1px solid #C4851C; }
+.t-act  { background: #F0ECE8; color: #475569; border: 1px solid #D5CFC8; }
+.t-both { background: #EEEDFE; color: #534AB7; border: 1px solid #534AB7; }
+
+/* ── NOTE BOX ── */
+.note-box {
+  background: #FAF7F4; border: 1.5px solid #E8E4E0;
+  border-left: 4px solid #E8634A; border-radius: 10px;
+  padding: 12px 14px; margin-top: 14px; font-size: 12px; line-height: 1.65;
+}
+.note-box.sage  { border-left-color: #2D8F6F; }
+.note-box.amber { border-left-color: #C4851C; }
+.note-box.fuschia { border-left-color: #961e78; }
+
+/* ── TIMELINE ── */
+.timeline { background: #FAF7F4; border: 1.5px solid #E8E4E0; border-radius: 12px; padding: 4px 16px 10px; }
+.t-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F0ECE8; }
+.t-row:last-child { border-bottom: none; }
+.t-time { font-size: 10px; font-weight: 700; color: #E8634A; min-width: 52px; padding-top: 2px; }
+.t-who  { font-size: 10px; font-weight: 600; color: #534AB7; min-width: 52px; padding-top: 2px; }
+.t-body { flex: 1; font-size: 11px; color: #2D2926; line-height: 1.55; }
+.tag {
+  display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px;
+  border-radius: 20px; margin-left: 5px; vertical-align: middle;
+}
+.tag-owl     { background: #FDF3E3; color: #C4851C; border: 1px solid #C4851C; }
+.tag-forever { background: #fdf4fb; color: #961e78; border: 1px solid #961e78; }
+.tag-flag    { background: #FFF5F0; color: #E8634A; border: 1px solid #E8634A; }
+.tag-act     { background: #F0ECE8; color: #475569; border: 1px solid #D5CFC8; }
+
+@media (max-width: 640px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🦉 Wiggle Notes — Complete System</h1>
+  <p>Flag · Warn Next Walker · Forever Notes · Day in the Life</p>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 1 — THE FLAG SYSTEM
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">1 — The Flag System</div>
+  <div class="section-title">Too busy to type. One tap. We follow up later.</div>
+  <div class="section-sub">A walker sends a flag when something happened but they can't explain it mid-walk. Gen or Rod sees it in Tower, follows up with the walker when things are calm. No pressure in the moment.</div>
+
+  <div class="grid-2">
+
+    <div>
+      <div class="col-label">Composer — flag chip, no text needed</div>
+      <div class="composer">
+        <div class="composer-handle"></div>
+        <div class="composer-title">✎ Note about Pebbles <span>after walk</span></div>
+        <div class="quick-options">
+          <div class="quick-label">Quick picks</div>
+          <div class="quick-chips">
+            <div class="chip">Great walk 🐾</div>
+            <div class="chip">Tired today</div>
+            <div class="chip selected warn-chip">Reactive</div>
+            <div class="chip">Paw bothering</div>
+            <div class="chip flag-chip">🚩 Flag — ask me later</div>
+          </div>
+
+          <textarea class="free-text" rows="2" placeholder="Optional — add details if you can..."></textarea>
+
+          <div style="height:1px;background:#E8E4E0;"></div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-name">Warn next walker</div>
+              <div class="toggle-desc">Becomes an owl note — visible on card for 3 days</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+
+        </div>
+        <button class="send-btn">Send note</button>
+      </div>
+      <div style="font-size:10px;color:#8C857E;margin-top:8px;line-height:1.6;">
+        🚩 Flag chip = "something happened, ask me later"<br>
+        No typing required. One tap + Send.<br>
+        Warn next walker also toggled → creates owl note too.
+      </div>
+    </div>
+
+    <div>
+      <div class="col-label">Tower Control — Flag Dashboard</div>
+      <div class="tower-panel">
+        <div class="tower-hdr">
+          <div>
+            <div class="tower-title">🚩 Walker Flags</div>
+            <div class="tower-sub">Follow up when calm · not urgent</div>
+          </div>
+          <div class="tower-badge">🚩 2 open</div>
+        </div>
+
+        <div class="tower-flag-item">
+          <div class="tower-flag-dot"></div>
+          <div class="tower-flag-body">
+            <div class="tower-flag-who">Belen <span class="tower-flag-dog">→ Pebbles</span></div>
+            <div class="tower-flag-msg">Reactive — flagged for follow-up. Warn next walker toggle was on.</div>
+            <div class="tower-flag-time">Today · 1:12 PM</div>
+          </div>
+          <div class="tower-flag-actions">
+            <button class="tower-btn tower-btn-ask">Ask Belen</button>
+            <button class="tower-btn tower-btn-done">Done</button>
+          </div>
+        </div>
+
+        <div class="tower-flag-item">
+          <div class="tower-flag-dot"></div>
+          <div class="tower-flag-body">
+            <div class="tower-flag-who">Chloe <span class="tower-flag-dog">→ Luna GS</span></div>
+            <div class="tower-flag-msg">🚩 Flag — ask me later (no text)</div>
+            <div class="tower-flag-time">Today · 11:45 AM</div>
+          </div>
+          <div class="tower-flag-actions">
+            <button class="tower-btn tower-btn-ask">Ask Chloe</button>
+            <button class="tower-btn tower-btn-done">Done</button>
+          </div>
+        </div>
+
+        <div class="tower-flag-item">
+          <div class="tower-flag-dot resolved"></div>
+          <div class="tower-flag-body">
+            <div class="tower-flag-who">Amanda <span class="tower-flag-dog">→ Chaska</span></div>
+            <div class="tower-flag-msg">Paw bothering — resolved, vet visit confirmed.</div>
+            <div class="tower-flag-time">Apr 2 · resolved by Gen</div>
+          </div>
+          <div class="tower-flag-actions">
+            <button class="tower-btn tower-btn-done" style="opacity:0.5;">Done ✓</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="note-box sage" style="margin-top:10px;">
+        <strong style="color:#2D8F6F;">DB:</strong> Uses existing <code>tags</code> array in walker_notes. Flag = <code>tags: ['flag']</code>. Tower queries <code>WHERE tags @> '{flag}'</code>. Zero schema change.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 2 — WARN NEXT WALKER (elaborated)
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">2 — Warn Next Walker — How It Works End to End</div>
+  <div class="section-title">One toggle. Two writes. Next walker is protected.</div>
+  <div class="section-sub">When a walker sees something the next walker needs to know — reactive behaviour, building issue, address change — they flip the toggle. The note becomes both a permanent activity record AND a timed owl note that walks on the card.</div>
+
+  <div class="owl-path" style="margin-bottom:16px;">
+    <div class="path-row">
+      <div class="path-arrow">①</div>
+      <div class="path-step">
+        <div class="path-title">Walker taps ✎ Note on Pebbles after the walk</div>
+        <div class="path-desc">Picks "Reactive" chip. Adds: "Only saw one dog from afar — handled it well but was tense." Flips <strong>Warn next walker</strong> toggle ON.</div>
+      </div>
+    </div>
+    <div class="path-row">
+      <div class="path-arrow">②</div>
+      <div class="path-step">
+        <div class="path-title">Two rows written to Supabase simultaneously</div>
+        <div class="path-desc">
+          <span class="path-tag t-act">📝 Activity</span> <code>walker_notes</code> row, type='note' — permanent history, always visible in drawer.<br>
+          <span class="path-tag t-owl">🦉 Owl</span> <code>owl_notes</code> row, expires in 3 days — walks on Pebbles' card for every walker.
+        </div>
+      </div>
+    </div>
+    <div class="path-row">
+      <div class="path-arrow">③</div>
+      <div class="path-step">
+        <div class="path-title">Next day — Amanda opens the app</div>
+        <div class="path-desc">Sees 🦉 walking on Pebbles' name line. Group header shows 🦉 1. She taps ▼ before even reaching the door.</div>
+      </div>
+    </div>
+    <div class="path-row">
+      <div class="path-arrow">④</div>
+      <div class="path-step">
+        <div class="path-title">Amanda reads the expand</div>
+        <div class="path-desc">"Reactive — only saw one dog from afar, handled it well but was tense. Belen · expires in 2 days." She plans a quieter route. Taps <strong>Got it</strong>. Owl disappears for her. Still shows for other walkers who haven't read it yet.</div>
+      </div>
+    </div>
+    <div class="path-row">
+      <div class="path-arrow">⑤</div>
+      <div class="path-step">
+        <div class="path-title">Day 3 — owl expires automatically</div>
+        <div class="path-desc">The owl_notes row's <code>expires_at</code> passes. Card is clean again. The activity note in the drawer remains forever — part of Pebbles' permanent history.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The two card states side by side -->
+  <div class="grid-2">
+    <div>
+      <div class="col-label">Pebbles' card after Belen's warning</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="grp-hdr">
+            <div class="grp-left">Group 2 <span class="walker-btn">Amanda</span></div>
+            <div class="owl-badge">🦉 1</div>
+          </div>
+          <div class="dog-card has-owl">
+            <div class="card-main">
+              <div class="avatar">🐾</div>
+              <div class="status-dot dot-amber"></div>
+              <div class="dog-info">
+                <div class="name-line">
+                  <div class="dog-name">Pebbles</div>
+                  <div class="owl-track"><span class="owl-runner">🦉</span></div>
+                </div>
+                <div class="dog-addr">3200 Mentana</div>
+              </div>
+              <div class="caret">▼</div>
+            </div>
+          </div>
+          <!-- expand open -->
+          <div class="expand-zone" style="border:1px solid #F0C76E;border-radius:10px;border-bottom:2px solid #e0b96e;">
+            <div class="note-block owl">
+              <div class="note-icon">🦉</div>
+              <div class="note-body">
+                <div class="note-text">Reactive — tense near dogs. Handled well but plan a quieter route.</div>
+                <div class="note-meta">Belen · yesterday · <span class="expire">2 days left</span></div>
+              </div>
+            </div>
+            <div class="expand-actions">
+              <button class="xbtn xbtn-gotit">✓ Got it</button>
+              <button class="xbtn xbtn-note">✎ Note</button>
+            </div>
+          </div>
+          <div class="dog-card">
+            <div class="card-main">
+              <div class="avatar">🐶</div>
+              <div class="status-dot dot-sage"></div>
+              <div class="dog-info">
+                <div class="name-line"><div class="dog-name">Sansa</div></div>
+                <div class="dog-addr">4659 des Érables</div>
+              </div>
+              <div class="door-pill">#2426</div>
+              <div class="caret">▼</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-label">Pebbles' drawer — both notes visible</div>
+      <div class="drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-hdr">
+          <div class="drawer-avatar">🐾</div>
+          <div>
+            <div class="drawer-name fuschia">Pebbles</div>
+            <div class="drawer-breed">Terrier Mix · Laurier</div>
+            <div class="drawer-badge"><span class="badge badge-group">Group 2</span></div>
+          </div>
+        </div>
+        <div class="d-actions">
+          <button class="btn-full btn-pickup">✓ Mark as Picked Up</button>
+          <button class="btn-full btn-nw">Not walking today</button>
+        </div>
+        <div class="d-row"><div class="d-lbl">Address</div><div class="d-val">3200 Mentana</div></div>
+        <div class="d-forever">
+          <div class="d-lbl">★ Forever</div>
+          <div class="d-forever-content">
+            <div class="d-forever-text">Reactive dog — be careful.</div>
+          </div>
+        </div>
+        <div class="d-owl">
+          <div class="d-lbl">🦉 Owl</div>
+          <div class="note-item">
+            <div class="note-item-text">Reactive — tense near dogs. Quieter route today.</div>
+            <div class="note-item-meta">Belen · yesterday · <span class="note-expire">2 days left</span></div>
+          </div>
+        </div>
+        <div class="d-activity">
+          <div class="d-lbl">📝 Activity</div>
+          <div class="note-item">
+            <div class="note-item-text">Reactive but only saw one dog from afar — good pup otherwise.</div>
+            <div class="note-item-meta">Belen · Apr 3</div>
+          </div>
+          <div class="note-item">
+            <div class="note-item-text">Reactive today near Garnier. Keep on east side.</div>
+            <div class="note-item-meta">Chloe · Mar 28</div>
+          </div>
+        </div>
+      </div>
+      <div class="note-box amber">
+        <strong style="color:#C4851C;">The pattern:</strong> Forever note says "reactive dog" (always true). Owl note says what happened today (timed context). Activity shows the history — over time, Gen sees if it's getting better or worse.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 3 — FOREVER NOTE EDITING
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">3 — Forever Notes — How They're Written and Edited</div>
+  <div class="section-title">Admin only. Simple text. Fuschia signals it forever.</div>
+  <div class="section-sub">Rod or Gen writes it once. It never expires. Walkers can read it but never edit it. From the real DB — 24 dogs already have forever notes right now.</div>
+
+  <div class="grid-2">
+
+    <div>
+      <div class="col-label">Admin view — editing a forever note in the drawer</div>
+      <!-- Walker sees read-only -->
+      <div style="font-size:10px;font-weight:700;color:#2D8F6F;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Walker sees (read-only)</div>
+      <div class="drawer" style="margin-bottom:14px;">
+        <div class="drawer-handle"></div>
+        <div class="drawer-hdr">
+          <div class="drawer-avatar">🐾</div>
+          <div>
+            <div class="drawer-name fuschia">Pebbles</div>
+            <div class="drawer-breed">Terrier · Laurier</div>
+          </div>
+        </div>
+        <div class="d-forever">
+          <div class="d-lbl">★ Forever</div>
+          <div class="d-forever-content">
+            <div class="d-forever-text">Reactive dog — be careful.</div>
+          </div>
+          <div class="admin-only-note">Admin-only · read-only for walkers</div>
+        </div>
+      </div>
+
+      <!-- Admin sees edit button -->
+      <div style="font-size:10px;font-weight:700;color:#961e78;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Admin sees (+ Edit button)</div>
+      <div class="drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-hdr">
+          <div class="drawer-avatar">🐾</div>
+          <div>
+            <div class="drawer-name fuschia">Pebbles</div>
+            <div class="drawer-breed">Terrier · Laurier</div>
+          </div>
+        </div>
+        <div class="d-forever">
+          <div class="d-lbl">★ Forever</div>
+          <div class="d-forever-content">
+            <div class="d-forever-text">Reactive dog — be careful.</div>
+            <button class="edit-btn">Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-label">Forever note editor (slides up for admin)</div>
+      <div class="forever-editor">
+        <div class="forever-editor-hdr">
+          <div>
+            <div class="forever-editor-title">★ Forever Note — Pebbles</div>
+            <div class="forever-editor-sub">Only Rod and Gen can edit this</div>
+          </div>
+          <div class="admin-badge">Admin</div>
+        </div>
+        <textarea class="forever-textarea" rows="3">Reactive dog — be careful.</textarea>
+        <div class="forever-examples">
+          <div class="example-label">Real examples from your DB right now</div>
+          <span class="example-pill">Reactive</span>
+          <span class="example-pill">Dog reactive</span>
+          <span class="example-pill">A humper!</span>
+          <span class="example-pill">Sensitive soul</span>
+          <span class="example-pill">Ring before going in</span>
+          <span class="example-pill">Intercôme 18/27</span>
+          <span class="example-pill">Two dogs, same household</span>
+          <span class="example-pill">text Rodrigo 10 min before pickup</span>
+        </div>
+        <div class="forever-actions">
+          <button class="forever-cancel">Cancel</button>
+          <button class="forever-save">★ Save forever note</button>
+        </div>
+      </div>
+
+      <div class="note-box fuschia" style="border-left-color:#961e78;margin-top:10px;">
+        <strong style="color:#961e78;">Where it lives:</strong> <code>dogs.notes</code> — already exists, 24 dogs populated. When this field has any content → dog name turns fuschia everywhere in the app. No extra table needed.
+      </div>
+
+      <div class="note-box" style="margin-top:10px;">
+        <strong>Tower Control (future):</strong> Same editor in Tower's dog profile panel. Rod types once, it saves to <code>dogs.notes</code>, fuschia appears in the app within seconds. One truth, two views.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 4 — DAY IN THE LIFE (complete)
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">4 — Day in the Life — Full System in Motion</div>
+  <div class="timeline">
+    <div class="t-row">
+      <div class="t-time">8:00 AM</div>
+      <div class="t-who">Gen</div>
+      <div class="t-body">Reads Acuity. Lea's owner left a note: "at sister's all week." Gen writes <code>@Lea at sister's — 4676 Chambord buzz #201 (5 days)</code> in Quick Owl Note. <span class="tag tag-owl">🦉 Created</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">10:45 AM</div>
+      <div class="t-who">Chloe</div>
+      <div class="t-body">Opens app. Sees 🦉 walking on Lea's name line. Taps ▼. Reads address note. Taps <strong>Got it</strong>. Owl disappears for her. Walks to 4676 Chambord. <span class="tag tag-owl">🦉 Acknowledged</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">11:15 AM</div>
+      <div class="t-who">Chloe</div>
+      <div class="t-body">After walk. Taps ✎ Note on Lea. Picks <strong>Great walk 🐾</strong>. Adds "SO happy at her sister's place." Sends — no toggles. <span class="tag tag-act">📝 Activity</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">11:30 AM</div>
+      <div class="t-who">Belen</div>
+      <div class="t-body">Opens <strong style="color:#961e78;">Pebbles</strong> — fuschia name. Taps ▼. Reads ★: "Reactive dog — be careful." No surprise. She's ready. <span class="tag tag-forever">★ Forever</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">1:10 PM</div>
+      <div class="t-who">Belen</div>
+      <div class="t-body">After Pebbles walk. Taps ✎ Note. Picks <strong>Reactive</strong>. Doesn't have time to write more. Taps <strong>🚩 Flag — ask me later</strong>. Flips Warn next walker ON. Sends. <span class="tag tag-flag">🚩 Flagged</span> <span class="tag tag-owl">🦉 Created 3d</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">2:00 PM</div>
+      <div class="t-who">Gen</div>
+      <div class="t-body">Tower shows 🚩 2 open flags. Reads: Belen flagged Pebbles, reactive. Gen texts Belen when she's free: "Hey, what happened with Pebbles?" Gets the story. Adds detail to the activity note. <span class="tag tag-flag">🚩 Resolved</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">Next day</div>
+      <div class="t-who">Amanda</div>
+      <div class="t-body">Opens app. Sees 🦉 on Pebbles — "Reactive — tense near dogs. Quieter route." Taps Got it. Owl gone. Walks east side. No surprises. No phone call needed. <span class="tag tag-owl">🦉 System working</span></div>
+    </div>
+    <div class="t-row">
+      <div class="t-time">Day 4</div>
+      <div class="t-who">App</div>
+      <div class="t-body">Pebbles' owl note expires automatically. Card is clean. The activity log in the drawer shows the full reactive history — Belen Apr 3, Chloe Mar 28. Gen can see the pattern. <span class="tag tag-act">📝 History stays</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 5 — ECOSYSTEM NOTE
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">5 — This System Across All Four Surfaces</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="note-box" style="margin-top:0;">
+      <strong>Wiggle App (walkers)</strong><br>
+      Read forever notes (fuschia). Read + acknowledge owl notes (Got it). Write activity notes + flag. Toggle warn next walker → creates owl.
+    </div>
+    <div class="note-box" style="margin-top:0;">
+      <strong>Tower Control (Gen + Rod)</strong><br>
+      Write + edit forever notes (admin-only edit button). Write owl notes (Quick Owl Note). See flag dashboard. See all activity. Resolve flags. Prep owner messages.
+    </div>
+    <div class="note-box" style="margin-top:0;">
+      <strong>Website (future — client portal)</strong><br>
+      Owners write Acuity notes at booking time. Phase 2: view walk activity notes about their own dog. See "Lea had a great walk today!" written by Chloe.
+    </div>
+    <div class="note-box" style="margin-top:0;">
+      <strong>Reminder for later — Filou</strong><br>
+      Forever note already says "text Rodrigo 10 min before pickup." Future: auto-trigger text 10 min before scheduled pickup time. Not now — after notes system is live.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

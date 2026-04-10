@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle — Admin Vision Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --coral:   #E8634A;
+  --coral-d: #C94A34;
+  --purple:  #534AB7;
+  --sage:    #2D8F6F;
+  --amber:   #C4851C;
+  --slate:   #475569;
+  --beast:   #E8762B;
+  --dark:    #1A1D23;
+  --dark2:   #252B35;
+  --peach:   #FFF5F0;
+  --cream:   #FAF7F4;
+  --sand:    #F0ECE8;
+  --warm-b:  #E8E4E0;
+  --tw-bg:   #F1F5F9;
+  --tw-card: #FFFFFF;
+  --tw-b:    #E2E8F0;
+  --tw-text: #1E293B;
+  --tw-mid:  #64748B;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--dark);
+  color: var(--tw-text);
+  min-height: 100vh;
+}
+
+/* ── TOP NAV ── */
+.top-nav {
+  background: var(--dark);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--coral);
+  letter-spacing: -.02em;
+  padding: 16px 24px 16px 0;
+  border-right: 1px solid rgba(255,255,255,.1);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+.nav-tab {
+  padding: 18px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.4);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all .2s;
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.nav-tab:hover { color: rgba(255,255,255,.7); }
+.nav-tab.active { color: #fff; border-bottom-color: var(--coral); }
+.nav-tab .tab-chip {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.chip-new { background: var(--coral); color: #fff; }
+.chip-key { background: var(--beast); color: #fff; }
+
+/* ── SCREENS ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ═══════════════════════════════════
+   SCREEN 1 — THE CONCEPT
+═══════════════════════════════════ */
+.concept-wrap {
+  background: var(--dark);
+  min-height: calc(100vh - 53px);
+  padding: 48px 32px 64px;
+}
+.concept-hero {
+  text-align: center;
+  margin-bottom: 56px;
+}
+.concept-hero h1 {
+  font-size: 38px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.03em;
+  margin-bottom: 12px;
+}
+.concept-hero h1 em { color: var(--coral); font-style: normal; }
+.concept-hero p {
+  font-size: 16px;
+  color: rgba(255,255,255,.45);
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.concept-diagram {
+  max-width: 960px;
+  margin: 0 auto 56px;
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  gap: 0;
+  align-items: center;
+}
+.concept-surface {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,.08);
+}
+.cs-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cs-body { padding: 20px; }
+.cs-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,.5);
+  margin-bottom: 12px;
+}
+
+/* Tower surface */
+.cs-tower { background: var(--dark2); }
+.cs-tower .cs-header { background: var(--dark); border-bottom: 1px solid rgba(255,255,255,.08); }
+.cs-tower .cs-header-title { font-size: 13px; font-weight: 700; color: #fff; }
+.cs-tower .cs-header-sub { font-size: 11px; color: rgba(255,255,255,.4); }
+
+/* App surface */
+.cs-app { background: var(--cream); }
+.cs-app .cs-header { background: var(--coral); border-bottom: none; }
+.cs-app .cs-header-title { font-size: 13px; font-weight: 700; color: #fff; }
+.cs-app .cs-header-sub { font-size: 11px; color: rgba(255,255,255,.7); }
+
+.concept-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.arrow-line {
+  width: 2px;
+  height: 32px;
+  background: linear-gradient(to bottom, rgba(232,99,74,.6), rgba(83,74,183,.6));
+}
+.arrow-icon {
+  font-size: 18px;
+}
+.arrow-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.3);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Persona cards */
+.persona-grid {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.persona-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,.08);
+}
+.persona-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.persona-avatar {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.persona-info h3 { font-size: 16px; font-weight: 700; color: #fff; }
+.persona-info p { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+.persona-body {
+  padding: 4px 24px 24px;
+}
+.persona-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.persona-item:last-child { border-bottom: none; }
+.pi-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.pi-text { flex: 1; }
+.pi-title { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); }
+.pi-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
+
+/* Rod card */
+.persona-rod { background: linear-gradient(160deg, #1f2632 0%, #1A1D23 100%); }
+.persona-rod .persona-header { border-bottom: 1px solid rgba(232,99,74,.2); }
+.persona-rod .persona-avatar { background: rgba(232,99,74,.15); }
+
+/* Gen card */
+.persona-gen { background: linear-gradient(160deg, #1e2530 0%, #1A1D23 100%); }
+.persona-gen .persona-header { border-bottom: 1px solid rgba(232,118,43,.2); }
+.persona-gen .persona-avatar { background: rgba(232,118,43,.15); }
+
+/* ═══════════════════════════════════
+   TOWER SHARED STYLES
+═══════════════════════════════════ */
+.tower-wrap {
+  background: var(--tw-bg);
+  min-height: calc(100vh - 53px);
+}
+.tower-header {
+  background: var(--dark);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.tower-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.th-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.th-date {
+  font-size: 11px;
+  color: rgba(255,255,255,.4);
+  font-family: 'DM Mono', monospace;
+}
+.th-greeting {
+  font-size: 12px;
+  color: rgba(255,255,255,.6);
+}
+.th-persona-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.badge-gen { background: rgba(232,118,43,.2); color: var(--beast); border: 1px solid rgba(232,118,43,.4); }
+.badge-rod { background: rgba(232,99,74,.2); color: var(--coral); border: 1px solid rgba(232,99,74,.4); }
+
+.tower-tabs-inner {
+  display: flex;
+  gap: 0;
+}
+.ti-tab {
+  padding: 14px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.35);
+  cursor: default;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.ti-tab.ti-active { color: #fff; border-bottom-color: var(--coral); }
+.ti-tab.ti-beast { color: var(--beast); }
+
+/* Stats bar */
+.stats-bar {
+  background: var(--dark2);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 0 28px;
+  display: flex;
+  gap: 0;
+}
+.stat-item {
+  padding: 12px 20px 12px 0;
+  margin-right: 20px;
+  border-right: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stat-item:last-child { border-right: none; }
+.stat-num {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  line-height: 1;
+}
+.stat-num.sage { color: var(--sage); }
+.stat-num.amber { color: var(--amber); }
+.stat-num.coral { color: var(--coral); }
+.stat-num.purple { color: var(--purple); }
+.stat-num.beast { color: var(--beast); }
+.stat-meta {}
+.stat-label { font-size: 10px; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .07em; }
+.stat-sub { font-size: 10px; color: rgba(255,255,255,.2); margin-top: 1px; }
+
+/* Main layout */
+.tower-body {
+  padding: 20px 28px;
+  display: grid;
+  gap: 20px;
+}
+.tower-body-2col { grid-template-columns: 1fr 340px; }
+.tower-body-3col { grid-template-columns: 1fr 1fr 300px; }
+
+/* Section header */
+.sec-hdr {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--tw-mid);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sec-hdr-action {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--coral);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Draft cards */
+.draft-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.draft-card {
+  background: var(--tw-card);
+  border-radius: 10px;
+  border: 1px solid var(--tw-b);
+  border-bottom: 2.5px solid #CBD5E1;
+  overflow: hidden;
+}
+.draft-card-header {
+  padding: 10px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.draft-date {
+  font-size: 12px;
+  font-weight: 700;
+}
+.draft-date.plateau { color: #3B82A0; }
+.draft-date.laurier { color: #4A9E6F; }
+.draft-sector {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--tw-mid);
+  margin-top: 1px;
+}
+.draft-actions { display: flex; gap: 6px; }
+.btn-approve {
+  font-size: 10px; font-weight: 700;
+  background: var(--sage); color: #fff;
+  border: none; border-radius: 6px;
+  padding: 4px 10px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-reject {
+  font-size: 10px; font-weight: 700;
+  background: var(--tw-bg); color: var(--amber);
+  border: 1px solid #E2C89A; border-radius: 6px;
+  padding: 4px 10px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.draft-dogs {
+  padding: 6px 12px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-top: 1px solid var(--tw-b);
+}
+.dog-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #EEF2FF;
+  color: var(--purple);
+  border: 1px solid #C7D2FE;
+}
+.dog-chip.picked { background: #ECFDF5; color: var(--sage); border-color: #A7F3D0; text-decoration: line-through; }
+.draft-count {
+  font-size: 10px;
+  color: var(--tw-mid);
+  padding: 0 12px 8px;
+  text-align: right;
+}
+.draft-flag { font-size: 10px; color: var(--amber); padding: 4px 12px 8px; font-weight: 600; }
+.draft-ok { font-size: 10px; color: var(--sage); padding: 4px 12px 8px; font-weight: 600; }
+
+/* Right panel */
+.right-panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* Flag panel */
+.flag-panel {
+  background: var(--tw-card);
+  border-radius: 10px;
+  border: 1px solid var(--tw-b);
+  border-bottom: 2.5px solid #CBD5E1;
+  overflow: hidden;
+}
+.flag-header {
+  background: var(--dark);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.flag-header-title { font-size: 12px; font-weight: 700; color: #fff; }
+.flag-count-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--coral);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.flag-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--tw-b);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.flag-item:last-child { border-bottom: none; }
+.flag-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.flag-dot.resolved { background: var(--sage); }
+.flag-body { flex: 1; }
+.flag-who { font-size: 11px; font-weight: 700; color: var(--tw-text); }
+.flag-dog { color: var(--purple); }
+.flag-msg { font-size: 10px; color: var(--tw-mid); margin-top: 2px; line-height: 1.4; }
+.flag-time { font-size: 9px; color: #94A3B8; margin-top: 2px; }
+.flag-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.fbtn {
+  font-size: 9px; font-weight: 600;
+  padding: 3px 7px; border-radius: 5px;
+  border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.fbtn-ask { background: #EEF2FF; color: var(--purple); }
+.fbtn-done { background: #ECFDF5; color: var(--sage); }
+
+/* Walker status panel */
+.walker-panel {
+  background: var(--tw-card);
+  border-radius: 10px;
+  border: 1px solid var(--tw-b);
+  border-bottom: 2.5px solid #CBD5E1;
+  overflow: hidden;
+}
+.walker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--tw-b);
+}
+.walker-item:last-child { border-bottom: none; }
+.walker-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--tw-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  border: 1px solid var(--tw-b);
+}
+.walker-name-col { flex: 1; }
+.walker-name { font-size: 12px; font-weight: 600; color: var(--tw-text); }
+.walker-sector { font-size: 10px; color: var(--tw-mid); }
+.walker-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wp-bar-wrap {
+  width: 60px;
+  height: 4px;
+  background: var(--tw-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.wp-bar { height: 100%; border-radius: 2px; background: var(--sage); }
+.wp-text { font-size: 10px; font-weight: 600; color: var(--tw-mid); font-family: 'DM Mono', monospace; }
+
+/* ═══════════════════════════════════
+   BEAST PANEL (Rod only)
+═══════════════════════════════════ */
+.beast-panel {
+  background: var(--dark2);
+  border-radius: 10px;
+  border: 1px solid rgba(232,118,43,.25);
+  border-bottom: 2.5px solid rgba(232,118,43,.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.beast-header {
+  background: var(--dark);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(232,118,43,.15);
+}
+.beast-icon { font-size: 16px; }
+.beast-title { font-size: 12px; font-weight: 700; color: var(--beast); }
+.beast-status {
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(232,118,43,.15);
+  color: var(--beast);
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+.beast-chat { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.chat-bubble {
+  max-width: 85%;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.cb-beast {
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.8);
+  border-radius: 10px 10px 10px 3px;
+}
+.cb-rod {
+  background: rgba(232,99,74,.15);
+  color: rgba(255,255,255,.85);
+  border-radius: 10px 10px 3px 10px;
+  align-self: flex-end;
+}
+.beast-input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.beast-input-field {
+  flex: 1;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,.6);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+}
+.beast-send {
+  background: var(--beast);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════
+   SCREEN 4 — THE BRIDGE
+═══════════════════════════════════ */
+.bridge-wrap {
+  background: var(--dark);
+  min-height: calc(100vh - 53px);
+  padding: 48px 32px;
+}
+.bridge-title {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.bridge-title h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.02em;
+  margin-bottom: 8px;
+}
+.bridge-title p {
+  font-size: 14px;
+  color: rgba(255,255,255,.4);
+}
+
+.bridge-flow {
+  max-width: 900px;
+  margin: 0 auto 48px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.bf-step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+.bf-step::after {
+  content: '→';
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: rgba(255,255,255,.2);
+  z-index: 1;
+}
+.bf-step:last-child::after { display: none; }
+.bf-node {
+  background: var(--dark2);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 16px 12px;
+  margin: 0 8px;
+  height: 100%;
+}
+.bf-icon { font-size: 22px; margin-bottom: 8px; }
+.bf-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.bf-sub { font-size: 10px; color: rgba(255,255,255,.4); line-height: 1.5; }
+.bf-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 6px;
+}
+.bf-badge-coral { background: rgba(232,99,74,.2); color: var(--coral); }
+.bf-badge-beast { background: rgba(232,118,43,.2); color: var(--beast); }
+.bf-badge-sage { background: rgba(45,143,111,.2); color: var(--sage); }
+.bf-badge-purple { background: rgba(83,74,183,.2); color: #818CF8; }
+
+.bridge-split {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.bridge-surface {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,.08);
+}
+
+/* App surface (warm) */
+.bridge-app {
+  background: var(--cream);
+}
+.bridge-app-hdr {
+  background: var(--coral);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bridge-app-hdr-title { font-size: 13px; font-weight: 700; color: #fff; }
+.bridge-app-hdr-sub { font-size: 10px; color: rgba(255,255,255,.7); }
+.bridge-app-unchanged {
+  background: rgba(45,143,111,.15);
+  border: 1px solid rgba(45,143,111,.3);
+  border-radius: 8px;
+  margin: 12px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sage);
+  text-align: center;
+}
+.app-group-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+}
+.app-group-name { font-size: 13px; font-weight: 700; color: #2D2926; }
+.app-walker-btn {
+  font-size: 10px; font-weight: 600;
+  background: #EEEDFE; color: var(--purple);
+  border: 1px solid var(--purple);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+.app-dog-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 12px;
+  padding: 7px 9px;
+  background: var(--cream);
+  border: 1px solid var(--warm-b);
+  border-bottom: 2px solid #D5CFC8;
+  border-radius: 8px;
+}
+.app-dog-row.picked { background: #E8F5EF; border-color: #6DCAA8; border-bottom-color: #2D8F6F; }
+.adr-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-sage { background: var(--sage); }
+.dot-amber { background: var(--amber); }
+.adr-name { font-size: 12px; font-weight: 600; color: #2D2926; flex: 1; }
+.adr-name.purple { color: var(--purple); }
+.adr-name.struck { text-decoration: line-through; color: var(--sage); }
+.adr-addr { font-size: 10px; color: var(--slate); }
+.adr-code { font-size: 9px; font-weight: 700; background: var(--slate); color: #fff; padding: 1px 5px; border-radius: 3px; }
+.adr-time { font-size: 10px; color: var(--sage); font-weight: 600; }
+
+/* Tower surface (cool) */
+.bridge-tower {
+  background: var(--tw-card);
+}
+.bridge-tower-hdr {
+  background: var(--dark);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bridge-tower-hdr-title { font-size: 13px; font-weight: 700; color: #fff; }
+.bridge-approved-badge {
+  font-size: 10px; font-weight: 700;
+  background: rgba(45,143,111,.2);
+  color: var(--sage);
+  border: 1px solid rgba(45,143,111,.4);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.tower-group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tw-b);
+}
+.tower-group-row:last-child { border-bottom: none; }
+.tgr-left {}
+.tgr-name { font-size: 12px; font-weight: 700; color: var(--tw-text); }
+.tgr-walker { font-size: 10px; color: var(--tw-mid); }
+.tgr-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.tgr-chip {
+  font-size: 9px; font-weight: 600;
+  background: #EEF2FF; color: var(--purple);
+  border-radius: 10px; padding: 1px 6px;
+}
+.tgr-chip.picked { background: #ECFDF5; color: var(--sage); text-decoration: line-through; }
+.tgr-right { text-align: right; flex-shrink: 0; }
+.tgr-count { font-size: 11px; font-weight: 700; color: var(--tw-mid); }
+.tgr-progress { font-size: 10px; color: var(--sage); margin-top: 2px; }
+
+/* ── App mini preview in concept ── */
+.mini-app-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  padding: 6px 8px;
+  background: var(--cream);
+  border-radius: 7px;
+  border: 1px solid var(--warm-b);
+}
+.mini-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.mini-dot-s { background: var(--sage); }
+.mini-dot-a { background: var(--amber); }
+.mini-name { font-size: 11px; font-weight: 600; color: #534AB7; flex: 1; }
+.mini-name.struck { text-decoration: line-through; color: var(--sage); }
+.mini-addr { font-size: 9px; color: var(--slate); }
+.mini-code { font-size: 8px; font-weight: 700; background: var(--slate); color: #fff; padding: 1px 4px; border-radius: 3px; }
+
+.mini-tower-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  padding: 5px 8px;
+  background: var(--tw-bg);
+  border-radius: 6px;
+  border: 1px solid var(--tw-b);
+}
+.mt-name { font-size: 11px; font-weight: 600; color: var(--purple); flex: 1; }
+.mt-status { font-size: 9px; font-weight: 600; color: var(--sage); }
+
+/* ── Utility ── */
+.lock-icon { color: rgba(255,255,255,.2); font-size: 11px; }
+.note-box-dark {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-left: 3px solid var(--coral);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: rgba(255,255,255,.6);
+  line-height: 1.65;
+  margin-top: 16px;
+}
+.note-box-dark strong { color: #fff; }
+
+/* ── Gen locked Beast ── */
+.beast-locked {
+  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+.beast-locked-icon { font-size: 28px; margin-bottom: 8px; opacity: .3; }
+.beast-locked-text { font-size: 12px; color: rgba(255,255,255,.25); }
+
+/* Owl composer mini */
+.owl-composer {
+  background: #FFFBF0;
+  border-radius: 10px;
+  border: 1px solid #F0C76E;
+  border-bottom: 2px solid #e0a93e;
+  padding: 12px 14px;
+}
+.oc-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--amber); margin-bottom: 8px; }
+.oc-input {
+  width: 100%;
+  background: #FFF8E8;
+  border: 1px solid #F0C76E;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #2D2926;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  margin-bottom: 8px;
+}
+.oc-row { display: flex; gap: 6px; }
+.oc-dog-pick {
+  flex: 1; font-size: 11px; font-weight: 600;
+  background: #FFF8E8; color: var(--amber);
+  border: 1px solid #F0C76E; border-radius: 7px;
+  padding: 7px 10px; font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.oc-send {
+  font-size: 11px; font-weight: 700;
+  background: var(--amber); color: #fff;
+  border: none; border-radius: 7px;
+  padding: 7px 14px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="nav-brand">🐾 Wiggle</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showScreen('concept')">The Idea</button>
+    <button class="nav-tab" onclick="showScreen('gen')">Gen's Tower <span class="tab-chip chip-new">Ops</span></button>
+    <button class="nav-tab" onclick="showScreen('rod')">Rod's Tower <span class="tab-chip chip-key">Beast</span></button>
+    <button class="nav-tab" onclick="showScreen('bridge')">The Bridge</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 — THE IDEA
+═══════════════════════════════════════════ -->
+<div id="screen-concept" class="screen active">
+<div class="concept-wrap">
+  <div class="concept-hero">
+    <h1>Two people. <em>One brain.</em></h1>
+    <p>Same Supabase database. Same real-time data. But Rod and Gen see different views — built for how they actually work.</p>
+  </div>
+
+  <!-- Visual diagram -->
+  <div class="concept-diagram">
+
+    <!-- Tower surface -->
+    <div class="concept-surface cs-tower">
+      <div class="cs-header">
+        <div>
+          <div class="cs-header-title">Tower Control</div>
+          <div class="cs-header-sub" style="color:rgba(255,255,255,.4);font-size:11px;">Rod + Gen · desktop</div>
+        </div>
+        <span style="font-size:18px;">🏢</span>
+      </div>
+      <div class="cs-body">
+        <div class="cs-label">What you see</div>
+        <div class="mini-tower-row"><div class="mini-name">Mini Gen Draft · Tue AM · Plateau</div><span class="mini-status">Approve?</span></div>
+        <div class="mini-tower-row"><div class="mini-name">Belen flagged Pebbles</div><span style="font-size:9px;color:var(--coral);font-weight:700;">🚩 Open</span></div>
+        <div class="mini-tower-row"><div class="mini-name">47 / 63 picked up</div><span class="mini-status">74%</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:10px;line-height:1.6;">Approve groups → walkers see them instantly. See flags → follow up from the desk. Beast helps with anything.</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="concept-arrow">
+      <div class="arrow-line"></div>
+      <div class="arrow-icon" style="color:rgba(255,255,255,.2);">⟷</div>
+      <div class="arrow-label">same<br>database</div>
+      <div class="arrow-line"></div>
+    </div>
+
+    <!-- App surface -->
+    <div class="concept-surface cs-app">
+      <div class="cs-header">
+        <div>
+          <div class="cs-header-title">Walker App</div>
+          <div class="cs-header-sub">Belen · Chloe · Amanda · phone</div>
+        </div>
+        <span style="font-size:18px;">📱</span>
+      </div>
+      <div class="cs-body">
+        <div class="cs-label" style="color:#8C857E;">What walkers see</div>
+        <div class="mini-app-row"><div class="mini-dot mini-dot-a"></div><div class="mini-name">Cheesy</div><div class="mini-addr">2676 Dandurand</div></div>
+        <div class="mini-app-row"><div class="mini-dot mini-dot-s"></div><div class="mini-name struck">Pepper Husky</div><div class="adr-time" style="font-size:10px;color:var(--sage);font-weight:600;">11:52</div></div>
+        <div class="mini-app-row"><div class="mini-dot mini-dot-s"></div><div class="mini-name">Sansa</div><div class="mini-addr">4659 Érables</div><div class="mini-code">#2426</div></div>
+        <div style="font-size:10px;color:#8C857E;margin-top:10px;line-height:1.6;">Unchanged. Fast. One hand. Winter coat. Groups approved in Tower appear here instantly.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Persona cards -->
+  <div class="persona-grid">
+
+    <!-- Rod -->
+    <div class="persona-card persona-rod">
+      <div class="persona-header">
+        <div class="persona-avatar">🎯</div>
+        <div class="persona-info">
+          <h3>Rod's Tower</h3>
+          <p>Chief Pup · both sectors · full control</p>
+        </div>
+      </div>
+      <div class="persona-body">
+        <div class="persona-item">
+          <div class="pi-icon">🦍</div>
+          <div class="pi-text">
+            <div class="pi-title">The Beast — fully active</div>
+            <div class="pi-sub">AI assistant with chat. "Cover Émilie's group with Amanda." Done.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">📊</div>
+          <div class="pi-text">
+            <div class="pi-title">Full dashboard — both sectors</div>
+            <div class="pi-sub">Plateau + Laurier. Walker coverage. Live pickup counts. Billing.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">🐾</div>
+          <div class="pi-text">
+            <div class="pi-title">Forever note editing</div>
+            <div class="pi-sub">Write and edit dogs.notes from the desk. Walkers see it in seconds.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">⚡</div>
+          <div class="pi-text">
+            <div class="pi-title">Beast confirm block</div>
+            <div class="pi-sub">Beast proposes. Rod confirms. Never direct production writes without review.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gen -->
+    <div class="persona-card persona-gen">
+      <div class="persona-header">
+        <div class="persona-avatar">☀️</div>
+        <div class="persona-info">
+          <h3>Gen's Tower</h3>
+          <p>Co-admin · morning ops · her sector focus</p>
+        </div>
+      </div>
+      <div class="persona-body">
+        <div class="persona-item">
+          <div class="pi-icon">📋</div>
+          <div class="pi-text">
+            <div class="pi-title">Mini Gen review — front and centre</div>
+            <div class="pi-sub">Approve or reject each week's draft groups. One click. No Sheets.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">🚩</div>
+          <div class="pi-text">
+            <div class="pi-title">Flag dashboard</div>
+            <div class="pi-sub">Walkers flag in the app → Gen sees it in Tower → follows up when calm.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">🦉</div>
+          <div class="pi-text">
+            <div class="pi-title">Quick Owl Note composer</div>
+            <div class="pi-sub">Dog at different address this week. Type it once. All walkers see it.</div>
+          </div>
+        </div>
+        <div class="persona-item">
+          <div class="pi-icon">👀</div>
+          <div class="pi-text">
+            <div class="pi-title">Live walker status</div>
+            <div class="pi-sub">Who's picked up what. Progress bars per walker per group.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note-box-dark" style="max-width:960px;margin:24px auto 0;">
+    <strong>The app side doesn't move.</strong> Walker experience is locked and protected. Tower is the desk brain — it sets things up, monitors, handles exceptions. The app executes. What happens in Tower pushes instantly to every walker's screen. One truth.
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 — GEN'S TOWER
+═══════════════════════════════════════════ -->
+<div id="screen-gen" class="screen">
+<div class="tower-wrap">
+  <div class="tower-header">
+    <div class="tower-header-left">
+      <div class="th-title">🐾 Tower Control</div>
+      <span class="th-persona-badge badge-gen">Gen</span>
+      <div class="th-greeting">Good morning, Gen ☀️</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="tower-tabs-inner">
+        <div class="ti-tab ti-active">Today</div>
+        <div class="ti-tab">Weekly</div>
+        <div class="ti-tab">Dogs</div>
+        <div class="ti-tab">Staff</div>
+        <div class="ti-tab" style="color:rgba(255,255,255,.15);">🦍 Beast 🔒</div>
+      </div>
+      <div class="th-date">Mon Apr 07 · 8:14 AM</div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div>
+        <div class="stat-num sage">47</div>
+      </div>
+      <div class="stat-meta">
+        <div class="stat-label">Picked Up</div>
+        <div class="stat-sub">of 63 walking today</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div>
+        <div class="stat-num amber">4</div>
+      </div>
+      <div class="stat-meta">
+        <div class="stat-label">Not Walking</div>
+        <div class="stat-sub">client cancels</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div>
+        <div class="stat-num coral">2</div>
+      </div>
+      <div class="stat-meta">
+        <div class="stat-label">Open Flags</div>
+        <div class="stat-sub">follow up when calm</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div>
+        <div class="stat-num beast">6</div>
+      </div>
+      <div class="stat-meta">
+        <div class="stat-label">Drafts Pending</div>
+        <div class="stat-sub">this week — approve below</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div>
+        <div class="stat-num purple">95</div>
+      </div>
+      <div class="stat-meta">
+        <div class="stat-label">Total Dogs</div>
+        <div class="stat-sub">Plateau + Laurier</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tower-body tower-body-2col">
+
+    <!-- Left: Draft review + Owl composer -->
+    <div>
+      <div class="sec-hdr">
+        📋 Mini Gen Draft — This Week
+        <span class="sec-hdr-action">Run Mini Gen →</span>
+      </div>
+      <div class="draft-grid">
+
+        <div class="draft-card">
+          <div class="draft-card-header">
+            <div>
+              <div class="draft-date plateau">Tue Apr 8 · Plateau</div>
+              <div class="draft-sector">Morning Group</div>
+            </div>
+            <div class="draft-actions">
+              <button class="btn-approve">✓ Approve</button>
+              <button class="btn-reject">Reject</button>
+            </div>
+          </div>
+          <div class="draft-dogs">
+            <span class="dog-chip">Lou Bouvier</span>
+            <span class="dog-chip">Pluto</span>
+            <span class="dog-chip">Sirius</span>
+            <span class="dog-chip">Enzo OG</span>
+            <span class="dog-chip">Pepper Husky</span>
+            <span class="dog-chip">Winston</span>
+            <span class="dog-chip">Indie Lab</span>
+          </div>
+          <div class="draft-ok">✓ No flags for this day</div>
+        </div>
+
+        <div class="draft-card">
+          <div class="draft-card-header">
+            <div>
+              <div class="draft-date laurier">Tue Apr 8 · Laurier</div>
+              <div class="draft-sector">Morning Group</div>
+            </div>
+            <div class="draft-actions">
+              <button class="btn-approve">✓ Approve</button>
+              <button class="btn-reject">Reject</button>
+            </div>
+          </div>
+          <div class="draft-dogs">
+            <span class="dog-chip">Cheesy</span>
+            <span class="dog-chip">Sansa</span>
+            <span class="dog-chip">Luna GS</span>
+            <span class="dog-chip">Pebbles</span>
+            <span class="dog-chip">Rosie</span>
+            <span class="dog-chip">Maya</span>
+          </div>
+          <div class="draft-flag">⚠ 1 flag — Pebbles reactive (see below)</div>
+        </div>
+
+        <div class="draft-card">
+          <div class="draft-card-header">
+            <div>
+              <div class="draft-date plateau">Wed Apr 9 · Plateau</div>
+              <div class="draft-sector">Morning Group</div>
+            </div>
+            <div class="draft-actions">
+              <button class="btn-approve">✓ Approve</button>
+              <button class="btn-reject">Reject</button>
+            </div>
+          </div>
+          <div class="draft-dogs">
+            <span class="dog-chip">Mochi</span>
+            <span class="dog-chip">Claude</span>
+            <span class="dog-chip">Alba</span>
+            <span class="dog-chip">Winston</span>
+            <span class="dog-chip">Enzo OG</span>
+          </div>
+          <div class="draft-ok">✓ No flags for this day</div>
+        </div>
+
+        <div class="draft-card">
+          <div class="draft-card-header">
+            <div>
+              <div class="draft-date laurier">Wed Apr 9 · Laurier</div>
+              <div class="draft-sector">Morning Group</div>
+            </div>
+            <div class="draft-actions">
+              <button class="btn-approve">✓ Approve</button>
+              <button class="btn-reject">Reject</button>
+            </div>
+          </div>
+          <div class="draft-dogs">
+            <span class="dog-chip">Cheesy</span>
+            <span class="dog-chip">Sansa</span>
+            <span class="dog-chip">Lou Bouvier</span>
+            <span class="dog-chip">Indie Lab</span>
+            <span class="dog-chip">Pebbles</span>
+            <span class="dog-chip">Rosie</span>
+          </div>
+          <div class="draft-ok">✓ No flags for this day</div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;">
+        <div class="sec-hdr">🦉 Quick Owl Note</div>
+        <div class="owl-composer">
+          <div class="oc-label">Send to walkers — disappears after the week</div>
+          <input class="oc-input" type="text" placeholder="e.g. Lea at sister's — 4676 Chambord buzz #201 this week">
+          <div class="oc-row">
+            <select class="oc-dog-pick"><option>Select a dog →</option><option>Cheesy</option><option>Pebbles</option><option>Lea</option><option>Sansa</option></select>
+            <button class="oc-send">🦉 Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Flags + Walker Status + Beast locked -->
+    <div class="right-panel">
+
+      <div>
+        <div class="sec-hdr">🚩 Walker Flags</div>
+        <div class="flag-panel">
+          <div class="flag-header">
+            <div class="flag-header-title">Open flags</div>
+            <div class="flag-count-badge">2 open</div>
+          </div>
+          <div class="flag-item">
+            <div class="flag-dot"></div>
+            <div class="flag-body">
+              <div class="flag-who">Belen → <span class="flag-dog">Pebbles</span></div>
+              <div class="flag-msg">Reactive — flagged, ask me later. Warn next walker was ON.</div>
+              <div class="flag-time">Today · 1:12 PM</div>
+            </div>
+            <div class="flag-btns">
+              <button class="fbtn fbtn-ask">Ask Belen</button>
+              <button class="fbtn fbtn-done">Done</button>
+            </div>
+          </div>
+          <div class="flag-item">
+            <div class="flag-dot"></div>
+            <div class="flag-body">
+              <div class="flag-who">Chloe → <span class="flag-dog">Luna GS</span></div>
+              <div class="flag-msg">🚩 Flag — ask me later (no text)</div>
+              <div class="flag-time">Today · 11:45 AM</div>
+            </div>
+            <div class="flag-btns">
+              <button class="fbtn fbtn-ask">Ask Chloe</button>
+              <button class="fbtn fbtn-done">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-hdr">👟 Walker Status — Live</div>
+        <div class="walker-panel">
+          <div class="flag-header">
+            <div class="flag-header-title">7 walkers · today</div>
+          </div>
+          <div class="walker-item">
+            <div class="walker-avatar">🐕</div>
+            <div class="walker-name-col">
+              <div class="walker-name">Belen</div>
+              <div class="walker-sector">Laurier · Group 3+5</div>
+            </div>
+            <div class="walker-progress">
+              <div class="wp-bar-wrap"><div class="wp-bar" style="width:80%"></div></div>
+              <div class="wp-text">8/10</div>
+            </div>
+          </div>
+          <div class="walker-item">
+            <div class="walker-avatar">🐾</div>
+            <div class="walker-name-col">
+              <div class="walker-name">Chloe</div>
+              <div class="walker-sector">Plateau · Group 1+2</div>
+            </div>
+            <div class="walker-progress">
+              <div class="wp-bar-wrap"><div class="wp-bar" style="width:60%"></div></div>
+              <div class="wp-text">6/10</div>
+            </div>
+          </div>
+          <div class="walker-item">
+            <div class="walker-avatar">🦮</div>
+            <div class="walker-name-col">
+              <div class="walker-name">Amanda</div>
+              <div class="walker-sector">Plateau · Group 4</div>
+            </div>
+            <div class="walker-progress">
+              <div class="wp-bar-wrap"><div class="wp-bar" style="width:100%"></div></div>
+              <div class="wp-text" style="color:var(--sage);">✓ Done</div>
+            </div>
+          </div>
+          <div class="walker-item">
+            <div class="walker-avatar">🐶</div>
+            <div class="walker-name-col">
+              <div class="walker-name">Megan</div>
+              <div class="walker-sector">Laurier · Group 6</div>
+            </div>
+            <div class="walker-progress">
+              <div class="wp-bar-wrap"><div class="wp-bar" style="width:45%"></div></div>
+              <div class="wp-text">5/11</div>
+            </div>
+          </div>
+          <div class="walker-item">
+            <div class="walker-avatar">🐩</div>
+            <div class="walker-name-col">
+              <div class="walker-name">Solene</div>
+              <div class="walker-sector">Plateau · Group 7</div>
+            </div>
+            <div class="walker-progress">
+              <div class="wp-bar-wrap"><div class="wp-bar" style="width:70%"></div></div>
+              <div class="wp-text">7/10</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="beast-locked">
+        <div class="beast-locked-icon">🦍</div>
+        <div class="beast-locked-text">The Beast is Rod's tool.<br>Ask Rod to use it — or ask Rod to unlock it for you.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3 — ROD'S TOWER
+═══════════════════════════════════════════ -->
+<div id="screen-rod" class="screen">
+<div class="tower-wrap">
+  <div class="tower-header">
+    <div class="tower-header-left">
+      <div class="th-title">🐾 Tower Control</div>
+      <span class="th-persona-badge badge-rod">Rod</span>
+      <div class="th-greeting">Chief Pup — full control</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="tower-tabs-inner">
+        <div class="ti-tab ti-active">Today</div>
+        <div class="ti-tab">Weekly</div>
+        <div class="ti-tab">Dogs</div>
+        <div class="ti-tab">Staff</div>
+        <div class="ti-tab ti-beast">🦍 Beast</div>
+      </div>
+      <div class="th-date">Mon Apr 07 · 8:14 AM</div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div><div class="stat-num sage">47</div></div>
+      <div class="stat-meta"><div class="stat-label">Picked Up</div><div class="stat-sub">of 63 walking</div></div>
+    </div>
+    <div class="stat-item">
+      <div><div class="stat-num amber">4</div></div>
+      <div class="stat-meta"><div class="stat-label">Not Walking</div><div class="stat-sub">client cancels</div></div>
+    </div>
+    <div class="stat-item">
+      <div><div class="stat-num coral">2</div></div>
+      <div class="stat-meta"><div class="stat-label">Open Flags</div><div class="stat-sub">needs follow up</div></div>
+    </div>
+    <div class="stat-item">
+      <div><div class="stat-num beast">6</div></div>
+      <div class="stat-meta"><div class="stat-label">Drafts Pending</div><div class="stat-sub">this week</div></div>
+    </div>
+    <div class="stat-item">
+      <div><div class="stat-num purple">95</div></div>
+      <div class="stat-meta"><div class="stat-label">Total Dogs</div><div class="stat-sub">both sectors</div></div>
+    </div>
+  </div>
+
+  <div class="tower-body tower-body-3col">
+
+    <!-- Left: Flags + Walker status (same as Gen) -->
+    <div>
+      <div class="sec-hdr">📋 Pending Drafts</div>
+      <div class="draft-card" style="margin-bottom:8px;">
+        <div class="draft-card-header">
+          <div>
+            <div class="draft-date plateau">Tue Apr 8 · Plateau</div>
+            <div class="draft-sector">Morning Group</div>
+          </div>
+          <div class="draft-actions">
+            <button class="btn-approve">✓ Approve</button>
+            <button class="btn-reject">Reject</button>
+          </div>
+        </div>
+        <div class="draft-dogs">
+          <span class="dog-chip">Lou Bouvier</span>
+          <span class="dog-chip">Pluto</span>
+          <span class="dog-chip">Sirius</span>
+          <span class="dog-chip">Enzo OG</span>
+          <span class="dog-chip">Pepper Husky</span>
+        </div>
+        <div class="draft-ok">✓ No flags</div>
+      </div>
+      <div class="draft-card">
+        <div class="draft-card-header">
+          <div>
+            <div class="draft-date laurier">Tue Apr 8 · Laurier</div>
+            <div class="draft-sector">Morning Group</div>
+          </div>
+          <div class="draft-actions">
+            <button class="btn-approve">✓ Approve</button>
+            <button class="btn-reject">Reject</button>
+          </div>
+        </div>
+        <div class="draft-dogs">
+          <span class="dog-chip">Cheesy</span>
+          <span class="dog-chip">Sansa</span>
+          <span class="dog-chip">Luna GS</span>
+          <span class="dog-chip">Pebbles</span>
+          <span class="dog-chip">Rosie</span>
+        </div>
+        <div class="draft-flag">⚠ 1 flag — see panel</div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="sec-hdr">🚩 Flags</div>
+        <div class="flag-panel">
+          <div class="flag-item">
+            <div class="flag-dot"></div>
+            <div class="flag-body">
+              <div class="flag-who">Belen → <span class="flag-dog">Pebbles</span></div>
+              <div class="flag-msg">Reactive — flagged. Warn next walker ON.</div>
+              <div class="flag-time">Today · 1:12 PM</div>
+            </div>
+            <div class="flag-btns">
+              <button class="fbtn fbtn-ask">Ask</button>
+              <button class="fbtn fbtn-done">Done</button>
+            </div>
+          </div>
+          <div class="flag-item">
+            <div class="flag-dot"></div>
+            <div class="flag-body">
+              <div class="flag-who">Chloe → <span class="flag-dog">Luna GS</span></div>
+              <div class="flag-msg">🚩 Flag — ask me later</div>
+              <div class="flag-time">Today · 11:45 AM</div>
+            </div>
+            <div class="flag-btns">
+              <button class="fbtn fbtn-ask">Ask</button>
+              <button class="fbtn fbtn-done">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centre: Walker status -->
+    <div>
+      <div class="sec-hdr">👟 Live Status</div>
+      <div class="walker-panel" style="margin-bottom:16px;">
+        <div class="flag-header"><div class="flag-header-title">7 walkers active</div></div>
+        <div class="walker-item">
+          <div class="walker-avatar">🐕</div>
+          <div class="walker-name-col"><div class="walker-name">Belen</div><div class="walker-sector">Laurier · Grp 3+5</div></div>
+          <div class="walker-progress">
+            <div class="wp-bar-wrap"><div class="wp-bar" style="width:80%"></div></div>
+            <div class="wp-text">8/10</div>
+          </div>
+        </div>
+        <div class="walker-item">
+          <div class="walker-avatar">🐾</div>
+          <div class="walker-name-col"><div class="walker-name">Chloe</div><div class="walker-sector">Plateau · Grp 1+2</div></div>
+          <div class="walker-progress">
+            <div class="wp-bar-wrap"><div class="wp-bar" style="width:60%"></div></div>
+            <div class="wp-text">6/10</div>
+          </div>
+        </div>
+        <div class="walker-item">
+          <div class="walker-avatar">🦮</div>
+          <div class="walker-name-col"><div class="walker-name">Amanda</div><div class="walker-sector">Plateau · Grp 4</div></div>
+          <div class="walker-progress">
+            <div class="wp-bar-wrap"><div class="wp-bar" style="width:100%"></div></div>
+            <div class="wp-text" style="color:var(--sage);">✓ Done</div>
+          </div>
+        </div>
+        <div class="walker-item">
+          <div class="walker-avatar">🐶</div>
+          <div class="walker-name-col"><div class="walker-name">Megan</div><div class="walker-sector">Laurier · Grp 6</div></div>
+          <div class="walker-progress">
+            <div class="wp-bar-wrap"><div class="wp-bar" style="width:45%"></div></div>
+            <div class="wp-text">5/11</div>
+          </div>
+        </div>
+        <div class="walker-item">
+          <div class="walker-avatar">🐩</div>
+          <div class="walker-name-col"><div class="walker-name">Solene</div><div class="walker-sector">Plateau · Grp 7</div></div>
+          <div class="walker-progress">
+            <div class="wp-bar-wrap"><div class="wp-bar" style="width:70%"></div></div>
+            <div class="wp-text">7/10</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-hdr">🦉 Quick Owl Note</div>
+      <div class="owl-composer">
+        <div class="oc-label">To all walkers — fades after the week</div>
+        <input class="oc-input" type="text" placeholder="e.g. Lea at sister's — 4676 Chambord this week">
+        <div class="oc-row">
+          <select class="oc-dog-pick"><option>Select a dog →</option><option>Pebbles</option><option>Lea</option></select>
+          <button class="oc-send">🦉 Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: The Beast (active) -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="sec-hdr">🦍 The Beast</div>
+      <div class="beast-panel" style="flex:1;">
+        <div class="beast-header">
+          <span class="beast-icon">🦍</span>
+          <div class="beast-title">The Beast</div>
+          <div class="beast-status">● Online</div>
+        </div>
+        <div class="beast-chat">
+          <div class="chat-bubble cb-beast">Good morning Rod. Today's roster is clean — 47 of 63 picked up. Two flags need your eye: Belen on Pebbles and Chloe on Luna GS. Mini Gen generated 6 draft cards this week, 0 pending approval.</div>
+          <div class="chat-bubble cb-rod">Can you write a forever note on Pebbles — reactive dog, be careful near other dogs on walks.</div>
+          <div class="chat-bubble cb-beast">Ready. Here's what I'll write to <strong style="color:var(--beast);">dogs.notes for Pebbles:</strong><br><br><em style="color:rgba(255,255,255,.5);">"Reactive dog — be careful near other dogs on walks."</em><br><br>This will show in purple on every walker's card immediately. Confirm?</div>
+          <div style="display:flex;gap:6px;padding:4px 0;">
+            <button style="flex:1;background:var(--sage);color:#fff;border:none;border-radius:7px;padding:8px;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">✓ Confirm — write it</button>
+            <button style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:8px 12px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;">Edit</button>
+          </div>
+        </div>
+        <div class="beast-input">
+          <input class="beast-input-field" type="text" placeholder="Ask The Beast anything about today...">
+          <button class="beast-send">Send</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4 — THE BRIDGE
+═══════════════════════════════════════════ -->
+<div id="screen-bridge" class="screen">
+<div class="bridge-wrap">
+  <div class="bridge-title">
+    <h2>The Bridge — Tower → App</h2>
+    <p>How a booking in Acuity becomes a walker's group in real time. The app never changes. The truth just arrives.</p>
+  </div>
+
+  <!-- Flow diagram -->
+  <div class="bridge-flow">
+    <div class="bf-step">
+      <div class="bf-node">
+        <div class="bf-icon">📅</div>
+        <div class="bf-title">Acuity Booking</div>
+        <div class="bf-sub">Client books. Owner name + dog comes in via webhook.</div>
+        <div><span class="bf-badge bf-badge-sage">Auto</span></div>
+      </div>
+    </div>
+    <div class="bf-step">
+      <div class="bf-node">
+        <div class="bf-icon">🤖</div>
+        <div class="bf-title">Mini Gen</div>
+        <div class="bf-sub">Resolves owner → dog via name map. Flags conflicts. Writes draft.</div>
+        <div><span class="bf-badge bf-badge-beast">Agent</span></div>
+      </div>
+    </div>
+    <div class="bf-step">
+      <div class="bf-node">
+        <div class="bf-icon">📋</div>
+        <div class="bf-title">Gen Reviews</div>
+        <div class="bf-sub">Tower shows the draft. One click approve per day/sector.</div>
+        <div><span class="bf-badge bf-badge-coral">Human ✓</span></div>
+      </div>
+    </div>
+    <div class="bf-step">
+      <div class="bf-node">
+        <div class="bf-icon">⚡</div>
+        <div class="bf-title">walk_groups</div>
+        <div class="bf-sub">Approved draft promoted. Dog names written as text[] rows.</div>
+        <div><span class="bf-badge bf-badge-sage">Instant</span></div>
+      </div>
+    </div>
+    <div class="bf-step">
+      <div class="bf-node">
+        <div class="bf-icon">📱</div>
+        <div class="bf-title">Walker Sees It</div>
+        <div class="bf-sub">App reads walk_groups. Supabase realtime. No refresh needed.</div>
+        <div><span class="bf-badge bf-badge-purple">Live</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side by side -->
+  <div class="bridge-split">
+
+    <div class="bridge-surface bridge-tower">
+      <div class="bridge-tower-hdr">
+        <div class="bridge-tower-hdr-title">🏢 Tower Control — Gen approves Tue AM</div>
+        <div class="bridge-approved-badge">✓ Just approved</div>
+      </div>
+      <div class="tower-group-row">
+        <div class="tgr-left">
+          <div class="tgr-name">Tue Apr 8 · Plateau AM</div>
+          <div class="tgr-walker">Unassigned → walkers pick up</div>
+          <div class="tgr-chips">
+            <span class="tgr-chip">Lou Bouvier</span>
+            <span class="tgr-chip picked">Pepper Husky</span>
+            <span class="tgr-chip">Pluto</span>
+            <span class="tgr-chip">Sirius</span>
+            <span class="tgr-chip">Enzo OG</span>
+            <span class="tgr-chip">Winston</span>
+          </div>
+        </div>
+        <div class="tgr-right">
+          <div class="tgr-count">6 dogs</div>
+          <div class="tgr-progress">1 picked up</div>
+        </div>
+      </div>
+      <div class="tower-group-row">
+        <div class="tgr-left">
+          <div class="tgr-name">Tue Apr 8 · Laurier AM</div>
+          <div class="tgr-walker">Unassigned → walkers pick up</div>
+          <div class="tgr-chips">
+            <span class="tgr-chip">Cheesy</span>
+            <span class="tgr-chip">Sansa</span>
+            <span class="tgr-chip">Luna GS</span>
+            <span class="tgr-chip">Pebbles</span>
+            <span class="tgr-chip">Rosie</span>
+          </div>
+        </div>
+        <div class="tgr-right">
+          <div class="tgr-count">5 dogs</div>
+          <div class="tgr-progress">0 picked up</div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;border-top:1px solid var(--tw-b);">
+        <div style="font-size:10px;color:var(--tw-mid);line-height:1.65;">
+          ↑ Gen's read-only view of what walkers are doing right now. Tower sees everything. Walkers own the execution — Rod + Gen's job is done once it's approved and in the system.
+        </div>
+      </div>
+    </div>
+
+    <div class="bridge-surface bridge-app">
+      <div class="bridge-app-hdr">
+        <div>
+          <div class="bridge-app-hdr-title">📱 Walker App — Belen's phone</div>
+          <div class="bridge-app-hdr-sub">Tue Apr 8 · Plateau AM</div>
+        </div>
+      </div>
+      <div class="bridge-app-unchanged">🔒 This side doesn't move. Ever.</div>
+      <div class="app-group-hdr">
+        <div class="app-group-name">Group 1</div>
+        <div style="display:flex;gap:5px;">
+          <span class="app-walker-btn">Belen</span>
+          <span style="font-size:10px;color:#8C857E;padding:2px 8px;">1/6</span>
+        </div>
+      </div>
+      <div class="app-dog-row picked">
+        <div class="adr-dot dot-sage"></div>
+        <div style="flex:1;">
+          <div class="adr-name struck">Pepper Husky</div>
+          <div class="adr-addr">5046 Rue Garnier</div>
+        </div>
+        <div class="adr-time">11:52</div>
+      </div>
+      <div class="app-dog-row">
+        <div class="adr-dot dot-amber"></div>
+        <div style="flex:1;">
+          <div class="adr-name purple">Lou Bouvier</div>
+          <div class="adr-addr">1501 Saint-Grégoire</div>
+        </div>
+        <div class="adr-code">#6945</div>
+      </div>
+      <div class="app-dog-row">
+        <div class="adr-dot dot-sage"></div>
+        <div style="flex:1;">
+          <div class="adr-name">Pluto</div>
+          <div class="adr-addr">4800 Esplanade</div>
+        </div>
+      </div>
+      <div class="app-dog-row">
+        <div class="adr-dot dot-sage"></div>
+        <div style="flex:1;">
+          <div class="adr-name">Sirius</div>
+          <div class="adr-addr">4920 De Lanaudière</div>
+        </div>
+        <div class="adr-code">#1212</div>
+      </div>
+      <div style="padding:10px 12px;font-size:10px;color:#8C857E;line-height:1.6;border-top:1px solid var(--warm-b);">
+        ↑ Same data from walk_groups. Walkers own all group decisions. Gen approved the dogs — walkers own who walks who and in what order.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note-box-dark" style="max-width:900px;margin:32px auto 0;">
+    <strong>Walker autonomy is a hard rule.</strong> Gen's responsibility ends the moment she hits Approve. Walkers see the dogs, walkers form the groups, walkers decide the order. Tower is the dispatch desk — not the field commander.
+  </div>
+</div>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

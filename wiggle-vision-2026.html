@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle — The Complete Vision 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral: #E8634A; --coral-dark: #C94A34; --coral-light: #FAECE7;
+  --purple: #534AB7; --purple-bg: #EEEDFE; --purple-dark: #3D3590;
+  --fuschia: #961e78; --fuschia-bg: #fdf4fb;
+  --sage: #2D8F6F; --sage-bg: #E8F5EF;
+  --amber: #C4851C; --amber-bg: #FDF3E3;
+  --slate: #475569;
+  --beast: #E8762B; --beast-bg: #FFF8F0;
+  --peach: #FFF5F0; --cream: #FAF7F4; --sand: #F0ECE8;
+  --border: #E8E4E0; --shadow: #D5CFC8;
+  --text: #2D2926; --mid: #8C857E; --light: #B5AFA8; --faint: #D5CFC8;
+  --dark: #1A1D23; --dark-2: #242830; --dark-3: #2E3340;
+  /* Tower cool grays */
+  --t-bg: #F0F2F5; --t-card: #FFFFFF; --t-border: #E2E6EC; --t-mid: #6B7280;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--dark); color: var(--text); }
+
+/* ═══════════════════════════════════════
+   COVER
+═══════════════════════════════════════ */
+.cover {
+  min-height: 100vh;
+  background: var(--dark);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 60px 40px;
+  position: relative; overflow: hidden;
+}
+.cover::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(232,99,74,.08) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 40% at 20% 80%, rgba(83,74,183,.06) 0%, transparent 50%),
+              radial-gradient(ellipse 40% 30% at 80% 70%, rgba(232,118,43,.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+.cover-eyebrow {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .2em;
+  color: var(--beast); margin-bottom: 20px;
+}
+.cover-logo { font-size: 52px; margin-bottom: 8px; }
+.cover-title {
+  font-size: 64px; font-weight: 700; letter-spacing: -.04em; line-height: 1;
+  color: #fff; margin-bottom: 16px;
+}
+.cover-title em { color: var(--coral); font-style: normal; }
+.cover-tagline {
+  font-size: 20px; color: rgba(255,255,255,.45); font-weight: 400;
+  margin-bottom: 60px; max-width: 480px;
+}
+.cover-thesis {
+  max-width: 580px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px; padding: 28px 32px; text-align: left;
+  margin-bottom: 48px;
+}
+.thesis-line {
+  font-size: 15px; color: rgba(255,255,255,.7); line-height: 1.8; margin-bottom: 12px;
+}
+.thesis-line:last-child { margin-bottom: 0; }
+.thesis-line strong { color: #fff; font-weight: 600; }
+.thesis-line em { color: var(--coral); font-style: normal; }
+.cover-nav { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.cover-btn {
+  padding: 12px 24px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; font-family: 'DM Sans', sans-serif;
+  transition: opacity .2s;
+}
+.cover-btn:hover { opacity: .85; }
+.btn-coral { background: var(--coral); color: #fff; }
+.btn-ghost { background: rgba(255,255,255,.08); color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.12); }
+
+/* ═══════════════════════════════════════
+   STICKY NAV
+═══════════════════════════════════════ */
+.sticky-nav {
+  position: sticky; top: 0; z-index: 200;
+  background: var(--dark); border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 0 40px; display: flex; align-items: center; gap: 4px;
+}
+.sticky-logo { font-size: 16px; font-weight: 700; color: var(--coral); margin-right: 24px; white-space: nowrap; padding: 16px 0; }
+.nav-tabs { display: flex; gap: 4px; flex: 1; }
+.nav-tab {
+  padding: 16px 16px; font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,.4); cursor: pointer; border: none; background: none;
+  font-family: 'DM Sans', sans-serif; border-bottom: 2px solid transparent;
+  transition: all .2s; white-space: nowrap;
+}
+.nav-tab:hover { color: rgba(255,255,255,.7); }
+.nav-tab.active { color: var(--coral); border-bottom-color: var(--coral); }
+
+/* ═══════════════════════════════════════
+   SECTION WRAPPER
+═══════════════════════════════════════ */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ═══════════════════════════════════════
+   SECTION 1: PHILOSOPHY
+═══════════════════════════════════════ */
+.philosophy-section { background: var(--peach); padding: 72px 40px; }
+.philosophy-wrap { max-width: 960px; margin: 0 auto; }
+.sec-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em;
+  color: var(--coral); margin-bottom: 20px;
+}
+.sec-title { font-size: 36px; font-weight: 700; letter-spacing: -.03em; color: var(--text); margin-bottom: 12px; }
+.sec-sub { font-size: 16px; color: var(--mid); line-height: 1.7; max-width: 600px; margin-bottom: 48px; }
+
+.phi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+.phi-card {
+  background: var(--cream); border: 1px solid var(--border);
+  border-bottom: 2.5px solid var(--shadow); border-radius: 12px; padding: 24px;
+}
+.phi-card-icon { font-size: 28px; margin-bottom: 12px; }
+.phi-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.phi-card-body { font-size: 13px; color: var(--mid); line-height: 1.7; }
+.phi-card-body strong { color: var(--text); }
+
+.axiom-box {
+  background: var(--dark); border-radius: 14px; padding: 32px; margin-bottom: 48px;
+}
+.axiom-row { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.axiom-row:last-child { border-bottom: none; }
+.axiom-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--coral); min-width: 24px; padding-top: 2px; }
+.axiom-text { font-size: 14px; color: rgba(255,255,255,.75); line-height: 1.65; }
+.axiom-text strong { color: #fff; }
+
+.two-surface { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.surface-card {
+  border-radius: 12px; padding: 24px; border: 1px solid;
+}
+.surface-walker { background: var(--cream); border-color: var(--border); }
+.surface-tower { background: #1e2228; border-color: rgba(255,255,255,.08); }
+.surface-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 12px; }
+.label-walker { color: var(--coral); }
+.label-tower { color: var(--beast); }
+.surface-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.walker-title { color: var(--text); }
+.tower-title { color: #fff; }
+.surface-body { font-size: 12px; line-height: 1.7; }
+.walker-body { color: var(--mid); }
+.tower-body { color: rgba(255,255,255,.5); }
+.surface-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.stag {
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+}
+.stag-warm { background: var(--coral-light); color: var(--coral); border: 1px solid #f0b5a8; }
+.stag-cool { background: rgba(255,255,255,.07); color: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.1); }
+
+/* ═══════════════════════════════════════
+   SECTION 2: WALKER APP
+═══════════════════════════════════════ */
+.walker-section { background: var(--peach); padding: 72px 40px; }
+.walker-wrap { max-width: 1100px; margin: 0 auto; }
+
+.screen-pair { display: grid; grid-template-columns: 300px 1fr; gap: 48px; align-items: start; margin-bottom: 80px; }
+.screen-pair.reverse { grid-template-columns: 1fr 300px; }
+.screen-pair.reverse .phone-col { order: 2; }
+.screen-pair.reverse .screen-desc { order: 1; }
+
+.phone-col { display: flex; flex-direction: column; align-items: center; }
+.phone-frame {
+  width: 280px; background: #111; border-radius: 38px;
+  padding: 12px; box-shadow: 0 24px 64px rgba(0,0,0,.25), 0 4px 12px rgba(0,0,0,.15);
+}
+.phone-notch {
+  background: #111; height: 24px; border-radius: 12px; margin-bottom: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.notch-pill { width: 60px; height: 10px; background: #222; border-radius: 5px; }
+.phone-screen {
+  background: var(--peach); border-radius: 28px; overflow: hidden;
+  min-height: 560px; display: flex; flex-direction: column;
+}
+
+/* Walker app inner components */
+.app-topbar {
+  padding: 12px 14px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.app-greeting { font-size: 16px; font-weight: 700; color: var(--text); }
+.app-sub { font-size: 10px; color: var(--mid); }
+.app-lock-btn {
+  font-size: 9px; font-weight: 700; padding: 5px 10px; border-radius: 6px;
+  background: var(--coral); color: #fff;
+}
+.app-scroll { flex: 1; overflow-y: auto; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+
+.group-block { margin-bottom: 4px; }
+.group-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 4px 5px;
+}
+.grp-left { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text); }
+.walker-pill {
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple);
+}
+.walker-pill-2 { background: var(--cream); color: var(--purple); border: 1px solid var(--purple); margin-left: -2px; }
+.grp-count { font-size: 9px; color: var(--mid); }
+
+.dog-card {
+  background: var(--cream); border: 1px solid var(--border);
+  border-bottom: 2.5px solid var(--shadow); border-radius: 10px;
+  overflow: hidden; margin-bottom: 4px;
+}
+.dog-card.picked { background: var(--sage-bg); border-color: var(--sage); }
+.dog-card.amber-state { background: var(--amber-bg); border-color: var(--amber); }
+.dog-card.has-forever { border-color: #d4a8cc; }
+
+.card-row { display: flex; align-items: center; gap: 7px; padding: 7px 9px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-sage { background: var(--sage); }
+.dot-amber { background: var(--amber); }
+.dot-gray { background: #ccc; }
+.avatar-sm {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--sand);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+.card-info { flex: 1; min-width: 0; }
+.dog-name {
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.name-black { color: var(--text); }
+.name-purple { color: var(--purple); }
+.name-struck { text-decoration: line-through; color: var(--sage); }
+.name-amber { text-decoration: line-through; color: var(--amber); }
+.dog-addr { font-size: 9px; color: var(--slate); font-weight: 500; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.code-pill {
+  font-size: 8px; font-weight: 700; background: var(--slate); color: #fff;
+  padding: 2px 5px; border-radius: 4px; flex-shrink: 0;
+}
+.caret-sm { font-size: 9px; color: var(--light); flex-shrink: 0; }
+.time-sm { font-size: 9px; font-weight: 700; color: var(--sage); flex-shrink: 0; }
+.owl-anim { font-size: 9px; animation: owl-bob 2s ease-in-out infinite; display: inline-block; margin-left: 3px; }
+@keyframes owl-bob { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+
+.star-dot { font-size: 8px; color: var(--fuschia); flex-shrink: 0; }
+
+/* Inline expand */
+.expand-zone {
+  border-top: 1px solid rgba(0,0,0,.05);
+  background: var(--peach); padding: 8px 9px;
+}
+.expand-addr { font-size: 10px; color: var(--coral); font-weight: 600; margin-bottom: 6px; }
+.expand-btns { display: flex; gap: 5px; }
+.xbtn {
+  flex: 1; padding: 7px 4px; border-radius: 7px; font-size: 10px; font-weight: 700;
+  text-align: center; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.xbtn-green { background: var(--sage); color: #fff; }
+.xbtn-note { background: var(--cream); color: var(--coral); border: 1px solid var(--coral); }
+
+/* Drawer overlay */
+.drawer-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,.4); z-index: 10;
+  border-radius: 28px;
+}
+.drawer-sheet {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--cream); border-radius: 20px 20px 28px 28px;
+  overflow: hidden;
+}
+.drawer-handle-bar { width: 36px; height: 3px; background: var(--shadow); border-radius: 2px; margin: 10px auto 2px; }
+.drawer-head { display: flex; align-items: center; gap: 10px; padding: 8px 14px 10px; border-bottom: 1px solid var(--border); }
+.drawer-ava {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--sand);
+  display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  border: 1.5px solid var(--border);
+}
+.drawer-name-big { font-size: 17px; font-weight: 700; }
+.drawer-breed-sm { font-size: 10px; color: var(--mid); margin-top: 1px; }
+.drawer-badges { display: flex; gap: 4px; margin-top: 4px; }
+.db { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.db-group { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple); }
+.db-caution { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); }
+
+.drawer-actions { padding: 10px 14px; display: flex; flex-direction: column; gap: 5px; }
+.drawer-btn-full {
+  width: 100%; padding: 10px; border-radius: 9px; font-size: 11px; font-weight: 700;
+  text-align: center; border: none; font-family: 'DM Sans', sans-serif; cursor: pointer;
+}
+.dbtn-pickup { background: var(--sage); color: #fff; }
+.dbtn-nw { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); }
+
+.drawer-row { border-top: 1px solid var(--border); padding: 7px 14px; }
+.d-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--coral); margin-bottom: 2px; }
+.d-val { font-size: 11px; color: var(--text); }
+.d-muted { font-size: 10px; color: var(--light); font-style: italic; }
+.d-forever-row { border-top: 1px solid #e8d0e3; padding: 7px 14px; background: var(--fuschia-bg); }
+.d-forever-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--fuschia); margin-bottom: 2px; }
+.d-forever-text { font-size: 11px; color: var(--fuschia); font-weight: 600; }
+.d-owl-row { border-top: 1px solid #F0C76E; padding: 7px 14px; background: #FFFBF0; }
+.d-owl-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--amber); margin-bottom: 2px; }
+.d-owl-text { font-size: 11px; color: var(--text); line-height: 1.5; }
+.d-owl-meta { font-size: 9px; color: var(--light); margin-top: 1px; }
+.d-owl-expire { color: var(--coral); font-weight: 600; }
+
+/* Screen description */
+.screen-desc { padding-top: 16px; }
+.screen-tag {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 12px;
+  border-radius: 20px; margin-bottom: 14px;
+}
+.tag-coral { background: var(--coral-light); color: var(--coral); border: 1px solid #f0b5a8; }
+.tag-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid #c0bbf0; }
+.tag-sage { background: var(--sage-bg); color: var(--sage); border: 1px solid #a0d4bc; }
+.screen-desc-title { font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--text); margin-bottom: 10px; }
+.screen-desc-body { font-size: 14px; color: var(--mid); line-height: 1.75; margin-bottom: 20px; }
+.detail-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.detail-list li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 13px; color: var(--mid); line-height: 1.55;
+}
+.detail-list li::before { content: '→'; color: var(--coral); flex-shrink: 0; font-weight: 700; }
+.detail-list li strong { color: var(--text); font-weight: 600; }
+
+.note-aside {
+  margin-top: 20px; background: var(--cream); border: 1px solid var(--border);
+  border-left: 4px solid var(--sage); border-radius: 8px;
+  padding: 12px 16px; font-size: 12px; color: var(--mid); line-height: 1.65;
+}
+.note-aside strong { color: var(--text); }
+
+/* ═══════════════════════════════════════
+   SECTION 3: TOWER CONTROL
+═══════════════════════════════════════ */
+.tower-section { background: #0F1114; padding: 72px 40px; }
+.tower-wrap { max-width: 1200px; margin: 0 auto; }
+.tower-sec-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; color: var(--beast); margin-bottom: 20px; }
+.tower-sec-title { font-size: 36px; font-weight: 700; letter-spacing: -.03em; color: #fff; margin-bottom: 12px; }
+.tower-sec-sub { font-size: 16px; color: rgba(255,255,255,.45); line-height: 1.7; max-width: 600px; margin-bottom: 60px; }
+
+/* Desktop mockup */
+.desktop-frame {
+  background: #1A1D23; border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 4px 16px rgba(0,0,0,.3);
+  overflow: hidden; margin-bottom: 60px;
+}
+.desktop-titlebar {
+  background: #111; padding: 8px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.tb-dot { width: 10px; height: 10px; border-radius: 50%; }
+.tb-red { background: #FF5F57; }
+.tb-yellow { background: #FFBD2E; }
+.tb-green { background: #28CA41; }
+.tb-url {
+  flex: 1; background: #222; border-radius: 5px; padding: 3px 10px;
+  font-size: 10px; color: rgba(255,255,255,.3); font-family: 'DM Mono', monospace;
+  text-align: center;
+}
+
+.tower-shell { display: grid; grid-template-columns: 200px 1fr; height: 680px; }
+
+/* Tower sidebar */
+.tower-sidebar {
+  background: var(--dark-2); border-right: 1px solid rgba(255,255,255,.06);
+  display: flex; flex-direction: column; padding: 16px 0;
+}
+.sidebar-logo { padding: 4px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 12px; }
+.sidebar-logo-text { font-size: 15px; font-weight: 700; color: var(--coral); }
+.sidebar-logo-sub { font-size: 9px; color: rgba(255,255,255,.3); margin-top: 1px; }
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; font-size: 12px; font-weight: 500;
+  color: rgba(255,255,255,.4); cursor: pointer; border-radius: 0;
+  transition: all .15s;
+}
+.sidebar-nav-item:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.03); }
+.sidebar-nav-item.active { color: #fff; background: rgba(255,255,255,.07); border-left: 2px solid var(--coral); }
+.sidebar-nav-item .nav-icon { font-size: 14px; width: 16px; }
+.sidebar-badge {
+  margin-left: auto; font-size: 9px; font-weight: 700;
+  background: var(--coral); color: #fff; padding: 1px 6px; border-radius: 10px;
+}
+.sidebar-beast-section { margin-top: auto; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.06); }
+.beast-btn {
+  width: 100%; padding: 9px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
+  background: var(--beast); color: #fff; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px;
+}
+
+/* Tower main area */
+.tower-main { background: var(--t-bg); display: flex; flex-direction: column; overflow: hidden; }
+.tower-topbar {
+  background: var(--t-card); border-bottom: 1px solid var(--t-border);
+  padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.tower-greeting { font-size: 14px; font-weight: 700; color: #1A1D23; }
+.tower-date { font-size: 11px; color: var(--t-mid); margin-top: 1px; }
+.tower-stats { display: flex; gap: 16px; }
+.t-stat { text-align: center; }
+.t-stat-num { font-size: 18px; font-weight: 700; color: var(--coral); line-height: 1; }
+.t-stat-lbl { font-size: 9px; color: var(--t-mid); text-transform: uppercase; letter-spacing: .05em; }
+
+/* Tower content grid */
+.tower-content {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: grid; grid-template-columns: 260px 1fr 220px; gap: 12px;
+  align-content: start;
+}
+
+.t-panel {
+  background: var(--t-card); border: 1px solid var(--t-border);
+  border-radius: 10px; overflow: hidden;
+}
+.t-panel-hdr {
+  padding: 10px 14px; border-bottom: 1px solid var(--t-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.t-panel-title { font-size: 11px; font-weight: 700; color: #1A1D23; }
+.t-panel-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+}
+.badge-coral { background: var(--coral-light); color: var(--coral); }
+.badge-sage { background: var(--sage-bg); color: var(--sage); }
+.badge-amber { background: var(--amber-bg); color: var(--amber); }
+.badge-beast { background: var(--beast-bg); color: var(--beast); }
+
+/* Mini Gen panel */
+.minigen-row {
+  padding: 10px 14px; border-bottom: 1px solid var(--t-border);
+  display: flex; align-items: center; gap: 8px;
+}
+.minigen-sector {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0;
+}
+.sect-plateau { background: rgba(59,130,160,.1); color: #3B82A0; border: 1px solid rgba(59,130,160,.2); }
+.sect-laurier { background: rgba(74,158,111,.1); color: #4A9E6F; border: 1px solid rgba(74,158,111,.2); }
+.minigen-date { font-size: 11px; font-weight: 600; color: #1A1D23; flex: 1; }
+.minigen-count { font-size: 10px; color: var(--t-mid); }
+.minigen-approve {
+  font-size: 9px; font-weight: 700; padding: 3px 9px; border-radius: 6px;
+  background: var(--sage-bg); color: var(--sage); border: 1px solid #a0d4bc;
+  cursor: pointer;
+}
+.minigen-footer {
+  padding: 10px 14px;
+}
+.approve-all-btn {
+  width: 100%; padding: 9px; border-radius: 8px; font-size: 11px; font-weight: 700;
+  background: var(--sage); color: #fff; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Flag items */
+.flag-item {
+  display: flex; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--t-border);
+  align-items: flex-start;
+}
+.flag-item:last-child { border-bottom: none; }
+.flag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); flex-shrink: 0; margin-top: 4px; }
+.flag-dot.resolved { background: var(--sage); }
+.flag-body { flex: 1; }
+.flag-who { font-size: 10px; font-weight: 700; color: #1A1D23; }
+.flag-dog { font-size: 10px; color: var(--purple); font-weight: 600; }
+.flag-msg { font-size: 10px; color: var(--t-mid); margin-top: 1px; line-height: 1.4; }
+.flag-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.flag-btn {
+  font-size: 9px; font-weight: 600; padding: 3px 7px; border-radius: 5px;
+  border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.fbtn-ask { background: var(--purple-bg); color: var(--purple); }
+.fbtn-done { background: var(--sage-bg); color: var(--sage); }
+
+/* Live walk board */
+.walk-board { grid-column: 2; }
+.board-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+.walker-card {
+  background: var(--t-bg); border: 1px solid var(--t-border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.wc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.wc-name { font-size: 12px; font-weight: 700; color: #1A1D23; }
+.wc-sector { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+.wc-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.wc-bar { flex: 1; height: 4px; background: var(--t-border); border-radius: 2px; overflow: hidden; }
+.wc-fill { height: 100%; background: var(--sage); border-radius: 2px; }
+.wc-count { font-size: 10px; font-weight: 700; color: var(--sage); }
+.wc-dogs { display: flex; flex-wrap: wrap; gap: 4px; }
+.dog-chip {
+  font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+  border: 1px solid;
+}
+.chip-waiting { background: var(--t-bg); color: var(--t-mid); border-color: var(--t-border); }
+.chip-picked { background: var(--sage-bg); color: var(--sage); border-color: #a0d4bc; }
+.chip-nw { background: var(--amber-bg); color: var(--amber); border-color: #e0c08a; }
+.chip-purple { background: var(--purple-bg); color: var(--purple); border-color: #c0bbf0; }
+
+/* Beast panel */
+.beast-panel { }
+.beast-hdr { background: var(--beast); padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+.beast-title { font-size: 12px; font-weight: 700; color: #fff; }
+.beast-badge-confirm { font-size: 9px; font-weight: 600; background: rgba(255,255,255,.2); color: #fff; padding: 2px 7px; border-radius: 10px; margin-left: auto; }
+.beast-item { padding: 10px 12px; border-bottom: 1px solid var(--t-border); }
+.beast-item:last-child { border-bottom: none; }
+.beast-msg { font-size: 11px; color: #1A1D23; line-height: 1.5; margin-bottom: 6px; }
+.beast-actions { display: flex; gap: 5px; }
+.beast-btn {
+  font-size: 9px; font-weight: 700; padding: 4px 9px; border-radius: 6px; border: none;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.bbtn-do { background: var(--beast); color: #fff; }
+.bbtn-skip { background: var(--t-bg); color: var(--t-mid); border: 1px solid var(--t-border); }
+
+/* Owl quick composer */
+.owl-composer { padding: 10px 12px; }
+.owl-input {
+  width: 100%; background: var(--t-bg); border: 1px solid var(--t-border);
+  border-radius: 7px; padding: 8px 10px; font-size: 11px; color: #1A1D23;
+  font-family: 'DM Sans', sans-serif; margin-bottom: 8px; resize: none;
+  min-height: 52px;
+}
+.owl-footer { display: flex; gap: 6px; }
+.owl-sector-pick { font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: var(--t-bg); color: var(--t-mid); border: 1px solid var(--t-border); cursor: pointer; }
+.owl-send { flex: 1; padding: 6px; border-radius: 6px; background: var(--amber); color: #fff; font-size: 10px; font-weight: 700; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+/* Tower screen descriptions */
+.tower-screen-desc { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 28px; margin-bottom: 40px; }
+.tsd-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.tsd-body { font-size: 14px; color: rgba(255,255,255,.5); line-height: 1.75; margin-bottom: 20px; }
+.tsd-features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.tsd-feat { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 8px; padding: 14px; }
+.tsd-feat-icon { font-size: 18px; margin-bottom: 8px; }
+.tsd-feat-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.8); margin-bottom: 4px; }
+.tsd-feat-body { font-size: 11px; color: rgba(255,255,255,.35); line-height: 1.55; }
+
+/* ═══════════════════════════════════════
+   SECTION 4: THE BRAIN
+═══════════════════════════════════════ */
+.brain-section { background: var(--dark); padding: 72px 40px; }
+.brain-wrap { max-width: 960px; margin: 0 auto; }
+
+.data-flow {
+  display: grid; grid-template-columns: 1fr 80px 1fr 80px 1fr;
+  align-items: center; gap: 0; margin-bottom: 60px;
+}
+.flow-node {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; padding: 20px; text-align: center;
+}
+.flow-icon { font-size: 28px; margin-bottom: 10px; }
+.flow-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.flow-sub { font-size: 11px; color: rgba(255,255,255,.4); line-height: 1.5; }
+.flow-arrow {
+  text-align: center; font-size: 20px; color: var(--coral);
+}
+.flow-center {
+  background: rgba(232,99,74,.08); border: 1px solid rgba(232,99,74,.2);
+  border-radius: 14px; padding: 24px; text-align: center;
+}
+.flow-center-title { font-size: 15px; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+.flow-center-sub { font-size: 12px; color: rgba(255,255,255,.4); line-height: 1.6; }
+
+.table-row {
+  display: grid; grid-template-columns: 140px 1fr 1fr;
+  gap: 16px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+  align-items: start;
+}
+.table-row:last-child { border-bottom: none; }
+.tr-name { font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--coral); }
+.tr-desc { font-size: 11px; color: rgba(255,255,255,.55); line-height: 1.55; }
+.tr-rule { font-size: 11px; color: rgba(255,255,255,.3); line-height: 1.55; }
+
+/* ═══════════════════════════════════════
+   SECTION 5: ROADMAP
+═══════════════════════════════════════ */
+.roadmap-section { background: var(--peach); padding: 72px 40px; }
+.roadmap-wrap { max-width: 960px; margin: 0 auto; }
+
+.phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px; }
+.phase-card {
+  background: var(--cream); border: 1px solid var(--border);
+  border-bottom: 2.5px solid var(--shadow); border-radius: 12px; overflow: hidden;
+}
+.phase-hdr {
+  padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+}
+.phase-hdr.done { background: var(--sage-bg); }
+.phase-hdr.next { background: var(--coral-light); }
+.phase-hdr.soon { background: var(--amber-bg); }
+.phase-hdr.later { background: var(--purple-bg); }
+.phase-num { font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.num-done { color: var(--sage); }
+.num-next { color: var(--coral); }
+.num-soon { color: var(--amber); }
+.num-later { color: var(--purple); }
+.phase-title { font-size: 14px; font-weight: 700; flex: 1; }
+.title-done { color: var(--sage); }
+.title-next { color: var(--coral); }
+.title-soon { color: var(--amber); }
+.title-later { color: var(--purple); }
+.phase-status {
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+}
+.ps-done { background: var(--sage-bg); color: var(--sage); border: 1px solid #a0d4bc; }
+.ps-next { background: var(--coral-light); color: var(--coral); border: 1px solid #f0b5a8; }
+.ps-soon { background: var(--amber-bg); color: var(--amber); border: 1px solid #e0c08a; }
+.ps-later { background: var(--purple-bg); color: var(--purple); border: 1px solid #c0bbf0; }
+.phase-items { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+.phase-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; }
+.pi-check { color: var(--sage); font-size: 12px; flex-shrink: 0; }
+.pi-dot { color: var(--coral); font-size: 12px; flex-shrink: 0; }
+.pi-circle { color: var(--amber); font-size: 12px; flex-shrink: 0; }
+.pi-later { color: var(--purple); font-size: 12px; flex-shrink: 0; }
+.pi-text { color: var(--mid); line-height: 1.5; }
+.pi-text strong { color: var(--text); }
+
+.verdict {
+  background: var(--dark); border-radius: 14px; padding: 32px; margin-bottom: 32px;
+}
+.verdict-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 20px; }
+.verdict-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.v-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 16px; }
+.v-card-title { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.v-card-body { font-size: 12px; color: rgba(255,255,255,.7); line-height: 1.65; }
+.v-card-body em { color: var(--coral); font-style: normal; font-weight: 600; }
+
+.closing {
+  text-align: center; padding: 48px 24px;
+  background: var(--cream); border: 1px solid var(--border);
+  border-bottom: 2.5px solid var(--shadow); border-radius: 14px;
+}
+.closing-quote { font-size: 20px; font-style: italic; color: var(--mid); line-height: 1.6; max-width: 560px; margin: 0 auto 16px; }
+.closing-tagline { font-size: 14px; font-weight: 700; color: var(--coral); }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     COVER
+═══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-eyebrow">Wiggle Dog Walks · Montréal · April 2026</div>
+  <div class="cover-logo">🐾</div>
+  <div class="cover-title">The Complete <em>Wiggle</em></div>
+  <div class="cover-tagline">One database. Two views. Every dog, every walker, every day.</div>
+
+  <div class="cover-thesis">
+    <div class="thesis-line">The walker app is <strong>the field.</strong> A phone in a winter coat. One hand. One dog at a time. It should feel like muscle memory.</div>
+    <div class="thesis-line">Tower Control is <strong>the command room.</strong> Gen at her desk before 8am, seeing everything before anyone leaves the house.</div>
+    <div class="thesis-line"><em>Same data. Same brain. Two completely different experiences.</em> That's the only architecture worth building.</div>
+  </div>
+
+  <div class="cover-nav">
+    <button class="cover-btn btn-coral" onclick="showSection('philosophy')">Start here</button>
+    <button class="cover-btn btn-ghost" onclick="showSection('walker')">Walker App</button>
+    <button class="cover-btn btn-ghost" onclick="showSection('tower')">Tower Control</button>
+    <button class="cover-btn btn-ghost" onclick="showSection('roadmap')">Roadmap</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     STICKY NAV
+═══════════════════════════════════════ -->
+<nav class="sticky-nav">
+  <div class="sticky-logo">🐾 Wiggle</div>
+  <div class="nav-tabs">
+    <button class="nav-tab" onclick="showSection('philosophy', this)">Philosophy</button>
+    <button class="nav-tab" onclick="showSection('walker', this)">Walker App</button>
+    <button class="nav-tab" onclick="showSection('tower', this)">Tower Control</button>
+    <button class="nav-tab" onclick="showSection('brain', this)">The Brain</button>
+    <button class="nav-tab" onclick="showSection('roadmap', this)">Roadmap</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     SECTION 1: PHILOSOPHY
+═══════════════════════════════════════ -->
+<div id="section-philosophy" class="section active">
+<div class="philosophy-section">
+<div class="philosophy-wrap">
+
+  <div class="sec-label">The foundation</div>
+  <div class="sec-title">Two surfaces. One truth.</div>
+  <div class="sec-sub">Every decision in this product filters through four questions. They're not guidelines. They're a constitution. Break one and the whole thing breaks.</div>
+
+  <div class="phi-grid">
+    <div class="phi-card">
+      <div class="phi-card-icon">🧤</div>
+      <div class="phi-card-title">WWRS — What would the walker need right now?</div>
+      <div class="phi-card-body">One hand. Winter coat. A dog already pulling. If the feature requires two taps or reading a sentence, it fails this test. The walker's context is <strong>kinetic and cold</strong>. The app must be faster than the weather.</div>
+    </div>
+    <div class="phi-card">
+      <div class="phi-card-icon">🏠</div>
+      <div class="phi-card-title">ONE PLACE — Every action has exactly one home.</div>
+      <div class="phi-card-body">Pickup happens in the drawer. Only the drawer. Owl notes happen in Tower and the note composer. Only there. When actions live in one place, walkers build <strong>muscle memory</strong>. When they don't, walkers make errors.</div>
+    </div>
+    <div class="phi-card">
+      <div class="phi-card-icon">🪒</div>
+      <div class="phi-card-title">SIMPLEST — Strip it to the bone first.</div>
+      <div class="phi-card-body">The best feature is the one with the fewest moving parts that still solves the real problem. Occam's razor isn't a design preference — it's <strong>operational safety</strong>. Every extra tap in a hallway is a potential dropped dog.</div>
+    </div>
+    <div class="phi-card">
+      <div class="phi-card-icon">🔄</div>
+      <div class="phi-card-title">BOTH VIEWS — Does it work in the app AND Tower?</div>
+      <div class="phi-card-body">A feature that only works in one view is <strong>incomplete</strong>. Gen writes an owl note in Tower — walkers see it in the app within seconds. A walker flags a dog — Gen sees it in Tower immediately. One database, two windows.</div>
+    </div>
+  </div>
+
+  <div class="axiom-box">
+    <div class="axiom-row">
+      <div class="axiom-num">01</div>
+      <div class="axiom-text"><strong>The card is a promise.</strong> Dog name, address, door code — visible without a single tap, no matter what layout mode the app is in. isCompact may reduce size. It may never remove content.</div>
+    </div>
+    <div class="axiom-row">
+      <div class="axiom-num">02</div>
+      <div class="axiom-text"><strong>Nothing disappears.</strong> Not walking stays amber. Back home fades but remains. The count always matches reality. A disappearing card creates doubt — "did I miss one?" — and doubt at a door with six dogs is dangerous.</div>
+    </div>
+    <div class="axiom-row">
+      <div class="axiom-num">03</div>
+      <div class="axiom-text"><strong>Every action is reversible.</strong> State is additive (insert) and reversible (delete). No destructive writes. Cold fingers misswipe. New walkers make mistakes. The cost of an error must be near zero.</div>
+    </div>
+    <div class="axiom-row">
+      <div class="axiom-num">04</div>
+      <div class="axiom-text"><strong>Color is signal, not decoration.</strong> Purple on a name means "this dog has a forever note." Sage means picked up. Amber means needs attention. A color that does two jobs does neither — it becomes noise.</div>
+    </div>
+    <div class="axiom-row">
+      <div class="axiom-num">05</div>
+      <div class="axiom-text"><strong>Beast never acts alone.</strong> Every AI suggestion requires a confirm block before executing. Mini Gen writes to staging, waits for Gen's approval. The agent stops. Gen decides. This is the only AI architecture Wiggle will ever use.</div>
+    </div>
+  </div>
+
+  <div class="two-surface">
+    <div class="surface-card surface-walker">
+      <div class="surface-label label-walker">Walker App</div>
+      <div class="surface-title walker-title">The Field</div>
+      <div class="surface-body walker-body">Warm peach and cream. DM Sans. The app should feel like the company feels — approachable, warm, alive. If it looks like a bank app, it's wrong. Walker autonomy is core: Rod and Gen's job ends when dogs are in the system. Walkers own all group decisions.</div>
+      <div class="surface-tags">
+        <span class="stag stag-warm">Phone</span>
+        <span class="stag stag-warm">One hand</span>
+        <span class="stag stag-warm">Real-time</span>
+        <span class="stag stag-warm">Warm palette</span>
+        <span class="stag stag-warm">Muscle memory</span>
+      </div>
+    </div>
+    <div class="surface-card surface-tower">
+      <div class="surface-label label-tower">Tower Control</div>
+      <div class="surface-title tower-title">The Command Room</div>
+      <div class="surface-body tower-body">Cool gray surfaces. Dark sidebar. Desktop browser. Gen plans the day before anyone leaves the house. Beast suggests, Gen confirms. Mini Gen drafts groups, Gen approves. Everything Gen needs in one screen before 8am — not four browser tabs.</div>
+      <div class="surface-tags">
+        <span class="stag stag-cool">Desktop</span>
+        <span class="stag stag-cool">Planning</span>
+        <span class="stag stag-cool">Oversight</span>
+        <span class="stag stag-cool">Cool palette</span>
+        <span class="stag stag-cool">Decisive</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION 2: WALKER APP
+═══════════════════════════════════════ -->
+<div id="section-walker" class="section">
+<div class="walker-section">
+<div class="walker-wrap">
+
+  <div class="sec-label">The field tool</div>
+  <div class="sec-title">Walker App — Three screens that do everything.</div>
+  <div class="sec-sub">The walk screen. The drawer. The notes composer. That's the whole app. Seven walkers. Ninety-five dogs. All of it fits in three screens.</div>
+
+  <!-- Screen 1: Today View -->
+  <div class="screen-pair">
+    <div class="phone-col">
+      <div class="phone-frame">
+        <div class="phone-notch"><div class="notch-pill"></div></div>
+        <div class="phone-screen" style="position:relative;">
+          <div class="app-topbar">
+            <div>
+              <div class="app-greeting">Good morning, Belen 🌤</div>
+              <div class="app-sub">Plateau · Monday · 8 dogs today</div>
+            </div>
+            <div class="app-lock-btn">🔒 Lock</div>
+          </div>
+          <div class="app-scroll">
+
+            <!-- Group 2 -->
+            <div class="group-block">
+              <div class="group-hdr">
+                <div class="grp-left">Group 2 <span class="walker-pill">Belen</span></div>
+                <div class="grp-count">Picked up 2/3</div>
+              </div>
+
+              <div class="dog-card picked">
+                <div class="card-row">
+                  <div class="avatar-sm">🐾</div>
+                  <div class="dot dot-sage"></div>
+                  <div class="card-info">
+                    <div class="dog-name name-struck">Pepper Husky</div>
+                    <div class="dog-addr">5046 Rue Garnier</div>
+                  </div>
+                  <div class="time-sm">11:52</div>
+                </div>
+              </div>
+
+              <div class="dog-card picked">
+                <div class="card-row">
+                  <div class="avatar-sm">🐕</div>
+                  <div class="dot dot-sage"></div>
+                  <div class="card-info">
+                    <div class="dog-name name-purple">Pebbles <span class="star-dot">★</span></div>
+                    <div class="dog-addr">3200 Mentana</div>
+                  </div>
+                  <div class="time-sm">12:01</div>
+                </div>
+              </div>
+
+              <div class="dog-card has-forever">
+                <div class="card-row">
+                  <div class="avatar-sm">🐩</div>
+                  <div class="dot dot-amber"></div>
+                  <div class="card-info">
+                    <div class="dog-name name-black">Cheesy <span class="owl-anim">🦉</span></div>
+                    <div class="dog-addr">2676 Dandurand</div>
+                  </div>
+                  <div class="code-pill">#1842</div>
+                  <div class="caret-sm">▼</div>
+                </div>
+                <div class="expand-zone">
+                  <div class="expand-addr">2676 Dandurand →</div>
+                  <div class="expand-btns">
+                    <button class="xbtn xbtn-green">✓ Picked up</button>
+                    <button class="xbtn xbtn-note">✎ Note</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group 3 -->
+            <div class="group-block">
+              <div class="group-hdr">
+                <div class="grp-left">Group 3 <span class="walker-pill">Chloe</span><span class="walker-pill-2">Megan</span></div>
+                <div class="grp-count">Picked up 0/3</div>
+              </div>
+              <div class="dog-card">
+                <div class="card-row">
+                  <div class="avatar-sm">🦮</div>
+                  <div class="dot dot-sage"></div>
+                  <div class="card-info">
+                    <div class="dog-name name-black">Lou Bouvier</div>
+                    <div class="dog-addr">1501 Saint-Grégoire #6</div>
+                  </div>
+                  <div class="code-pill">#6945</div>
+                  <div class="caret-sm">▼</div>
+                </div>
+              </div>
+              <div class="dog-card amber-state">
+                <div class="card-row">
+                  <div class="avatar-sm">🐶</div>
+                  <div class="dot dot-amber"></div>
+                  <div class="card-info">
+                    <div class="dog-name name-amber">Luna GS</div>
+                    <div class="dog-addr">4200 Esplanade</div>
+                  </div>
+                  <div class="code-pill" style="background:#C4851C;">#NW</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-desc">
+      <span class="screen-tag tag-coral">Screen 1 of 3</span>
+      <div class="screen-desc-title">The Walk Screen — your whole day, scannable in 3 seconds.</div>
+      <div class="screen-desc-body">Groups, walkers, dogs. Every card shows name + address + door code without a single tap. Status reads in color: sage means done, amber means something needs attention, purple means there's a forever note you should know about before you knock.</div>
+      <ul class="detail-list">
+        <li><strong>Purple dog name</strong> → tap to open the drawer, there's a standing note about this dog</li>
+        <li><strong>🦉 walking on the name</strong> → a time-sensitive owl note from another walker or Gen</li>
+        <li><strong>Caret ▼</strong> → expands inline for quick pickup or note — no screen change, no drawer</li>
+        <li><strong>Picked up</strong> → card turns sage, name struck through, pickup time shown</li>
+        <li><strong>Not walking</strong> → card turns amber, stays visible — the count never lies</li>
+        <li><strong>isCompact (interlock mode)</strong> → reduces card size only, never removes name/address/code</li>
+      </ul>
+      <div class="note-aside">
+        <strong>Walker autonomy is core.</strong> Rod and Gen's job ends when dogs are in the system unassigned. Walkers own all group organization decisions. Tower never overrides.
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Dog Profile Drawer -->
+  <div class="screen-pair reverse">
+    <div class="phone-col">
+      <div class="phone-frame">
+        <div class="phone-notch"><div class="notch-pill"></div></div>
+        <div class="phone-screen" style="position:relative; min-height:560px;">
+          <!-- Background faded -->
+          <div style="filter:blur(1px) opacity(.4); padding:10px;">
+            <div class="group-hdr"><div class="grp-left">Group 2 <span class="walker-pill">Belen</span></div></div>
+            <div class="dog-card">
+              <div class="card-row">
+                <div class="avatar-sm">🐾</div><div class="dot dot-amber"></div>
+                <div class="card-info"><div class="dog-name name-purple">Pebbles</div><div class="dog-addr">3200 Mentana</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- Drawer overlay -->
+          <div class="drawer-overlay"></div>
+          <div class="drawer-sheet">
+            <div class="drawer-handle-bar"></div>
+            <div class="drawer-head">
+              <div class="drawer-ava">🐾</div>
+              <div>
+                <div class="drawer-name-big name-purple">Pebbles</div>
+                <div class="drawer-breed-sm">Terrier Mix · Laurier</div>
+                <div class="drawer-badges">
+                  <span class="db db-group">Group 2</span>
+                  <span class="db db-caution">⚠ Reactive</span>
+                </div>
+              </div>
+            </div>
+            <div class="drawer-actions">
+              <button class="drawer-btn-full dbtn-pickup">✓ Mark as Picked Up</button>
+              <button class="drawer-btn-full dbtn-nw">Not walking today</button>
+            </div>
+            <div class="drawer-row"><div class="d-lbl">Address</div><div class="d-val">3200 Mentana</div></div>
+            <div class="d-forever-row">
+              <div class="d-forever-lbl">★ Forever Note</div>
+              <div class="d-forever-text">Reactive dog — be careful near other dogs. Keep east side of street.</div>
+            </div>
+            <div class="d-owl-row">
+              <div class="d-owl-lbl">🦉 Owl — this week</div>
+              <div class="d-owl-text">Tense near dogs on Garnier yesterday. Handled well — plan quieter route.</div>
+              <div class="d-owl-meta">Chloe · Apr 6 · <span class="d-owl-expire">1 day left</span></div>
+            </div>
+            <div class="drawer-row"><div class="d-lbl">Activity</div><div class="d-muted">Great walk yesterday, no incidents.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-desc">
+      <span class="screen-tag tag-purple">Screen 2 of 3</span>
+      <div class="screen-desc-title">The Dog Profile Drawer — one dog, one place, everything.</div>
+      <div class="screen-desc-body">Tap the dog's name. The drawer slides up. Every action that changes this dog's state for the day lives here — and nowhere else. Pickup, not walking, undo. Every piece of relevant information stacked in order of urgency.</div>
+      <ul class="detail-list">
+        <li><strong>★ Forever Note (fuschia)</strong> → permanent standing instructions, admin-only edit, never expires</li>
+        <li><strong>🦉 Owl Note (amber)</strong> → timed staff-to-staff handoff, expires this week, sector-filtered</li>
+        <li><strong>📝 Activity (neutral)</strong> → full walk history from all walkers, permanent record</li>
+        <li><strong>Auto-closes after status actions</strong> → picked up, back home, not walking, undo. App moves with the walker to the next door.</li>
+        <li><strong>Stays open after info taps</strong> → editing times, reading notes. Never closes when the walker is reading.</li>
+      </ul>
+      <div class="note-aside">
+        <strong>The drawer is the control centre.</strong> If you're about to add a dog action somewhere other than the drawer — stop. That principle exists because walkers should never have to remember where things live.
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Note Composer -->
+  <div class="screen-pair">
+    <div class="phone-col">
+      <div class="phone-frame">
+        <div class="phone-notch"><div class="notch-pill"></div></div>
+        <div class="phone-screen" style="position:relative; min-height:560px; background:#FAF7F4;">
+          <!-- Composer as bottom sheet over group view -->
+          <div style="padding:12px 10px; filter:blur(1px) opacity(.35);">
+            <div class="group-hdr"><div class="grp-left">Group 2 <span class="walker-pill">Belen</span></div></div>
+          </div>
+          <div class="drawer-overlay"></div>
+          <div class="drawer-sheet" style="background:#FAF7F4;">
+            <div class="drawer-handle-bar"></div>
+            <div style="padding:8px 14px 10px; border-bottom:1px solid var(--border);">
+              <div style="font-size:13px;font-weight:700;color:var(--text);">✎ Note about Pebbles <span style="font-size:10px;font-weight:400;color:var(--mid);">after walk</span></div>
+            </div>
+            <div style="padding:10px 14px;">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mid);margin-bottom:8px;">Quick picks</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+                <span style="font-size:10px;font-weight:600;padding:5px 10px;border-radius:20px;background:#E8F5EF;color:var(--sage);border:1px solid #a0d4bc;">Great walk 🐾</span>
+                <span style="font-size:10px;font-weight:600;padding:5px 10px;border-radius:20px;background:var(--amber-bg);color:var(--amber);border:1px solid #e0c08a;">Reactive</span>
+                <span style="font-size:10px;font-weight:600;padding:5px 10px;border-radius:20px;background:var(--peach);color:var(--coral);border:1px solid #f0b5a8;">🚩 Flag me later</span>
+                <span style="font-size:10px;font-weight:600;padding:5px 10px;border-radius:20px;background:var(--sand);color:var(--mid);border:1px solid var(--border);">Tired today</span>
+              </div>
+              <textarea style="width:100%;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);min-height:44px;font-family:'DM Sans',sans-serif;resize:none;" placeholder="Add details if you have a sec..."></textarea>
+              <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div>
+                  <div style="font-size:11px;font-weight:600;color:var(--text);">Warn next walker</div>
+                  <div style="font-size:9px;color:var(--mid);">Becomes a 🦉 owl note for 3 days</div>
+                </div>
+                <div style="width:32px;height:18px;border-radius:9px;background:var(--amber);position:relative;">
+                  <div style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:50%;background:#fff;"></div>
+                </div>
+              </div>
+              <button style="width:100%;padding:11px;border-radius:9px;background:var(--coral);color:#fff;border:none;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">Send note</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-desc">
+      <span class="screen-tag tag-sage">Screen 3 of 3</span>
+      <div class="screen-desc-title">The Note Composer — quick picks, one toggle, done.</div>
+      <div class="screen-desc-body">After the walk. One tap on ✎ Note. Quick chips handle 90% of observations — no typing needed. The "Warn next walker" toggle does two things at once: writes the permanent activity record AND creates a timed owl note that walks on the dog's name card for three days.</div>
+      <ul class="detail-list">
+        <li><strong>Quick picks</strong> → tap a chip, hit Send. No keyboard, no winter glove removal.</li>
+        <li><strong>🚩 Flag chip</strong> → "something happened, ask me later." Zero typing. Gen sees it in Tower.</li>
+        <li><strong>Warn next walker</strong> → dual-write: activity note (permanent) + owl note (3-day warning)</li>
+        <li><strong>Free text</strong> → optional. Always. The chip is enough.</li>
+        <li><strong>Every note carries</strong> → walker name, walker ID, timestamp. No anonymous mutations.</li>
+      </ul>
+      <div class="note-aside">
+        <strong>Four note types. Four lifetimes.</strong> ★ Forever never expires. 🦉 Owl lasts one week. 📅 Acuity expires today (Phase 2). 📝 Activity is the permanent record. The right note at the right time is the only note that helps.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION 3: TOWER CONTROL
+═══════════════════════════════════════ -->
+<div id="section-tower" class="section">
+<div class="tower-section">
+<div class="tower-wrap">
+
+  <div class="tower-sec-label">Gen's command room</div>
+  <div class="tower-sec-title">Tower Control — the morning briefing in one screen.</div>
+  <div class="tower-sec-sub">Before this, Gen opened four browser tabs: Acuity, Google Sheets, the walker app, and her phone. Tower replaces all four. One screen. Three panels. Everything before 8am.</div>
+
+  <div class="tower-screen-desc">
+    <div class="tsd-title">Today View — Gen's primary screen</div>
+    <div class="tsd-body">Mini Gen has already done the mechanical work — drafted today's groups, flagged conflicts, and written resolver notes. Gen arrives, reviews the left panel (flags, drafts, must-asks), confirms the walk board looks right, and acts on Beast's suggestions. Total time: 5 minutes instead of 20.</div>
+    <div class="tsd-features">
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">📋</div>
+        <div class="tsd-feat-title">Morning Checklist</div>
+        <div class="tsd-feat-body">Mini Gen drafts, open flags, must-ask dogs — everything Gen needs to action before the walks start. Approve drafts with one click.</div>
+      </div>
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">🗓</div>
+        <div class="tsd-feat-title">Live Walk Board</div>
+        <div class="tsd-feat-body">Every walker, their progress, their dogs. Real-time updates from walker_notes. Gen spots problems before she gets a text.</div>
+      </div>
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">🦍</div>
+        <div class="tsd-feat-title">Beast + Quick Owl</div>
+        <div class="tsd-feat-body">Beast suggestions with one-tap confirm. Quick owl note composer to push time-sensitive context to walkers without leaving Tower.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop mockup -->
+  <div class="desktop-frame">
+    <div class="desktop-titlebar">
+      <div class="tb-dot tb-red"></div>
+      <div class="tb-dot tb-yellow"></div>
+      <div class="tb-dot tb-green"></div>
+      <div class="tb-url">wiggle-app-dusky.vercel.app/tower/today</div>
+    </div>
+
+    <div class="tower-shell">
+      <!-- Sidebar -->
+      <div class="tower-sidebar">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-text">🐾 Tower</div>
+          <div class="sidebar-logo-sub">Control · Wiggle Dog Walks</div>
+        </div>
+        <div class="sidebar-nav-item active">
+          <span class="nav-icon">📅</span> Today
+          <span class="sidebar-badge">4</span>
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">📋</span> Mini Gen
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">🗓</span> Weekly
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">🐕</span> Dogs
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">👟</span> Staff
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">💬</span> Messages
+          <span class="sidebar-badge" style="background:#3B82F6;">2</span>
+        </div>
+        <div class="sidebar-nav-item">
+          <span class="nav-icon">💳</span> Billing
+        </div>
+        <div class="sidebar-beast-section">
+          <button class="beast-btn">🦍 Ask Beast</button>
+        </div>
+      </div>
+
+      <!-- Tower main -->
+      <div class="tower-main">
+        <div class="tower-topbar">
+          <div>
+            <div class="tower-greeting">Good morning, Gen 🐾</div>
+            <div class="tower-date">Monday, April 7, 2026 · Plateau + Laurier</div>
+          </div>
+          <div class="tower-stats">
+            <div class="t-stat"><div class="t-stat-num">95</div><div class="t-stat-lbl">Dogs</div></div>
+            <div class="t-stat"><div class="t-stat-num" style="color:var(--sage);">7</div><div class="t-stat-lbl">Walkers</div></div>
+            <div class="t-stat"><div class="t-stat-num" style="color:var(--amber);">4</div><div class="t-stat-lbl">Flags</div></div>
+            <div class="t-stat"><div class="t-stat-num" style="color:var(--beast);">3</div><div class="t-stat-lbl">Beast</div></div>
+          </div>
+        </div>
+
+        <div class="tower-content">
+          <!-- LEFT PANEL: Morning checklist -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+
+            <!-- Mini Gen status -->
+            <div class="t-panel">
+              <div class="t-panel-hdr">
+                <div class="t-panel-title">📋 Mini Gen — Today's Draft</div>
+                <span class="t-panel-badge badge-sage">8 pending</span>
+              </div>
+              <div class="minigen-row">
+                <span class="minigen-sector sect-plateau">Plateau</span>
+                <div class="minigen-date">Mon Apr 7</div>
+                <div class="minigen-count">13 dogs</div>
+                <button class="minigen-approve">Approve ✓</button>
+              </div>
+              <div class="minigen-row">
+                <span class="minigen-sector sect-laurier">Laurier</span>
+                <div class="minigen-date">Mon Apr 7</div>
+                <div class="minigen-count">9 dogs</div>
+                <button class="minigen-approve">Approve ✓</button>
+              </div>
+              <div class="minigen-row">
+                <span class="minigen-sector sect-plateau">Plateau</span>
+                <div class="minigen-date">Tue Apr 8</div>
+                <div class="minigen-count">11 dogs</div>
+                <button class="minigen-approve">Approve ✓</button>
+              </div>
+              <div class="minigen-footer">
+                <button class="approve-all-btn">✓ Approve all 8 drafts</button>
+              </div>
+            </div>
+
+            <!-- Flags -->
+            <div class="t-panel">
+              <div class="t-panel-hdr">
+                <div class="t-panel-title">🚩 Walker Flags</div>
+                <span class="t-panel-badge badge-coral">4 open</span>
+              </div>
+              <div class="flag-item">
+                <div class="flag-dot"></div>
+                <div class="flag-body">
+                  <div class="flag-who">Belen <span class="flag-dog">→ Pebbles</span></div>
+                  <div class="flag-msg">Reactive on Garnier — ask me later</div>
+                </div>
+                <div class="flag-actions">
+                  <button class="flag-btn fbtn-ask">Ask</button>
+                  <button class="flag-btn fbtn-done">Done</button>
+                </div>
+              </div>
+              <div class="flag-item">
+                <div class="flag-dot"></div>
+                <div class="flag-body">
+                  <div class="flag-who">Chloe <span class="flag-dog">→ Luna GS</span></div>
+                  <div class="flag-msg">🚩 Flag — ask me later (no text)</div>
+                </div>
+                <div class="flag-actions">
+                  <button class="flag-btn fbtn-ask">Ask</button>
+                  <button class="flag-btn fbtn-done">Done</button>
+                </div>
+              </div>
+              <div class="flag-item">
+                <div class="flag-dot resolved"></div>
+                <div class="flag-body">
+                  <div class="flag-who">Amanda <span class="flag-dog">→ Chaska</span></div>
+                  <div class="flag-msg">Paw bothering — resolved, vet confirmed</div>
+                </div>
+                <div class="flag-actions">
+                  <button class="flag-btn fbtn-done" style="opacity:.4;">Done ✓</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- CENTER PANEL: Live walk board -->
+          <div class="t-panel walk-board">
+            <div class="t-panel-hdr">
+              <div class="t-panel-title">🗓 Live Walk Board — Monday</div>
+              <span class="t-panel-badge badge-sage">10 / 22 picked up</span>
+            </div>
+            <div class="board-grid">
+
+              <div class="walker-card">
+                <div class="wc-head">
+                  <div class="wc-name">Belen</div>
+                  <span class="wc-sector sect-plateau">Plateau</span>
+                </div>
+                <div class="wc-progress">
+                  <div class="wc-bar"><div class="wc-fill" style="width:66%;"></div></div>
+                  <div class="wc-count">4/6</div>
+                </div>
+                <div class="wc-dogs">
+                  <span class="dog-chip chip-picked">Pepper</span>
+                  <span class="dog-chip chip-picked">Pebbles</span>
+                  <span class="dog-chip chip-picked">Enzo OG</span>
+                  <span class="dog-chip chip-picked">Sansa</span>
+                  <span class="dog-chip chip-waiting">Cheesy</span>
+                  <span class="dog-chip chip-waiting">Sirius</span>
+                </div>
+              </div>
+
+              <div class="walker-card">
+                <div class="wc-head">
+                  <div class="wc-name">Chloe</div>
+                  <span class="wc-sector sect-plateau">Plateau</span>
+                </div>
+                <div class="wc-progress">
+                  <div class="wc-bar"><div class="wc-fill" style="width:40%;"></div></div>
+                  <div class="wc-count">2/5</div>
+                </div>
+                <div class="wc-dogs">
+                  <span class="dog-chip chip-picked">Lou Bouvier</span>
+                  <span class="dog-chip chip-picked">Maya</span>
+                  <span class="dog-chip chip-nw">Luna GS</span>
+                  <span class="dog-chip chip-waiting">Rosie</span>
+                  <span class="dog-chip chip-waiting">Winston</span>
+                </div>
+              </div>
+
+              <div class="walker-card">
+                <div class="wc-head">
+                  <div class="wc-name">Amanda</div>
+                  <span class="wc-sector sect-laurier">Laurier</span>
+                </div>
+                <div class="wc-progress">
+                  <div class="wc-bar"><div class="wc-fill" style="width:75%;"></div></div>
+                  <div class="wc-count">3/4</div>
+                </div>
+                <div class="wc-dogs">
+                  <span class="dog-chip chip-picked">Mochi</span>
+                  <span class="dog-chip chip-picked">Pluto</span>
+                  <span class="dog-chip chip-picked chip-purple">Chaska</span>
+                  <span class="dog-chip chip-waiting">Indie Lab</span>
+                </div>
+              </div>
+
+              <div class="walker-card">
+                <div class="wc-head">
+                  <div class="wc-name">Megan</div>
+                  <span class="wc-sector sect-laurier">Laurier</span>
+                </div>
+                <div class="wc-progress">
+                  <div class="wc-bar"><div class="wc-fill" style="width:14%;"></div></div>
+                  <div class="wc-count">1/7</div>
+                </div>
+                <div class="wc-dogs">
+                  <span class="dog-chip chip-picked">Claude</span>
+                  <span class="dog-chip chip-waiting">Alba</span>
+                  <span class="dog-chip chip-waiting">Nela</span>
+                  <span class="dog-chip chip-waiting">Ziva</span>
+                  <span class="dog-chip chip-waiting">Hugo</span>
+                  <span class="dog-chip chip-waiting">Leo</span>
+                  <span class="dog-chip chip-waiting">Margot</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Beast + Quick Owl -->
+          <div style="display:flex;flex-direction:column;gap:10px;">
+
+            <!-- Beast -->
+            <div class="t-panel beast-panel">
+              <div class="beast-hdr">
+                <div class="beast-title">🦍 Beast — 3 suggestions</div>
+                <div class="beast-badge-confirm">Confirms before acting</div>
+              </div>
+              <div class="beast-item">
+                <div class="beast-msg">Mochi and Chaska are in the same group (Mon–Thu). Known conflict. Move Chaska to Group 4?</div>
+                <div class="beast-actions">
+                  <button class="beast-btn bbtn-do">Do it</button>
+                  <button class="beast-btn bbtn-skip">Skip</button>
+                </div>
+              </div>
+              <div class="beast-item">
+                <div class="beast-msg">Megan has 7 dogs today — highest count this week. Any capacity concern?</div>
+                <div class="beast-actions">
+                  <button class="beast-btn bbtn-do">Flag</button>
+                  <button class="beast-btn bbtn-skip">Fine</button>
+                </div>
+              </div>
+              <div class="beast-item">
+                <div class="beast-msg">3 new Acuity bookings this week — names unresolved in acuity_name_map.</div>
+                <div class="beast-actions">
+                  <button class="beast-btn bbtn-do">Review</button>
+                  <button class="beast-btn bbtn-skip">Later</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Owl Composer -->
+            <div class="t-panel">
+              <div class="t-panel-hdr">
+                <div class="t-panel-title">🦉 Quick Owl Note</div>
+                <span class="t-panel-badge badge-amber">push to walkers</span>
+              </div>
+              <div class="owl-composer">
+                <textarea class="owl-input" placeholder="Write a quick note that walkers will see on the dog's card for 3 days..."></textarea>
+                <div class="owl-footer">
+                  <button class="owl-sector-pick">Plateau</button>
+                  <button class="owl-sector-pick">Laurier</button>
+                  <button class="owl-send">Send 🦉</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tower-screen-desc" style="margin-top:40px;">
+    <div class="tsd-title">Why Tower must be different from the walker app</div>
+    <div class="tsd-body">The walker app is warm peach and cream because Wiggle should feel like the company feels — approachable and alive. Tower is cool gray because Gen is planning, not walking. She needs density, not warmth. She needs to scan 22 dogs across 4 walkers at once — not read a card at a door. Different context. Different energy. Same data.</div>
+    <div class="tsd-features">
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">🌡️</div>
+        <div class="tsd-feat-title">Cool surfaces</div>
+        <div class="tsd-feat-body">#F0F2F5 background, white cards, #E2E6EC borders. Never warm peach — that's for the field.</div>
+      </div>
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">🔲</div>
+        <div class="tsd-feat-title">Dense layout</div>
+        <div class="tsd-feat-body">Three-panel desktop layout. Gen sees everything at once. No tabs required to understand today's state.</div>
+      </div>
+      <div class="tsd-feat">
+        <div class="tsd-feat-icon">⚡</div>
+        <div class="tsd-feat-title">Action-first</div>
+        <div class="tsd-feat-body">Every flag has Ask/Done buttons. Every draft has Approve. Every Beast suggestion has Do it/Skip. Gen acts, not reads.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION 4: THE BRAIN
+═══════════════════════════════════════ -->
+<div id="section-brain" class="section">
+<div class="brain-section">
+<div class="brain-wrap">
+
+  <div class="tower-sec-label">The shared foundation</div>
+  <div class="tower-sec-title">Supabase — one truth, two windows.</div>
+  <div class="tower-sec-sub">Gen edits in Tower → Supabase → walkers see it in the app. Walkers flag in the app → Supabase → Gen sees it in Tower. No sync jobs. No webhooks. One database, two real-time views.</div>
+
+  <div class="data-flow" style="margin-bottom:48px;">
+    <div class="flow-node">
+      <div class="flow-icon">📱</div>
+      <div class="flow-title">Walker App</div>
+      <div class="flow-sub">Reads walk_groups, walker_notes, owl_notes, dogs in real-time</div>
+    </div>
+    <div class="flow-arrow">⟺</div>
+    <div class="flow-center">
+      <div class="flow-center-title">🗄 Supabase</div>
+      <div class="flow-center-sub">ifhniwjdrsswgemmqddn<br>95 dogs · 12 profiles<br>Realtime subscriptions<br>Row-level security</div>
+    </div>
+    <div class="flow-arrow">⟺</div>
+    <div class="flow-node">
+      <div class="flow-icon">🖥</div>
+      <div class="flow-title">Tower Control</div>
+      <div class="flow-sub">Writes groups, owl notes, flags, approvals — seen by walkers instantly</div>
+    </div>
+  </div>
+
+  <!-- Table of key tables -->
+  <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;margin-bottom:48px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--coral);margin-bottom:16px;">Key tables — the single source of truth</div>
+
+    <div class="table-row" style="border-bottom:1px solid rgba(255,255,255,.06);">
+      <div class="tr-name">walker_notes</div>
+      <div class="tr-desc">ALL walk state lives here. pickup · returned · not_walking · group_done · note · resolver_flag. Walk_logs is empty — ignore it.</div>
+      <div class="tr-rule">Every write carries walker_id, walker_name, walk_date. No anonymous mutations.</div>
+    </div>
+    <div class="table-row">
+      <div class="tr-name">dogs.notes</div>
+      <div class="tr-desc">Forever notes. 24 dogs have content today. When not null → dog name turns purple. Admin-only edit.</div>
+      <div class="tr-rule">Never expires. The permanent standing instructions for every walk this dog will ever have.</div>
+    </div>
+    <div class="table-row">
+      <div class="tr-name">owl_notes</div>
+      <div class="tr-desc">Timed staff-to-staff notes. Expires weekly. HARD RULE: always filter by target_sector or notes bleed across sectors.</div>
+      <div class="tr-rule">Acknowledged_by marks per-walker read status. Other walkers still see it until they read it.</div>
+    </div>
+    <div class="table-row">
+      <div class="tr-name">walk_groups</div>
+      <div class="tr-desc">Dog groups. dog_ids stores dog NAMES as text[] — not UUIDs. Intentional for debuggability. Unique constraint: (walk_date, group_num, sector).</div>
+      <div class="tr-rule">Mini Gen writes to mini_gen_drafts first. Only moves to walk_groups after Gen approves.</div>
+    </div>
+    <div class="table-row">
+      <div class="tr-name">mini_gen_drafts</div>
+      <div class="tr-desc">Staging table for Mini Gen output. status: pending → approved → rejected. Never direct to production.</div>
+      <div class="tr-rule">Gen approves via Tower. api/tower-approve.js promotes approved drafts to walk_groups.</div>
+    </div>
+    <div class="table-row" style="border-bottom:none;">
+      <div class="tr-name">acuity_name_map</div>
+      <div class="tr-desc">77 entries. Bridges Acuity's owner-centric bookings to the dog-centric database. acuity_name = OWNER. dog_name = DOG.</div>
+      <div class="tr-rule">Email disambiguates duplicate owner names. Same-home pairs get two rows. 100% resolution rate.</div>
+    </div>
+  </div>
+
+  <!-- Agent diagram -->
+  <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--beast);margin-bottom:16px;">The AI layer — stop and wait, always</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="background:rgba(45,143,111,.07);border:1px solid rgba(45,143,111,.15);border-radius:10px;padding:18px;">
+        <div style="font-size:12px;font-weight:700;color:#6ee7b7;margin-bottom:8px;">🤖 Mini Gen — LIVE</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.65;">Acuity bookings → The Watcher → The Briefing → Mini Gen → mini_gen_drafts. Runs daily at 8am EDT. Gen reviews in Tower. Approval → walk_groups. 100% resolution rate (114/114). <strong style="color:rgba(255,255,255,.8);">Stops and waits for human approval before touching production.</strong></div>
+      </div>
+      <div style="background:rgba(232,118,43,.07);border:1px solid rgba(232,118,43,.15);border-radius:10px;padding:18px;">
+        <div style="font-size:12px;font-weight:700;color:#fdba74;margin-bottom:8px;">🦍 Beast — NEXT</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.65;">Suggestions in Tower's right panel. Conflict detection, capacity alerts, name map gaps, operational patterns. Confirm block UI designed. <strong style="color:rgba(255,255,255,.8);">Every suggestion requires "Do it" before executing. Beast never touches production alone.</strong> Same discipline as Mini Gen.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SECTION 5: ROADMAP
+═══════════════════════════════════════ -->
+<div id="section-roadmap" class="section">
+<div class="roadmap-section">
+<div class="roadmap-wrap">
+
+  <div class="sec-label">Where we are · where we're going</div>
+  <div class="sec-title">The Roadmap — four phases, one operation.</div>
+  <div class="sec-sub">Phase 0 is done. The walker app works. Mini Gen works. Every walk state in Supabase. Now we close the loop.</div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card">
+      <div class="phase-hdr done">
+        <div class="phase-num num-done">PHASE 0</div>
+        <div class="phase-title title-done">The Foundation</div>
+        <span class="phase-status ps-done">Done ✓</span>
+      </div>
+      <div class="phase-items">
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Walker app V4</strong> — groups, dog cards, pickup/return/not-walking, drawer, notes</div></div>
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Mini Gen</strong> — Acuity → drafts → Tower approval → walk_groups. 100% resolution.</div></div>
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Forever notes</strong> — purple signal, fuschia content, admin-only edit. 24 dogs populated.</div></div>
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Owl notes</strong> — animated on card, sector-filtered, Got it acknowledgment, dual-write toggle.</div></div>
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Flag system</strong> — 🚩 chip writes tags=['flag'], Tower sees open flags.</div></div>
+        <div class="phase-item"><span class="pi-check">✓</span><div class="pi-text"><strong>Bug sweep April 6</strong> — undo, back home, not-walking, isCompact all clean.</div></div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-hdr next">
+        <div class="phase-num num-next">PHASE 1</div>
+        <div class="phase-title title-next">Tower Today View</div>
+        <span class="phase-status ps-next">Build this next</span>
+      </div>
+      <div class="phase-items">
+        <div class="phase-item"><span class="pi-dot">●</span><div class="pi-text"><strong>Tower Today screen</strong> — three panels: Mini Gen drafts + flags left, live walk board center, Beast + quick owl right.</div></div>
+        <div class="phase-item"><span class="pi-dot">●</span><div class="pi-text"><strong>Live walk board</strong> — walker cards with real-time dog chip status from walker_notes subscriptions.</div></div>
+        <div class="phase-item"><span class="pi-dot">●</span><div class="pi-text"><strong>Flag actions</strong> — Ask and Done buttons wired to Supabase. Gen acts, not reads.</div></div>
+        <div class="phase-item"><span class="pi-dot">●</span><div class="pi-text"><strong>Quick owl composer</strong> — Gen pushes context to walkers without leaving Tower. Sector-targeted.</div></div>
+        <div class="phase-item"><span class="pi-dot">●</span><div class="pi-text"><strong>Beast confirm UI</strong> — wire "Do it" to real Supabase writes. Each action gets its own api endpoint.</div></div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-hdr soon">
+        <div class="phase-num num-soon">PHASE 2</div>
+        <div class="phase-title title-soon">Close the Loop</div>
+        <span class="phase-status ps-soon">After Phase 1</span>
+      </div>
+      <div class="phase-items">
+        <div class="phase-item"><span class="pi-circle">○</span><div class="pi-text"><strong>TELUS SMS inbox</strong> — webhook → Supabase → Messages panel in Tower. Gen replies from Tower via TELUS API.</div></div>
+        <div class="phase-item"><span class="pi-circle">○</span><div class="pi-text"><strong>Gmail Action Queue</strong> — Acuity emails, client messages, contact forms surface in Tower. Gen acts without switching tabs.</div></div>
+        <div class="phase-item"><span class="pi-circle">○</span><div class="pi-text"><strong>Acuity Notes Phase 2</strong> — owner booking notes appear as blue cards in walker app. Four note types complete.</div></div>
+        <div class="phase-item"><span class="pi-circle">○</span><div class="pi-text"><strong>Map Health panel</strong> — acuity_name_map gaps surfaced in Tower. 9am check proposes new entries.</div></div>
+        <div class="phase-item"><span class="pi-circle">○</span><div class="pi-text"><strong>Auto-reject stale drafts</strong> — past-date pending mini_gen_drafts cleaned automatically.</div></div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-hdr later">
+        <div class="phase-num num-later">PHASE 3</div>
+        <div class="phase-title title-later">The Full Picture</div>
+        <span class="phase-status ps-later">30 days of data first</span>
+      </div>
+      <div class="phase-items">
+        <div class="phase-item"><span class="pi-later">◇</span><div class="pi-text"><strong>Client portal (website)</strong> — owners see their dog's walk history. "Lea had a great walk today." Booking via Acuity.</div></div>
+        <div class="phase-item"><span class="pi-later">◇</span><div class="pi-text"><strong>Goals + Check for Friends</strong> — walk data over time. No caps until 30 days of real data collected.</div></div>
+        <div class="phase-item"><span class="pi-later">◇</span><div class="pi-text"><strong>Billing tab</strong> — placeholder until billing table exists. Build from real operational data.</div></div>
+        <div class="phase-item"><span class="pi-later">◇</span><div class="pi-text"><strong>Instagram integration</strong> — walk photos from app → Gen approves in Tower → posts. Content without effort.</div></div>
+        <div class="phase-item"><span class="pi-later">◇</span><div class="pi-text"><strong>Le Quartier (map layer)</strong> — if route efficiency becomes a real bottleneck. Not now.</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="verdict">
+    <div class="verdict-title">The Verdict — what this becomes</div>
+    <div class="verdict-grid">
+      <div class="v-card">
+        <div class="v-card-title">What's impressive now</div>
+        <div class="v-card-body">The design philosophy. WWRS, four filters, "agents stop and wait" — this is architecture built for durability, not speed. walker_notes as single truth, Mini Gen's staging approach, the four-filter decision framework. <em>Protect the discipline. It's worth more than any feature.</em></div>
+      </div>
+      <div class="v-card">
+        <div class="v-card-title">The single biggest unlock</div>
+        <div class="v-card-body">Tower Today view. Every day Tower doesn't exist, the operational loop stays in Gen's head and Rod's text messages. One screen — three panels — replaces four browser tabs. When Gen moves from Google Sheets to Tower, <em>the operation becomes self-documenting.</em></div>
+      </div>
+      <div class="v-card">
+        <div class="v-card-title">What this looks like in 6 months</div>
+        <div class="v-card-body">Mini Gen drafts the week. Gen approves in Tower. Walkers see their groups. Notes flow both directions. Beast catches problems before Gen does. Client SMS arrives in Tower. Rod hasn't touched a spreadsheet in 4 months. <em>Work smart, play always.</em></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="closing">
+    <div class="closing-quote">"Wiggle has the architecture of a product that will last and the heart of a business that already does — what it needs now is the bridge between the two."</div>
+    <div class="closing-tagline">Work smart, play always. 🐾</div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+function showSection(id, tabEl) {
+  // Hide all sections
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+  // Show target
+  document.getElementById('section-' + id).classList.add('active');
+
+  // Activate tab
+  if (tabEl) tabEl.classList.add('active');
+
+  // Scroll to top of content
+  document.querySelector('.sticky-nav').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

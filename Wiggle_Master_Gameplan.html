@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle — Master Game Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --coral: #E8634A; --purple: #534AB7; --sage: #2D8F6F;
+  --amber: #C4851C; --slate: #475569; --beast: #E8762B;
+  --dark: #1A1D23; --peach: #FFF5F0; --cream: #FAF7F4;
+  --border: #E8E4E0; --text: #2D2926; --mid: #8C857E; --faint: #B5AFA8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--peach); color: var(--text); padding: 0 0 80px; }
+
+.cover { background: var(--dark); padding: 52px 48px 44px; border-bottom: 3px solid var(--beast); }
+.cover-eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--beast); margin-bottom: 14px; }
+.cover-title { font-size: 34px; font-weight: 700; color: #fff; letter-spacing: -.03em; margin-bottom: 10px; line-height: 1.2; }
+.cover-title em { color: var(--coral); font-style: normal; }
+.cover-sub { font-size: 14px; color: rgba(255,255,255,.45); line-height: 1.7; max-width: 600px; }
+
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 32px; }
+.section { margin-top: 48px; }
+.sec-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--coral); padding-bottom: 10px; border-bottom: 1.5px solid var(--border);
+  margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between;
+}
+.sec-num { font-family: 'DM Mono', monospace; color: var(--faint); }
+.sec-title { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 6px; }
+.sec-intro { font-size: 13px; color: var(--mid); line-height: 1.7; margin-bottom: 20px; max-width: 680px; }
+
+.card { background: var(--cream); border: 1px solid var(--border); border-bottom: 2.5px solid #D5CFC8; border-radius: 11px; padding: 16px 20px; margin-bottom: 10px; }
+.card-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+.card-body { font-size: 12px; color: var(--mid); line-height: 1.7; }
+.card-body strong { color: var(--text); font-weight: 600; }
+
+.callout { background: var(--dark); border-radius: 11px; padding: 18px 22px; margin: 16px 0; font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.75; }
+.callout strong { color: #fff; }
+.callout em { color: var(--coral); font-style: normal; }
+
+/* Layer table */
+.layer {
+  background: var(--cream); border: 1px solid var(--border);
+  border-bottom: 2.5px solid #D5CFC8; border-radius: 11px;
+  overflow: hidden; margin-bottom: 14px;
+}
+.layer-header {
+  background: var(--dark); padding: 10px 18px;
+  display: flex; align-items: center; gap: 10px;
+}
+.layer-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.layer-title { font-size: 13px; font-weight: 700; color: #fff; flex: 1; }
+.layer-status {
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+}
+.ls-now { background: rgba(45,143,111,.25); color: #6ee7b7; }
+.ls-next { background: rgba(196,133,28,.25); color: #fcd34d; }
+.ls-later { background: rgba(83,74,183,.25); color: #a5b4fc; }
+.ls-done { background: rgba(45,143,111,.15); color: var(--sage); border: 1px solid rgba(45,143,111,.3); }
+.ls-broken { background: rgba(232,99,74,.2); color: #fca5a5; }
+
+.layer-item {
+  display: flex; gap: 12px; padding: 11px 18px;
+  border-bottom: 1px solid var(--border); align-items: flex-start;
+}
+.layer-item:last-child { border-bottom: none; }
+.li-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.li-content { flex: 1; }
+.li-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.li-desc { font-size: 11px; color: var(--mid); line-height: 1.55; }
+.li-tag {
+  display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 7px;
+  border-radius: 20px; margin-top: 4px;
+}
+.t-claude-code { background: #EEEDFE; color: var(--purple); border: 1px solid #C4C0F0; }
+.t-antigravity { background: #FFF5F0; color: var(--coral); border: 1px solid #FCA99A; }
+.t-supabase { background: #ECFDF5; color: var(--sage); border: 1px solid #A7F3D0; }
+.t-beast { background: #FFF8F0; color: var(--beast); border: 1px solid #FCD9B0; }
+
+/* Agent table */
+.agent-table { background: var(--cream); border: 1px solid var(--border); border-bottom: 2.5px solid #D5CFC8; border-radius: 11px; overflow: hidden; margin-bottom: 14px; }
+.at-header { background: var(--dark); padding: 10px 18px; font-size: 12px; font-weight: 700; color: #fff; display: flex; gap: 12px; }
+.at-row { display: grid; grid-template-columns: 32px 140px 1fr 80px; gap: 14px; padding: 10px 18px; border-bottom: 1px solid var(--border); align-items: start; }
+.at-row:last-child { border-bottom: none; }
+.at-num { font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--faint); padding-top: 2px; }
+.at-name { font-size: 12px; font-weight: 700; color: var(--text); }
+.at-job { font-size: 11px; color: var(--mid); line-height: 1.55; }
+.at-status { text-align: right; }
+.at-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  display: inline-block;
+}
+.ab-live { background: #ECFDF5; color: var(--sage); border: 1px solid #A7F3D0; }
+.ab-build { background: #FDF3E3; color: var(--amber); border: 1px solid #F0C76E; }
+.ab-plan { background: #EEEDFE; color: var(--purple); border: 1px solid #C4C0F0; }
+.ab-fix { background: #FFF5F0; color: var(--coral); border: 1px solid #FCA99A; }
+
+/* Brainstorm prompt */
+.brainstorm-box {
+  background: var(--dark); border-radius: 14px; overflow: hidden;
+  border: 1.5px solid rgba(232,118,43,.3); margin-bottom: 14px;
+}
+.bb-header {
+  background: rgba(232,118,43,.1); padding: 14px 20px;
+  border-bottom: 1px solid rgba(232,118,43,.2);
+  display: flex; align-items: center; gap: 10px;
+}
+.bb-title { font-size: 13px; font-weight: 700; color: var(--beast); }
+.bb-sub { font-size: 11px; color: rgba(255,255,255,.3); margin-top: 2px; }
+.bb-body { padding: 20px; }
+.bb-prompt {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: rgba(255,255,255,.75); line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+/* DB table */
+.db-table { background: var(--cream); border: 1px solid var(--border); border-bottom: 2.5px solid #D5CFC8; border-radius: 11px; overflow: hidden; margin-bottom: 10px; }
+.db-header { background: var(--dark); padding: 9px 16px; display: flex; align-items: center; gap: 8px; }
+.db-name { font-size: 12px; font-weight: 700; color: #fff; font-family: 'DM Mono', monospace; }
+.db-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.db-row { display: flex; gap: 16px; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 11px; align-items: baseline; }
+.db-row:last-child { border-bottom: none; }
+.db-col { color: var(--purple); font-family: 'DM Mono', monospace; font-weight: 600; min-width: 180px; flex-shrink: 0; }
+.db-type { color: var(--slate); font-family: 'DM Mono', monospace; min-width: 100px; flex-shrink: 0; }
+.db-note { color: var(--mid); flex: 1; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.footer { background: var(--dark); margin-top: 60px; padding: 22px 48px; display: flex; align-items: center; justify-content: space-between; border-top: 3px solid var(--coral); }
+.footer-l { font-size: 11px; color: rgba(255,255,255,.3); font-family: 'DM Mono', monospace; }
+.footer-r { font-size: 13px; font-weight: 700; color: var(--coral); }
+
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } .wrap { padding: 0 16px; } .at-row { grid-template-columns: 28px 120px 1fr; } .at-status { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="cover-eyebrow">Wiggle Dog Walks · Master Game Plan · April 2026</div>
+  <div class="cover-title">Everything we need to build.<br><em>In order. Together.</em></div>
+  <div class="cover-sub">The complete build plan for the Wiggle ecosystem — app, Tower Control, Beast, agents, and the communications hub. Use this file to orient any session, any tool, any person.</div>
+</div>
+
+<div class="wrap">
+
+<!-- ═══════════════════════════════════════
+     THE ONE SENTENCE
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The North Star <span class="sec-num">00</span></div>
+  <div class="callout">
+    <strong>Two views. One truth. One team.</strong> Rod and Gen work from Tower Control. Walkers execute in the app. All client communication — email, SMS, Instagram, Acuity — flows into Tower. The Beast reads everything, suggests actions, and executes with Gen or Rod's approval. <em>Every dog walked. Every note in the right place. Every client communication handled. All from one system.</em>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     THE BUILD LAYERS
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The Build Plan — Layer by Layer <span class="sec-num">01</span></div>
+  <div class="sec-title">Six layers. Build in order. Each one unlocks the next.</div>
+  <div class="sec-intro">Bones first. Flow second. Machine third. Never skip a layer — each one is the foundation for the one above it.</div>
+
+  <!-- Layer 1 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--sage);">1</div>
+      <div class="layer-title">Layer 1 — Fix What's Missing</div>
+      <div class="layer-status ls-now">DO NOW</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🗄️</div>
+      <div class="li-content">
+        <div class="li-title">Create acuity_notes table</div>
+        <div class="li-desc">Owner notes from Acuity bookings. Expires day-of. Rod thought this was done — it was never built. Prompt: Layer1_DB_Migration.txt</div>
+        <span class="li-tag t-claude-code">Claude Code</span>
+        <span class="li-tag t-supabase">Migration</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🗄️</div>
+      <div class="li-content">
+        <div class="li-title">Create dog_vacations table</div>
+        <div class="li-desc">Explicit vacation blocks per dog (start, end, source, reason). Mini Gen detects vacations but has nowhere to store them. Same prompt: Layer1_DB_Migration.txt</div>
+        <span class="li-tag t-claude-code">Claude Code</span>
+        <span class="li-tag t-supabase">Migration</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📱</div>
+      <div class="li-content">
+        <div class="li-title">Wire acuity_notes to DogProfileDrawer (blue section)</div>
+        <div class="li-desc">📅 From Owner — blue bg, today only, between Owl Notes and Activity Notes. Read-only, no dismiss button. Prompt: Layer1_AcuityNotes_UI.txt</div>
+        <span class="li-tag t-antigravity">Antigravity</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🔧</div>
+      <div class="li-content">
+        <div class="li-title">Fix schedule-verify cron error</div>
+        <div class="li-desc">Non-user-facing error on every cron run. Doesn't affect walkers but needs diagnosis before it becomes real. Check runtime logs for full error message.</div>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer 2 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--coral);">2</div>
+      <div class="layer-title">Layer 2 — Tower Shell + Persona Toggle</div>
+      <div class="layer-status ls-now">DO NOW</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🔀</div>
+      <div class="li-content">
+        <div class="li-title">Persona toggle — Rod view / Gen view</div>
+        <div class="li-desc">One dashboard. Role-based default (admin = Rod, co-admin = Gen). Toggle button to switch. Both can see everything — default is your lane. Prevents duplication, enables teamwork.</div>
+        <span class="li-tag t-antigravity">Antigravity</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🏢</div>
+      <div class="li-content">
+        <div class="li-title">Tower Today — Gen's view fully built</div>
+        <div class="li-desc">Mini Gen review, flags, live walker status, quick owl note. Closes Gen's Google Sheets tab forever. This is the single highest-leverage screen in the whole system.</div>
+        <span class="li-tag t-antigravity">Antigravity</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🎯</div>
+      <div class="li-content">
+        <div class="li-title">Tower Today — Rod's additions</div>
+        <div class="li-desc">Beast panel placeholder (visible, not yet wired). Both-sector view. Full admin controls. Forever note editing from Tower desk. Billing tab placeholder.</div>
+        <span class="li-tag t-antigravity">Antigravity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer 3 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--purple);">3</div>
+      <div class="layer-title">Layer 3 — Input Routing (The Inbox)</div>
+      <div class="layer-status ls-next">NEXT</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📧</div>
+      <div class="li-content">
+        <div class="li-title">Email → Tower (Gmail)</div>
+        <div class="li-desc">info@wiggledogwalks.com. Gmail MCP is already connected. Inbox Agent reads, classifies (booking? vacation? question?), writes to inbound_messages, surfaces in Tower. First input channel. Closest to done.</div>
+        <span class="li-tag t-beast">Inbox Agent</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📱</div>
+      <div class="li-content">
+        <div class="li-title">SMS → Tower (TELUS / RingCentral)</div>
+        <div class="li-desc">866-472-4973. RingCentral webhook → inbound_messages → Tower. Client texts appear in Tower alongside email. Gen replies from the desk via TELUS API.</div>
+        <span class="li-tag t-beast">Inbox Agent</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📸</div>
+      <div class="li-content">
+        <div class="li-title">Instagram DMs → Tower</div>
+        <div class="li-desc">Most complex. Instagram Graph API, DM permissions, webhook setup. Build last — after email and SMS are working and proven.</div>
+        <span class="li-tag t-beast">Inbox Agent</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🗄️</div>
+      <div class="li-content">
+        <div class="li-title">Create inbound_messages + beast_actions tables</div>
+        <div class="li-desc">inbound_messages: staging for all incoming comms before Beast processes. beast_actions: pending proposed actions waiting for confirm/reject. The confirm block lives here.</div>
+        <span class="li-tag t-supabase">Migration</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer 4 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--beast);">4</div>
+      <div class="layer-title">Layer 4 — Beast Read Layer</div>
+      <div class="layer-status ls-next">NEXT</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🦍</div>
+      <div class="li-content">
+        <div class="li-title">Beast reads all inputs, generates morning briefing</div>
+        <div class="li-desc">Every morning Beast surfaces: "3 emails came in overnight. 1 vacation request for Pebbles June 15-20. 2 booking requests. 1 cancellation." Gen opens Tower and everything is already digested.</div>
+        <span class="li-tag t-beast">Beast</span>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">💬</div>
+      <div class="li-content">
+        <div class="li-title">Beast can answer questions about today</div>
+        <div class="li-desc">"What happened with Luna GS?" — Beast surfaces the flag note. "Who's walked the most this week?" — Beast queries walker_notes and answers. Read-only queries. No writes yet.</div>
+        <span class="li-tag t-beast">Beast</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer 5 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--amber);">5</div>
+      <div class="layer-title">Layer 5 — Beast Action Layer (The Confirm Block)</div>
+      <div class="layer-status ls-later">LATER</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">⚡</div>
+      <div class="li-content">
+        <div class="li-title">Beast proposes — Gen/Rod confirms — Executor writes</div>
+        <div class="li-desc">Beast: "I'll add a vacation block for Pebbles June 15-20, cancel 5 walks, and write an owl note for walkers." Gen: Confirm. Executor writes to dog_vacations + walker_notes. Done.</div>
+        <span class="li-tag t-beast">Beast + Executor Agent</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📅</div>
+      <div class="li-content">
+        <div class="li-title">Add/cancel/modify walks via Beast</div>
+        <div class="li-desc">Beast can propose: add a walk to expected_schedule, mark a dog not walking today, update a booking, write a forever note (Rod only). Confirm block required every time. No exceptions.</div>
+        <span class="li-tag t-beast">Beast</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">💌</div>
+      <div class="li-content">
+        <div class="li-title">Beast drafts client replies</div>
+        <div class="li-desc">Client emails about vacation. Beast drafts a reply: "Hi Sarah, Pebbles' vacation June 15-20 is noted. See you back the 21st!" Gen reviews, confirms, Beast sends via Gmail/TELUS. Loop closed.</div>
+        <span class="li-tag t-beast">Beast + Inbox Agent</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer 6 -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-num" style="background:var(--slate);">6</div>
+      <div class="layer-title">Layer 6 — Close the Full Loop</div>
+      <div class="layer-status ls-later">LATER</div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">📊</div>
+      <div class="li-content">
+        <div class="li-title">Billing tab — revenue tracking</div>
+        <div class="li-desc">After 30 days of real walk data. Revenue per dog, per sector, per walker per period. Billing table in Supabase. Rod sees the numbers from Tower.</div>
+        <span class="li-tag t-claude-code">Claude Code</span>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🌐</div>
+      <div class="li-content">
+        <div class="li-title">Website — client-facing brand surface</div>
+        <div class="li-desc">Peach, coral, DM Sans, warm photography. New clients book via Acuity directly from the site. Mini Gen maps them automatically. Feeds the whole pipeline from day one.</div>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="li-icon">🐾</div>
+      <div class="li-content">
+        <div class="li-title">Walk summaries to clients</div>
+        <div class="li-desc">Summarizer Agent generates a post-walk message: "Pebbles had a great walk today with Belen! 45 minutes, lots of energy." Gen reviews, sends. Clients love it.</div>
+        <span class="li-tag t-beast">Summarizer Agent</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     THE AGENT ROSTER
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The Agent Roster <span class="sec-num">02</span></div>
+  <div class="sec-title">Every agent. What it does. When it gets built.</div>
+  <div class="sec-intro">Currently building 3 agents in the pipeline. Here's the full team — 10 agents total. Each one has one job and one job only.</div>
+
+  <div class="agent-table">
+    <div class="at-header" style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);">
+      <div style="width:32px;">#</div>
+      <div style="width:140px;">Name</div>
+      <div>Job</div>
+      <div style="width:80px;text-align:right;">Status</div>
+    </div>
+
+    <!-- Existing pipeline -->
+    <div class="at-row">
+      <div class="at-num">01</div>
+      <div class="at-name">🔭 The Watcher</div>
+      <div class="at-job">Monitors Acuity for new and changed bookings. Fires when something arrives. Hands off to The Briefing.</div>
+      <div class="at-status"><span class="at-badge ab-build">Building</span></div>
+    </div>
+    <div class="at-row">
+      <div class="at-num">02</div>
+      <div class="at-name">📋 The Briefing</div>
+      <div class="at-job">Morning ops summary. Reads what The Watcher found, what Mini Gen resolved, what flags exist. Hands Gen a clean picture of the day.</div>
+      <div class="at-status"><span class="at-badge ab-build">Building</span></div>
+    </div>
+    <div class="at-row">
+      <div class="at-num">03</div>
+      <div class="at-name">🤖 Mini Gen</div>
+      <div class="at-job">Resolves Acuity owner names → dog names via acuity_name_map. Detects conflicts and vacation patterns. Writes drafts to mini_gen_drafts — never directly to walk_groups. 100% resolution rate.</div>
+      <div class="at-status"><span class="at-badge ab-live">Live ✓</span></div>
+    </div>
+
+    <!-- New agents -->
+    <div class="at-row" style="background:#FAFAF8;">
+      <div class="at-num">04</div>
+      <div class="at-name">📬 The Inbox</div>
+      <div class="at-job">Reads all incoming channels: email, SMS, Instagram DMs. Classifies each message (booking request? vacation notice? question? complaint?). Writes to inbound_messages. Surfaces in Tower. Triggers Beast.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row">
+      <div class="at-num">05</div>
+      <div class="at-name">🗺️ The Mapper</div>
+      <div class="at-job">When a new dog is added to the dogs table, automatically attempts to create an acuity_name_map entry using owner first name + email. Closes the gap between new client and Mini Gen recognition. Could be a trigger + agent combo.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row" style="background:#FAFAF8;">
+      <div class="at-num">06</div>
+      <div class="at-name">📝 The Extractor</div>
+      <div class="at-job">Pulls owner notes from Acuity booking payloads → writes to acuity_notes table. Fires on every new Acuity webhook. The bridge between what owners write at booking time and what walkers see on walk day.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row">
+      <div class="at-num">07</div>
+      <div class="at-name">⚡ The Executor</div>
+      <div class="at-job">Beast's hands. After Gen or Rod confirms a Beast action, The Executor performs the write: add vacation block, cancel walk, write owl note, update dog info. Never acts without a confirmed beast_actions row. The confirm block is its gate.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row" style="background:#FAFAF8;">
+      <div class="at-num">08</div>
+      <div class="at-name">🌿 The Gardener</div>
+      <div class="at-job">Operational hygiene. Cleans expired owl notes. Scans activity notes for patterns ("Pebbles flagged reactive 4 times this month — consider updating the forever note"). Surfaces anomalies to Gen in Tower without requiring action.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row">
+      <div class="at-num">09</div>
+      <div class="at-name">📊 The Summarizer</div>
+      <div class="at-job">After a group is marked done, generates a walk summary. "Belen walked 8 dogs today. All returned. Luna GS flagged." Future: drafts client-facing messages ("Pebbles had a great walk!") for Gen to confirm and send.</div>
+      <div class="at-status"><span class="at-badge ab-plan">Plan</span></div>
+    </div>
+    <div class="at-row" style="background:#FAFAF8;">
+      <div class="at-num">10</div>
+      <div class="at-name">🏥 The Health Check</div>
+      <div class="at-job">Daily system integrity check. All dogs accounted for? Orphan walk_groups? acuity_name_map entries still valid? schedule-verify fixed and expanded. Runs nightly. Alerts Rod if anything looks off.</div>
+      <div class="at-status"><span class="at-badge ab-fix">Fix existing</span></div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>The agent philosophy:</strong> Every agent has one job and hands off cleanly. No agent writes to production without a human checkpoint (Beast/Executor) or is read-only (Watcher, Inbox, Briefing, Gardener, Health Check). <em>Agents stop and wait. Humans confirm and go.</em>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MISSING DB TABLES
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">Database — What's Missing <span class="sec-num">03</span></div>
+  <div class="sec-title">Four tables don't exist yet. Here's what each one holds.</div>
+
+  <div class="grid-2">
+
+    <div class="db-table">
+      <div class="db-header">
+        <div class="db-name">acuity_notes</div>
+        <div class="db-badge ls-broken" style="background:rgba(232,99,74,.2);color:#fca5a5;">Missing — Layer 1</div>
+      </div>
+      <div class="db-row"><div class="db-col">dog_id</div><div class="db-type">uuid</div><div class="db-note">FK → dogs.id</div></div>
+      <div class="db-row"><div class="db-col">dog_name</div><div class="db-type">text</div><div class="db-note">Denormalized for speed</div></div>
+      <div class="db-row"><div class="db-col">sector</div><div class="db-type">text</div><div class="db-note">Plateau | Laurier</div></div>
+      <div class="db-row"><div class="db-col">note_text</div><div class="db-type">text</div><div class="db-note">What the owner wrote</div></div>
+      <div class="db-row"><div class="db-col">booking_date</div><div class="db-type">date</div><div class="db-note">Expiry — today only</div></div>
+      <div class="db-row"><div class="db-col">acuity_appointment_id</div><div class="db-type">text</div><div class="db-note">For dedup</div></div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-header">
+        <div class="db-name">dog_vacations</div>
+        <div class="db-badge ls-broken" style="background:rgba(232,99,74,.2);color:#fca5a5;">Missing — Layer 1</div>
+      </div>
+      <div class="db-row"><div class="db-col">dog_id</div><div class="db-type">uuid</div><div class="db-note">FK → dogs.id</div></div>
+      <div class="db-row"><div class="db-col">dog_name</div><div class="db-type">text</div><div class="db-note">Denormalized</div></div>
+      <div class="db-row"><div class="db-col">start_date</div><div class="db-type">date</div><div class="db-note">First day away</div></div>
+      <div class="db-row"><div class="db-col">end_date</div><div class="db-type">date</div><div class="db-note">Last day away</div></div>
+      <div class="db-row"><div class="db-col">source</div><div class="db-type">text</div><div class="db-note">email | sms | acuity | beast | manual</div></div>
+      <div class="db-row"><div class="db-col">reason</div><div class="db-type">text</div><div class="db-note">Optional — "family trip"</div></div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-header">
+        <div class="db-name">inbound_messages</div>
+        <div class="db-badge" style="background:rgba(83,74,183,.2);color:#a5b4fc;">Layer 3</div>
+      </div>
+      <div class="db-row"><div class="db-col">channel</div><div class="db-type">text</div><div class="db-note">email | sms | instagram | acuity</div></div>
+      <div class="db-row"><div class="db-col">sender_name</div><div class="db-type">text</div><div class="db-note">Client name if known</div></div>
+      <div class="db-row"><div class="db-col">sender_handle</div><div class="db-type">text</div><div class="db-note">Email / phone / IG handle</div></div>
+      <div class="db-row"><div class="db-col">body</div><div class="db-type">text</div><div class="db-note">Raw message content</div></div>
+      <div class="db-row"><div class="db-col">classification</div><div class="db-type">text</div><div class="db-note">booking | vacation | question | cancel | other</div></div>
+      <div class="db-row"><div class="db-col">processed_by_beast</div><div class="db-type">bool</div><div class="db-note">Has Beast acted on this?</div></div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-header">
+        <div class="db-name">beast_actions</div>
+        <div class="db-badge" style="background:rgba(83,74,183,.2);color:#a5b4fc;">Layer 5</div>
+      </div>
+      <div class="db-row"><div class="db-col">action_type</div><div class="db-type">text</div><div class="db-note">add_vacation | cancel_walk | write_note | send_reply…</div></div>
+      <div class="db-row"><div class="db-col">payload</div><div class="db-type">jsonb</div><div class="db-note">Everything Executor needs to act</div></div>
+      <div class="db-row"><div class="db-col">proposed_by</div><div class="db-type">text</div><div class="db-note">Always 'beast'</div></div>
+      <div class="db-row"><div class="db-col">status</div><div class="db-type">text</div><div class="db-note">pending | confirmed | rejected | executed</div></div>
+      <div class="db-row"><div class="db-col">confirmed_by</div><div class="db-type">uuid</div><div class="db-note">Rod or Gen's profile id</div></div>
+      <div class="db-row"><div class="db-col">executed_at</div><div class="db-type">timestamptz</div><div class="db-note">When Executor completed it</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     THE BRAINSTORM PROMPT
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The Brainstorm Prompt <span class="sec-num">04</span></div>
+  <div class="sec-title">Drop this into any Claude session to design the system.</div>
+  <div class="sec-intro">Use this prompt to think through the design, flow, and UX of everything before building. Paste it as-is. Let it run. Then react.</div>
+
+  <div class="brainstorm-box">
+    <div class="bb-header">
+      <div>
+        <div class="bb-title">🦍 Wiggle Design + Flow Brainstorm Prompt</div>
+        <div class="bb-sub">Paste into Claude Chat · new session · no context needed</div>
+      </div>
+    </div>
+    <div class="bb-body">
+      <div class="bb-prompt">You are a senior product designer and operations architect working with Rodrigo (Rod),
+founder of Wiggle Dog Walks in Montréal. You know this business deeply.
+
+CONTEXT:
+- ~95 dogs, ~7 walkers, two sectors (Plateau + Laurier)
+- Co-admin: Gen (Geneviève) handles morning ops
+- Walker app (React PWA) is live and working — DO NOT REDESIGN IT
+- Tower Control (admin dashboard) is partially built
+- Same Supabase database — two views of one truth
+
+THE VISION:
+Tower Control is the nerve centre for Rod and Gen.
+All client communication flows IN: email, SMS, Instagram, Acuity bookings.
+The Beast (AI assistant) reads everything, suggests actions, and executes
+with Gen or Rod's approval. Walker app stays exactly as it is.
+
+WHAT WE NEED TO THINK THROUGH:
+1. Tower Control screens — what are all the screens? What lives where?
+   - Today view (morning briefing + live ops)
+   - Weekly view (schedule + draft review)
+   - Dogs tab (roster, forever notes, vacations, conflicts)
+   - Staff tab (walker schedules, sectors, coverage)
+   - Inbox tab (email + SMS + Instagram + Acuity in one feed)
+   - Beast tab (AI assistant, confirm block, action history)
+   - Billing tab (future — after 30 days of data)
+
+2. The persona toggle — Rod starts on Rod's view, Gen starts on Gen's view.
+   What exactly is different between the two? What does each person need
+   front and centre? What can they see in the other's view?
+
+3. The Inbox panel — all inbound channels in one feed.
+   How does Gen know at a glance what needs action vs what's informational?
+   How does she reply? How does Beast get involved?
+
+4. The Beast confirm block — Beast proposes, Rod/Gen confirms.
+   What does the UI look like? Card? Modal? Inline in the chat?
+   What information does Gen need to see before confirming?
+   What happens after she confirms — how does she know it worked?
+
+5. The agent pipeline — 10 agents total:
+   Watcher → Briefing → Mini Gen (existing)
+   Inbox, Mapper, Extractor, Executor, Gardener, Summarizer, Health Check (planned)
+   How do they hand off? Where does each one surface in Tower?
+   What does Rod see when an agent acts? What does Gen see?
+
+6. The flow of a vacation request:
+   Client emails → Inbox Agent classifies → surfaces in Tower → Beast proposes
+   vacation block → Gen confirms → Executor writes to dog_vacations →
+   Mini Gen sees it → walkers see it as Not Walking. Walk me through every
+   screen and state change in this flow.
+
+7. The flow of a new booking:
+   Client books Acuity → Watcher fires → Mini Gen resolves →
+   draft written → Gen reviews in Tower → approves → walk_groups updated →
+   walker sees it. Same question — every screen, every state change.
+
+DESIGN RULES (do not break these):
+- Walker app: DO NOT TOUCH. It is locked.
+- Tower uses cool gray (#F1F5F9, white cards) — never the app's warm palette
+- Coral (#E8634A) is always the primary CTA
+- Purple (#534AB7) for dog names and group structure
+- Sage (#2D8F6F) for positive/done states
+- Amber (#C4851C) for attention/warnings
+- Beast orange (#E8762B) for Beast-specific UI only
+- DM Sans throughout — no other fonts
+- Beast NEVER writes without a confirm. Ever.
+- Walker autonomy: Gen's job ends at approval. Walkers own execution.
+
+YOUR JOB:
+Think out loud. Draw the flows. Describe the screens.
+Ask Rod questions when you need to make a decision.
+Propose options rather than picking for him.
+This is a design session, not a build session.
+No code. No prompts. Just thinking.
+
+Start by mapping all Tower Control screens and what lives on each one.
+Then walk through the vacation request flow screen by screen.
+</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     CURRENT STATE SNAPSHOT
+═══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">Right Now — April 2026 <span class="sec-num">05</span></div>
+  <div class="sec-title">What's real, what's missing, what's next.</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">✅ Working and locked</div>
+      <div class="card-body">
+        Walker app V4 — all four bugs fixed April 6.<br>
+        Mini Gen — 100% resolution, 77-entry name map.<br>
+        Notes system — forever, owl, activity, flags all wired.<br>
+        Profiles — 12 clean, duplicates removed.<br>
+        Mini Gen review panel — stale draft filter fixed.<br>
+        Pickup / return / not-walking / undo — all verified.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔧 Layer 1 — fix now</div>
+      <div class="card-body">
+        acuity_notes table — doesn't exist. Build it.<br>
+        dog_vacations table — doesn't exist. Build it.<br>
+        Acuity Notes in DogProfileDrawer — blue section, wire it.<br>
+        schedule-verify cron error — diagnose and fix.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏗️ Layer 2 — Tower shell</div>
+      <div class="card-body">
+        Persona toggle — Rod/Gen default views, can switch.<br>
+        Tower Today — Gen's morning view complete.<br>
+        Tower Today — Rod's additions (Beast panel, full admin).<br>
+        Goal: Gen closes the Google Sheets tab forever.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Prompts ready to run</div>
+      <div class="card-body">
+        Layer1_DB_Migration.txt → Claude Code<br>
+        Layer1_AcuityNotes_UI.txt → Antigravity<br>
+        This document → brainstorm prompt embedded above.<br>
+        Use them in order. One at a time. Test between each.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-l">Wiggle Dog Walks · Master Game Plan · April 2026</div>
+  <div class="footer-r">Work smart, play always. 🐾</div>
+</div>
+
+</body>
+</html>

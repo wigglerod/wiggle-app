@@ -336,6 +336,14 @@ Category definitions:
   conflict             — duplicate booking or scheduling inconsistency
   unknown              — relevant but cannot be clearly classified`
 
+  const fallback = {
+    category: 'unknown',
+    priority: 'normal',
+    summary: `Unclassified message from ${msg.from} — subject: "${msg.subject.slice(0, 50)}"`,
+    walk_date: null,
+    skip: false
+  }
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -352,19 +360,31 @@ Category definitions:
     })
 
     const data = await response.json()
-    const text = data.content?.[0]?.text || '{}'
-    return JSON.parse(text.trim())
+
+    if (!response.ok) {
+      console.error(`[scout] classifyEmail API error for "${msg.subject}": ${response.status} — ${JSON.stringify(data)}`)
+      return fallback
+    }
+
+    const text = data.content?.[0]?.text
+    if (!text) {
+      console.error(`[scout] classifyEmail empty response for "${msg.subject}": ${JSON.stringify(data)}`)
+      return fallback
+    }
+
+    const result = JSON.parse(text.trim())
+
+    if (!result.category || !result.summary) {
+      console.error(`[scout] classifyEmail incomplete parse for "${msg.subject}": ${text}`)
+      return fallback
+    }
+
+    console.log(`[scout] classifyEmail OK for "${msg.subject}": category=${result.category}, dog=${resolvedDog?.dog_name || 'unknown'}`)
+    return result
 
   } catch (err) {
     console.error(`[scout] classifyEmail failed for "${msg.subject}": ${err.message}`)
-    // Non-fatal — return an 'unknown' card so the message is not silently lost
-    return {
-      category: 'unknown',
-      priority: 'normal',
-      summary: `Unclassified message from ${msg.from} — subject: "${msg.subject.slice(0, 50)}"`,
-      walk_date: null,
-      skip: false
-    }
+    return fallback
   }
 }
 

@@ -238,9 +238,11 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
       const { data } = await supabase
         .from('profiles')
         .select('id, full_name, role, sector, schedule')
-        .or(`sector.eq.${sector},and(sector.eq.both,full_name.ilike.Rodrigo%)`)
+        .in('role', ['senior_walker', 'admin'])
+        .or(`sector.eq.${sector},sector.eq.both`)
         .not('full_name', 'is', null)
-        .not('full_name', 'in', '(Gen,Wiggle Pro,Pup Walker)')
+        .not('email', 'eq', 'test@wiggledogwalks.com')
+        .not('email', 'ilike', 'pupwalker%')
         .order('full_name')
       if (data) {
         // Deduplicate by full_name — keep first occurrence (already ordered)
@@ -1227,30 +1229,20 @@ function SwipeHintBar() {
 
 
 
-// ── Fixed walker display order per sector ─────────────────────────
-const SECTOR_WALKERS = {
-  Laurier: ['Amanda', 'Amelie', 'Rodrigo', 'Maeva', 'Belen'],
-  Plateau: ['Chloe', 'Megan', 'Rodrigo', 'Solene'],
-}
-
 // ── Sort walkers: scheduled today first, then others, alphabetical within each ─
 function getSortedWalkers(allWalkers, sector, date) {
   const dayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })
-  const validFirstNames = SECTOR_WALKERS[sector] || []
-  
+
   return [...allWalkers]
     .filter(w => {
-      if (!w.full_name || !w.schedule) return false
-      const first = w.full_name.split(' ')[0]
-      if (!validFirstNames.includes(first)) return false
-      if (w.role === 'admin' || first === 'Gen') return false
-      if (w.full_name === 'test@wiggledogwalks.com' || w.full_name.toLowerCase().includes('test')) return false
-      if (w.full_name === 'Wiggle Pro' || w.full_name === 'Pup Walker') return false
+      if (!w.full_name) return false
+      if (!['senior_walker', 'admin'].includes(w.role)) return false
+      if (w.sector !== sector && w.sector !== 'both') return false
       return true
     })
     .sort((a, b) => {
-      const aToday = a.schedule.includes(dayName)
-      const bToday = b.schedule.includes(dayName)
+      const aToday = a.schedule && a.schedule.includes(dayName)
+      const bToday = b.schedule && b.schedule.includes(dayName)
       if (aToday && !bToday) return -1
       if (!aToday && bToday) return 1
       const aFirst = a.full_name.split(' ')[0]
@@ -1932,7 +1924,7 @@ function WalkerPickerSheet({ allWalkers, date, onSelect, onClose }) {
   const scheduledWalkers = []
   const otherWalkers = []
 
-  const filteredWalkers = allWalkers.filter(w => w.role !== 'admin' && w.full_name !== 'test@wiggledogwalks.com' && !w.full_name?.toLowerCase().includes('test'))
+  const filteredWalkers = allWalkers.filter(w => ['senior_walker', 'admin'].includes(w.role))
 
   for (const w of filteredWalkers) {
     if (w.schedule && w.schedule.includes(dayName)) {

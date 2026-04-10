@@ -1,0 +1,2999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiggle Dog Walks — Product Vision</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'DM Sans', sans-serif;
+            color: #2D2926;
+        }
+
+        /* PRESENTATION WRAPPER */
+        body {
+            background: #FFF5F0;
+        }
+
+        /* HERO SECTION */
+        .hero-section {
+            background: #FFF5F0;
+            padding: 120px 40px;
+            text-align: center;
+            border-bottom: 2px solid #E8E4E0;
+        }
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 700;
+            color: #2D2926;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .hero-subtitle {
+            font-size: 32px;
+            font-weight: 600;
+            color: #E8634A;
+            margin-bottom: 24px;
+        }
+
+        .hero-meta {
+            font-size: 16px;
+            color: #8C857E;
+            margin-bottom: 12px;
+        }
+
+        .hero-tagline {
+            font-size: 18px;
+            color: #534AB7;
+            font-weight: 500;
+            font-style: italic;
+        }
+
+        /* STICKY TAB NAVIGATION */
+        .nav-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #FFF5F0;
+            border-bottom: 2px solid #E8E4E0;
+            padding: 16px 40px;
+            display: flex;
+            gap: 40px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-tab {
+            font-size: 14px;
+            font-weight: 600;
+            color: #8C857E;
+            cursor: pointer;
+            padding-bottom: 12px;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            background: none;
+            border: none;
+        }
+
+        .nav-tab:hover {
+            color: #534AB7;
+        }
+
+        .nav-tab.active {
+            color: #E8634A;
+            border-bottom-color: #E8634A;
+        }
+
+        /* CONTENT SECTIONS */
+        .content-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* SECTION 1: THE DESTINATION */
+        .section-destination {
+            padding: 0;
+        }
+
+        .destination-intro {
+            background: #FAF7F4;
+            border: 1px solid #E8E4E0;
+            border-left: 4px solid #E8634A;
+            padding: 24px;
+            margin-bottom: 60px;
+            border-radius: 8px;
+            font-size: 18px;
+            color: #8C857E;
+            line-height: 1.7;
+        }
+
+        .subsection-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #534AB7;
+            margin-top: 60px;
+            margin-bottom: 32px;
+        }
+
+        /* WALKER APP SCREENS */
+        .walker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-bottom: 80px;
+        }
+
+        @media (max-width: 1024px) {
+            .walker-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .screen-section {
+            margin-bottom: 40px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            background: #000;
+            border-radius: 40px;
+            padding: 14px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .status-bar {
+            background: #000;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .app-screen {
+            width: 100%;
+            height: 812px;
+            background: #FFF5F0;
+            border-radius: 32px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .caption {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #8C857E;
+            max-width: 375px;
+            line-height: 1.5;
+        }
+
+        /* WALKER APP STYLING - inherited from walker-screens.html */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 4px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2D2926;
+        }
+
+        .sector-badge {
+            background: #3B82A0;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .group {
+            margin-bottom: 16px;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #FAF7F4;
+            border: 2px solid #E8E4E0;
+            border-left: 4px solid #E8634A;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .group-header.done {
+            background: #F0ECE8;
+            opacity: 0.55;
+            border-left-color: #E8E4E0;
+        }
+
+        .group-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .group-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2D2926;
+        }
+
+        .group-done {
+            font-size: 12px;
+            color: #8C857E;
+        }
+
+        .group-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .walker-button {
+            background: white;
+            border: 1px solid #E8E4E0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #534AB7;
+            cursor: pointer;
+        }
+
+        .dog-count {
+            font-size: 11px;
+            color: #8C857E;
+        }
+
+        .dog-card {
+            background: #FAF7F4;
+            border: 1px solid #E8E4E0;
+            border-bottom: 2.5px solid #D5CFC8;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dog-card.picked-up {
+            background: #E8F5EF;
+            border-color: #6DCAA8;
+            border-bottom-color: #6DCAA8;
+        }
+
+        .dog-card.not-walking {
+            background: #FDF3E3;
+            border-color: #F0C76E;
+            border-bottom-color: #F0C76E;
+        }
+
+        .dog-left {
+            flex: 1;
+        }
+
+        .dog-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 4px;
+        }
+
+        .dog-name.has-note {
+            color: #534AB7;
+        }
+
+        .dog-name.picked-up {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .dog-time {
+            font-size: 10px;
+            color: #8C857E;
+            margin-bottom: 4px;
+        }
+
+        .dog-address {
+            font-size: 10px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .dog-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .door-code {
+            background: #475569;
+            color: white;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .difficulty-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .difficulty-sage {
+            background: #2D8F6F;
+        }
+
+        .difficulty-amber {
+            background: #C4851C;
+        }
+
+        .difficulty-coral {
+            background: #E8634A;
+        }
+
+        .lock-slider {
+            margin-top: 20px;
+            padding: 0 4px;
+        }
+
+        .slider-container {
+            background: linear-gradient(90deg, #E8634A 0%, #C94A34 100%);
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .slider-thumb {
+            width: 44px;
+            height: 44px;
+            background: #FAF7F4;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            right: 6px;
+        }
+
+        .slider-text {
+            font-size: 12px;
+            color: white;
+            font-weight: 500;
+            margin-left: 12px;
+            width: 100%;
+        }
+
+        /* DRAWER STYLES */
+        .dimmed-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .drawer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #FAF7F4;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 16px;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .drawer-header {
+            margin-bottom: 20px;
+        }
+
+        .drawer-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #534AB7;
+            margin-bottom: 4px;
+        }
+
+        .drawer-subtitle {
+            font-size: 12px;
+            color: #8C857E;
+        }
+
+        .drawer-badge {
+            display: inline-block;
+            background: #3B82A0;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .drawer-section {
+            margin-bottom: 16px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn-primary {
+            background: #E8634A;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            height: 44px;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #E8634A;
+            border: 1px solid #E8634A;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            height: 44px;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-forever {
+            background: #fdf4fb;
+            border: 1px solid #e8d0e3;
+            color: #961e78;
+        }
+
+        .section-owl {
+            background: #FDF3E3;
+            border: 1px solid #F0C76E;
+            color: #C4851C;
+        }
+
+        .section-activity {
+            background: white;
+            border: 1px solid #E8E4E0;
+            color: #2D2926;
+        }
+
+        .section-content {
+            padding: 12px;
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #2D2926;
+            margin-bottom: 8px;
+        }
+
+        .section-forever .section-content {
+            background: #fdf4fb;
+            border-color: #e8d0e3;
+        }
+
+        .section-owl .section-content {
+            background: #FDF3E3;
+            border-color: #F0C76E;
+        }
+
+        .admin-label {
+            font-size: 10px;
+            color: #8C857E;
+            font-style: italic;
+        }
+
+        .expiry-label {
+            font-size: 10px;
+            color: #C4851C;
+            margin-top: 8px;
+        }
+
+        .btn-small {
+            background: white;
+            border: 1px solid #F0C76E;
+            color: #C4851C;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .activity-note {
+            padding: 10px;
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .activity-note-meta {
+            font-size: 9px;
+            color: #8C857E;
+            margin-top: 4px;
+        }
+
+        /* BOTTOM SHEET */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 20px 16px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .sheet-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 16px;
+        }
+
+        .chips-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            border: 1.5px solid;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .chip-sage {
+            background: white;
+            color: #2D8F6F;
+            border-color: #2D8F6F;
+        }
+
+        .chip-amber {
+            background: white;
+            color: #C4851C;
+            border-color: #C4851C;
+        }
+
+        .chip-coral {
+            background: white;
+            color: #E8634A;
+            border-color: #E8634A;
+        }
+
+        .chip-coral-filled {
+            background: #E8634A;
+            color: white;
+            border-color: #E8634A;
+        }
+
+        .text-area {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #E8E4E0;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            color: #2D2926;
+            resize: none;
+            height: 100px;
+            margin-bottom: 16px;
+        }
+
+        .text-area::placeholder {
+            color: #B5AFA8;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #FFF5F0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            color: #2D2926;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: #E8634A;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .toggle-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 10px;
+            position: absolute;
+            right: 2px;
+            top: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* INTERLOCK */
+        .interlock-bar {
+            background: #534AB7;
+            color: white;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .group-compact {
+            margin-bottom: 12px;
+        }
+
+        .group-header-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #FAF7F4;
+            border: 1px solid #E8E4E0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .group-compact-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2D2926;
+        }
+
+        .walker-compact {
+            font-size: 11px;
+            color: #534AB7;
+            font-weight: 600;
+        }
+
+        .dog-card-compact {
+            background: #FAF7F4;
+            border: 1px solid #E8E4E0;
+            border-bottom: 2.5px solid #D5CFC8;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .dog-card-compact.amanda {
+            border-left: 3px solid #E8634A;
+            background: linear-gradient(90deg, rgba(232, 99, 74, 0.05) 0%, #FAF7F4 100%);
+        }
+
+        .dog-card-compact.belen {
+            border-left: 3px solid #534AB7;
+            background: linear-gradient(90deg, rgba(83, 74, 183, 0.05) 0%, #FAF7F4 100%);
+        }
+
+        .card-compact-left {
+            flex: 1;
+        }
+
+        .card-compact-name {
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 2px;
+        }
+
+        .card-compact-name.has-note {
+            color: #534AB7;
+        }
+
+        .card-compact-address {
+            font-size: 10px;
+            color: #475569;
+            margin-bottom: 2px;
+        }
+
+        .card-compact-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .door-code-compact {
+            background: #475569;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        .screen-relative {
+            position: relative;
+        }
+
+        .description {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* TOWER SCREENS */
+        .tower-screens {
+            display: flex;
+            flex-direction: column;
+            gap: 60px;
+        }
+
+        .tower-screen-section {
+            background: #F1F5F9;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #E2E8F0;
+            margin-bottom: 40px;
+        }
+
+        .tower-screen-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .tower-screen-caption {
+            font-size: 13px;
+            color: #8C857E;
+            margin-top: 8px;
+            padding: 0 4px;
+            font-style: italic;
+        }
+
+        /* NAV HEADER */
+        .nav-header {
+            background: #1E293B;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0F172A;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .nav-logo {
+            font-size: 16px;
+            font-weight: 700;
+            color: #E8634A;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 20px;
+            list-style: none;
+        }
+
+        .nav-tabs li {
+            font-size: 13px;
+            color: #94A3B8;
+            cursor: pointer;
+            padding-bottom: 8px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-tabs li.active {
+            color: #E8634A;
+            border-bottom-color: #E8634A;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            background: #334155;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #E2E8F0;
+        }
+
+        /* CONTENT AREA */
+        .content {
+            padding: 24px;
+            background: #F1F5F9;
+            min-height: 600px;
+        }
+
+        /* STATS ROW */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            text-align: center;
+        }
+
+        .stat-card.sage { border-left: 4px solid #2D8F6F; }
+        .stat-card.purple { border-left: 4px solid #534AB7; }
+        .stat-card.coral { border-left: 4px solid #E8634A; }
+        .stat-card.amber { border-left: 4px solid #C4851C; }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2D2926;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #8C857E;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* TWO-COLUMN LAYOUT */
+        .two-column {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        /* SECTION HEADERS */
+        .tower-section-header {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #475569;
+            margin-bottom: 12px;
+            margin-top: 24px;
+            padding-left: 2px;
+        }
+
+        .tower-section-header.plateau::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: #3B82A0;
+            margin-right: 8px;
+        }
+
+        .tower-section-header.laurier::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: #4A9E6F;
+            margin-right: 8px;
+        }
+
+        /* TABLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        thead {
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        th {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 13px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tower-dog-name {
+            color: #534AB7;
+            font-weight: 600;
+        }
+
+        .tower-sector-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .plateau-badge { background: #3B82A0; }
+        .laurier-badge { background: #4A9E6F; }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-sage { background: #E8F5EF; color: #2D8F6F; }
+        .status-slate { background: #F1F5F9; color: #475569; }
+        .status-sand { background: #F0ECE8; color: #6B5B4D; }
+
+        /* ALERT CARD */
+        .alert-card {
+            background: #FDF3E3;
+            border: 1px solid #F0C76E;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .alert-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #C4851C;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .alert-content {
+            font-size: 13px;
+            color: #8C6B1D;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-coral {
+            background: #E8634A;
+            color: white;
+        }
+
+        .btn-coral:hover {
+            background: #C94A34;
+        }
+
+        /* FLAG CARD */
+        .flag-card {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .flag-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #2D2926;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .flag-item {
+            background: #FAFAF8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .flag-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .flag-title {
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 4px;
+        }
+
+        .flag-meta {
+            font-size: 11px;
+            color: #8C857E;
+            margin-bottom: 8px;
+        }
+
+        .flag-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .flag-buttons button {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .flag-buttons button:hover {
+            background: #F8FAFC;
+        }
+
+        /* COMPOSER */
+        .composer-card {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .composer-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #2D2926;
+            margin-bottom: 12px;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: #2D2926;
+        }
+
+        select {
+            height: 32px;
+            background: white;
+            cursor: pointer;
+        }
+
+        textarea {
+            height: 70px;
+            resize: none;
+        }
+
+        textarea::placeholder {
+            color: #B5AFA8;
+        }
+
+        .composer-footer {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .composer-footer select {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .composer-footer button {
+            flex: 1;
+            padding: 8px;
+            background: #E8634A;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* WEEKLY GRID */
+        .weekly-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .week-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .week-header.today {
+            color: #E8634A;
+            border-bottom: 2px solid #E8634A;
+        }
+
+        .grid-section {
+            margin-bottom: 16px;
+        }
+
+        .grid-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            margin-bottom: 8px;
+            padding-left: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .grid-section-title::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: currentColor;
+        }
+
+        .grid-section-title.plateau {
+            color: #3B82A0;
+        }
+
+        .grid-section-title.laurier {
+            color: #4A9E6F;
+        }
+
+        .grid-cell {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 120px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 6px;
+            position: relative;
+        }
+
+        .grid-cell.today {
+            border: 2px solid #E8634A;
+        }
+
+        .grid-cell.conflict::after {
+            content: '⚠️';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 14px;
+        }
+
+        .dog-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            background: #F1F5F9;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .dog-chip.confirmed {
+            background: #E8F5EF;
+            color: #2D8F6F;
+        }
+
+        .pending-drafts {
+            background: #FAECE7;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #8C6B1D;
+            text-align: center;
+        }
+
+        .pending-drafts a {
+            color: #E8634A;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        /* ROADMAP STYLES */
+        .roadmap-section {
+            padding: 0;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 40px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 4px;
+            background: linear-gradient(90deg, #2D8F6F 0%, #534AB7 25%, #E8634A 50%, #C4851C 75%, #475569 100%);
+            border-radius: 2px;
+        }
+
+        .phases-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .phase {
+            margin-top: 20px;
+        }
+
+        .phase-marker {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .phase-0 .phase-marker {
+            background: #2D8F6F;
+        }
+
+        .phase-1 .phase-marker {
+            background: #E8634A;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 2px 8px rgba(232, 99, 74, 0.3); }
+            50% { box-shadow: 0 2px 16px rgba(232, 99, 74, 0.6); }
+        }
+
+        .phase-2 .phase-marker {
+            background: #534AB7;
+        }
+
+        .phase-3 .phase-marker {
+            background: #C4851C;
+        }
+
+        .phase-4 .phase-marker {
+            background: #475569;
+        }
+
+        .phase-title {
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 12px;
+            color: #2D2926;
+        }
+
+        .phase-tagline {
+            font-size: 13px;
+            text-align: center;
+            color: #8C857E;
+            font-style: italic;
+            margin-bottom: 16px;
+        }
+
+        .phase-content {
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #8C857E;
+        }
+
+        .phase-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .phase-content li {
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .phase-content li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #8C857E;
+        }
+
+        /* ASSESSMENT TABLE */
+        .assessment-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+
+        .assessment-table thead {
+            background: #534AB7;
+            color: white;
+        }
+
+        .assessment-table th {
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .assessment-table th:last-child {
+            border-right: none;
+        }
+
+        .assessment-table td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #E8E4E0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .assessment-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .assessment-table tbody tr:nth-child(even) {
+            background: #FFF5F0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .status-live {
+            background: #E8F5EF;
+            color: #2D8F6F;
+            border: 1px solid #6DCAA8;
+        }
+
+        .status-partial {
+            background: #FDF3E3;
+            color: #C4851C;
+            border: 1px solid #F0C76E;
+        }
+
+        .status-not-built {
+            background: #FAECE7;
+            color: #C94A34;
+            border: 1px solid #E8634A;
+        }
+
+        /* EVALUATION CARDS */
+        .eval-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .eval-card {
+            background: white;
+            border: 1px solid #E8E4E0;
+            border-radius: 10px;
+            padding: 24px;
+            border-bottom: 2.5px solid #D5CFC8;
+        }
+
+        .eval-score {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .eval-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: #E8634A;
+            margin-right: 8px;
+        }
+
+        .eval-denominator {
+            font-size: 20px;
+            color: #8C857E;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #E8E4E0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #E8634A, #534AB7);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .eval-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2D2926;
+            margin-bottom: 12px;
+        }
+
+        .eval-evidence {
+            font-size: 13px;
+            color: #8C857E;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E8E4E0;
+        }
+
+        .eval-improvement {
+            font-size: 13px;
+            color: #534AB7;
+            font-weight: 500;
+        }
+
+        /* VERDICT BOX */
+        .verdict-box {
+            background: white;
+            border: 2px solid #534AB7;
+            border-radius: 10px;
+            padding: 32px;
+            margin-top: 40px;
+        }
+
+        .verdict-section {
+            margin-bottom: 28px;
+        }
+
+        .verdict-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #534AB7;
+            margin-bottom: 12px;
+        }
+
+        .verdict-text {
+            font-size: 14px;
+            color: #8C857E;
+            line-height: 1.7;
+        }
+
+        /* COVER PAGE */
+        .cover-page {
+            background: white;
+            border: 2px solid #E8634A;
+            border-radius: 10px;
+            padding: 40px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .cover-text {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2D2926;
+            line-height: 1.8;
+        }
+
+        /* INTRO TEXT */
+        .intro-text {
+            background: #FAF7F4;
+            border-left: 4px solid #E8634A;
+            padding: 20px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            color: #8C857E;
+            border-radius: 4px;
+        }
+
+        /* TAGLINE */
+        .tagline {
+            font-size: 20px;
+            font-weight: 500;
+            color: #E8634A;
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+
+        /* FOOTER */
+        .footer {
+            background: #FAF7F4;
+            border-top: 2px solid #E8E4E0;
+            padding: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #8C857E;
+            margin-top: 80px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .phases-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .phone-frame {
+                width: 100%;
+                max-width: 375px;
+            }
+
+            .nav-sticky {
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+
+            .hero-title {
+                font-size: 36px;
+            }
+
+            .hero-subtitle {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO SECTION -->
+<div class="hero-section">
+    <div class="hero-title">WIGGLE DOG WALKS</div>
+    <div class="hero-subtitle">The $20K Product Vision</div>
+    <div class="hero-meta">April 6, 2026 · Montréal</div>
+    <div class="hero-tagline">Work smart, play always. 🐾</div>
+</div>
+
+<!-- STICKY NAVIGATION -->
+<div class="nav-sticky">
+    <button class="nav-tab active" onclick="switchSection('destination')">The Destination</button>
+    <button class="nav-tab" onclick="switchSection('route')">The Route</button>
+    <button class="nav-tab" onclick="switchSection('location')">Current Location</button>
+    <button class="nav-tab" onclick="switchSection('evaluation')">The Evaluation</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrapper">
+
+    <!-- SECTION 1: THE DESTINATION -->
+    <div id="destination" class="section active section-destination">
+        <div class="destination-intro">
+            <strong>Here is what the finished product looks like.</strong> Two interfaces, one database. The walker app in their hand at every door. Tower Control in Rodrigo's (and Gen's) office—the operational hub that replaces Google Sheets and text messages.
+        </div>
+
+        <!-- WALKER APP -->
+        <div class="subsection-title">Walker App</div>
+        <div class="walker-grid">
+            <!-- SCREEN A: Walk Day -->
+            <div class="screen-section">
+                <div class="phone-frame">
+                    <div class="status-bar">
+                        <span>9:00</span>
+                        <span>●●●●●</span>
+                    </div>
+                    <div class="app-screen">
+                        <div class="screen-content">
+                            <!-- Header -->
+                            <div class="header-bar">
+                                <div class="header-title">Monday, April 6</div>
+                                <div class="sector-badge">Plateau</div>
+                            </div>
+
+                            <!-- Group 1: Active -->
+                            <div class="group">
+                                <div class="group-header">
+                                    <div class="group-left">
+                                        <div class="group-name">Parc Laurier AM</div>
+                                    </div>
+                                    <div class="group-right">
+                                        <button class="walker-button">Amanda</button>
+                                        <span class="dog-count">4 dogs</span>
+                                    </div>
+                                </div>
+
+                                <!-- Dog 1: Halloumi -->
+                                <div class="dog-card">
+                                    <div class="dog-left">
+                                        <div class="dog-name has-note">Halloumi</div>
+                                        <div class="dog-address">4200 Esplanade</div>
+                                    </div>
+                                    <div class="dog-right">
+                                        <div class="door-code">4521</div>
+                                        <div class="difficulty-dot difficulty-sage"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Dog 2: Mochi -->
+                                <div class="dog-card picked-up">
+                                    <div class="dog-left">
+                                        <div class="dog-name picked-up">Mochi</div>
+                                        <div class="dog-time">Picked up 9:23 AM</div>
+                                        <div class="dog-address">352 Villeneuve</div>
+                                    </div>
+                                    <div class="dog-right">
+                                        <div class="door-code">A3</div>
+                                        <div class="difficulty-dot difficulty-sage"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Dog 3: Biscuit -->
+                                <div class="dog-card">
+                                    <div class="dog-left">
+                                        <div class="dog-name">Biscuit</div>
+                                        <div class="dog-address">4180 St-Denis</div>
+                                    </div>
+                                    <div class="dog-right">
+                                        <div class="difficulty-dot difficulty-amber"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Dog 4: Luna -->
+                                <div class="dog-card">
+                                    <div class="dog-left">
+                                        <div class="dog-name has-note">Luna</div>
+                                        <div class="dog-address">560 Gilford</div>
+                                    </div>
+                                    <div class="dog-right">
+                                        <div class="door-code">#202</div>
+                                        <div class="difficulty-dot difficulty-sage"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group 2: Done -->
+                            <div class="group">
+                                <div class="group-header done">
+                                    <div class="group-left">
+                                        <div class="group-name">Mile End PM</div>
+                                    </div>
+                                    <div class="group-right">
+                                        <button class="walker-button">Chloe</button>
+                                        <span class="dog-count">3 dogs</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lock slider -->
+                            <div class="lock-slider">
+                                <div class="slider-container">
+                                    <div class="slider-text">Slide to lock</div>
+                                    <div class="slider-thumb"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="caption">Screen A: Main walk screen showing groups, dogs, and status. Purple names signal forever notes. Coral border indicates active group.</div>
+            </div>
+
+            <!-- SCREEN B: Dog Profile Drawer -->
+            <div class="screen-section">
+                <div class="phone-frame">
+                    <div class="status-bar">
+                        <span>9:15</span>
+                        <span>●●●●●</span>
+                    </div>
+                    <div class="app-screen screen-relative">
+                        <div class="dimmed-bg"></div>
+                        <div class="drawer">
+                            <!-- Header -->
+                            <div class="drawer-header">
+                                <div class="drawer-name">Halloumi</div>
+                                <div class="drawer-subtitle">Golden Retriever · Plateau <span class="drawer-badge">Plateau</span></div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="action-buttons">
+                                <button class="btn-primary">Mark as Picked Up</button>
+                                <button class="btn-outline">Not Walking Today</button>
+                            </div>
+
+                            <!-- Address & Door Code -->
+                            <div class="drawer-section">
+                                <div class="info-row">
+                                    <span>4200 Esplanade</span>
+                                    <div class="door-code">4521</div>
+                                </div>
+                            </div>
+
+                            <!-- Forever Notes Section -->
+                            <div class="drawer-section">
+                                <div class="section-header section-forever">
+                                    <span>★ Forever Notes</span>
+                                </div>
+                                <div class="section-content">
+                                    Halloumi pulls hard on leash near other dogs. Always use the front-clip harness (hanging by the door). Give treats when calm. Owner says OK to use gentle leader if needed.
+                                    <div class="admin-label">Admin only · Edit</div>
+                                </div>
+                            </div>
+
+                            <!-- Owl Notes Section -->
+                            <div class="drawer-section">
+                                <div class="section-header section-owl">
+                                    <span>🦉 Owl Notes</span>
+                                </div>
+                                <div class="section-content">
+                                    Halloumi was limping slightly yesterday. Check front left paw before walk. — Amanda, Apr 5
+                                    <div class="expiry-label">Expires Apr 8</div>
+                                    <button class="btn-small">Got it</button>
+                                </div>
+                            </div>
+
+                            <!-- Activity Notes Section -->
+                            <div class="drawer-section">
+                                <div class="section-header section-activity">
+                                    <span>📝 Activity Notes</span>
+                                </div>
+                                <div class="activity-note">
+                                    Great walk today! Made friends with a husky at the park. Very calm.
+                                    <div class="activity-note-meta">Chloe, Apr 4</div>
+                                </div>
+                                <div class="activity-note">
+                                    Tired after long walk. Drank a lot of water.
+                                    <div class="activity-note-meta">Amanda, Apr 3</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="caption">Screen B: Dog profile drawer with action center, address, door code, forever notes (fuschia), owl notes (amber), and activity history.</div>
+            </div>
+
+            <!-- SCREEN C: Note Composer -->
+            <div class="screen-section">
+                <div class="phone-frame">
+                    <div class="status-bar">
+                        <span>9:20</span>
+                        <span>●●●●●</span>
+                    </div>
+                    <div class="app-screen screen-relative">
+                        <div class="dimmed-bg"></div>
+                        <div class="bottom-sheet">
+                            <div class="sheet-title">Add Note for Mochi</div>
+
+                            <!-- Quick Chips -->
+                            <div class="chips-row">
+                                <button class="chip chip-sage">Great walk</button>
+                                <button class="chip chip-amber">Tired</button>
+                                <button class="chip chip-coral">Reactive</button>
+                                <button class="chip chip-coral-filled">🚩 Flag</button>
+                            </div>
+
+                            <!-- Text Area -->
+                            <textarea class="text-area" placeholder="What happened on the walk?"></textarea>
+
+                            <!-- Toggle -->
+                            <div class="toggle-row">
+                                <span class="toggle-label">Warn next walker</span>
+                                <div class="toggle-switch">
+                                    <div class="toggle-thumb"></div>
+                                </div>
+                            </div>
+
+                            <!-- Send Button -->
+                            <button class="btn-primary">Send Note</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="caption">Screen C: Note composer with quick chips, text area, and warn toggle. Notes are tagged and flagged for next walker visibility.</div>
+            </div>
+
+            <!-- SCREEN D: Interlock -->
+            <div class="screen-section">
+                <div class="phone-frame">
+                    <div class="status-bar">
+                        <span>9:25</span>
+                        <span>●●●●●</span>
+                    </div>
+                    <div class="app-screen">
+                        <div class="screen-content">
+                            <!-- Interlock Bar -->
+                            <div class="interlock-bar">🔗 Interlocked Groups</div>
+
+                            <!-- Group A Header -->
+                            <div class="group-compact">
+                                <div class="group-header-compact">
+                                    <span class="group-compact-name">Parc Laurier AM</span>
+                                    <span class="walker-compact">Amanda</span>
+                                </div>
+
+                                <!-- Amanda's dogs -->
+                                <div class="dog-card-compact amanda">
+                                    <div class="card-compact-left">
+                                        <div class="card-compact-name has-note">Halloumi</div>
+                                        <div class="card-compact-address">4200 Esplanade</div>
+                                    </div>
+                                    <div class="card-compact-right">
+                                        <div class="door-code-compact">4521</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group B Header -->
+                            <div class="group-compact">
+                                <div class="group-header-compact">
+                                    <span class="group-compact-name">Plateau Central</span>
+                                    <span class="walker-compact">Belen</span>
+                                </div>
+
+                                <!-- Belen's first dog -->
+                                <div class="dog-card-compact belen">
+                                    <div class="card-compact-left">
+                                        <div class="card-compact-name">Chaska</div>
+                                        <div class="card-compact-address">287 Laurier</div>
+                                    </div>
+                                    <div class="card-compact-right">
+                                        <div class="door-code-compact">B2</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interleaved: Amanda's second dog -->
+                            <div class="group-compact" style="margin-top: -4px;">
+                                <div class="dog-card-compact amanda">
+                                    <div class="card-compact-left">
+                                        <div class="card-compact-name has-note">Luna</div>
+                                        <div class="card-compact-address">560 Gilford</div>
+                                    </div>
+                                    <div class="card-compact-right">
+                                        <div class="door-code-compact">#202</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interleaved: Belen's second dog -->
+                            <div class="group-compact" style="margin-top: -4px;">
+                                <div class="dog-card-compact belen">
+                                    <div class="card-compact-left">
+                                        <div class="card-compact-name">Scotch</div>
+                                        <div class="card-compact-address">4150 Drolet</div>
+                                    </div>
+                                    <div class="card-compact-right">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interleaved: Amanda's third dog -->
+                            <div class="group-compact" style="margin-top: -4px;">
+                                <div class="dog-card-compact amanda">
+                                    <div class="card-compact-left">
+                                        <div class="card-compact-name">Biscuit</div>
+                                        <div class="card-compact-address">4180 St-Denis</div>
+                                    </div>
+                                    <div class="card-compact-right">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="caption">Screen D: Interlock merges two coordinated groups. Purple sync bar. Cards alternate by walker (coral tint for Amanda, purple for Belen).</div>
+            </div>
+        </div>
+
+        <!-- TOWER CONTROL -->
+        <div class="subsection-title">Tower Control</div>
+        <div class="tower-screens">
+            <!-- SCREEN E: TODAY TAB -->
+            <div class="tower-screen-section">
+                <div class="tower-screen-title">Screen E: Today Tab (Morning Briefing)</div>
+                <div style="height: 700px; overflow: hidden; background: white; border-radius: 10px; display: flex; flex-direction: column;">
+                    <!-- NAV -->
+                    <div class="nav-header">
+                        <div class="nav-left">
+                            <div class="nav-logo">🐾 Tower Control</div>
+                            <ul class="nav-tabs">
+                                <li class="active">Today</li>
+                                <li>Weekly</li>
+                                <li>Dogs</li>
+                                <li>Billing</li>
+                                <li>Staff</li>
+                                <li>Beast</li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <div class="user-badge">Gen</div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENT -->
+                    <div class="content" style="flex: 1; overflow-y: auto;">
+                        <!-- STATS -->
+                        <div class="stats-row">
+                            <div class="stat-card sage">
+                                <div class="stat-number">47</div>
+                                <div class="stat-label">Dogs Walking</div>
+                            </div>
+                            <div class="stat-card purple">
+                                <div class="stat-number">8</div>
+                                <div class="stat-label">Groups</div>
+                            </div>
+                            <div class="stat-card coral">
+                                <div class="stat-number">5</div>
+                                <div class="stat-label">Walkers</div>
+                            </div>
+                            <div class="stat-card amber">
+                                <div class="stat-number">2</div>
+                                <div class="stat-label">Open Flags</div>
+                            </div>
+                        </div>
+
+                        <!-- TWO COLUMN -->
+                        <div class="two-column">
+                            <div class="left-column">
+                                <!-- PLATEAU -->
+                                <div class="tower-section-header plateau">Plateau</div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Group</th>
+                                            <th>Dogs</th>
+                                            <th>Walker</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Parc Laurier AM</td>
+                                            <td>4</td>
+                                            <td><span class="tower-dog-name">Amanda</span></td>
+                                            <td><span class="status-pill status-sage">In Progress</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Mile End PM</td>
+                                            <td>3</td>
+                                            <td><span class="tower-dog-name">Chloe</span></td>
+                                            <td><span class="status-pill status-slate">Scheduled</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>St-Viateur</td>
+                                            <td>5</td>
+                                            <td><span class="tower-dog-name">Solene</span></td>
+                                            <td><span class="status-pill status-sage">In Progress</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- LAURIER -->
+                                <div class="tower-section-header laurier">Laurier</div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Group</th>
+                                            <th>Dogs</th>
+                                            <th>Walker</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Laurier West</td>
+                                            <td>4</td>
+                                            <td><span class="tower-dog-name">Megan</span></td>
+                                            <td><span class="status-pill status-slate">Scheduled</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Outremont</td>
+                                            <td>3</td>
+                                            <td><span class="tower-dog-name">Amelie</span></td>
+                                            <td><span class="status-pill status-sand">Done</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="right-column">
+                                <!-- ALERT -->
+                                <div class="alert-card">
+                                    <div class="alert-header">⚠️ Unassigned Group</div>
+                                    <div class="alert-content">Plateau Central (3 dogs) has no walker assigned for today.</div>
+                                    <button class="btn btn-coral">Assign</button>
+                                </div>
+
+                                <!-- FLAGS -->
+                                <div class="flag-card">
+                                    <div class="flag-header">🚩 Open Flags (2)</div>
+
+                                    <div class="flag-item">
+                                        <div class="flag-title">Mochi — reactive</div>
+                                        <div class="flag-meta">Small dogs yesterday · Amanda, Apr 5</div>
+                                        <div class="flag-buttons">
+                                            <button>Ask</button>
+                                            <button>Done</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="flag-item">
+                                        <div class="flag-title">Luna — early pickup</div>
+                                        <div class="flag-meta">Owner request · Gen, Apr 4</div>
+                                        <div class="flag-buttons">
+                                            <button>Ask</button>
+                                            <button>Done</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- COMPOSER -->
+                                <div class="composer-card">
+                                    <div class="composer-header">✍️ Owl Note</div>
+                                    <select>
+                                        <option>Select dog...</option>
+                                        <option>Halloumi</option>
+                                        <option>Mochi</option>
+                                        <option>Luna</option>
+                                    </select>
+                                    <textarea placeholder="Write a note for walkers..."></textarea>
+                                    <div class="composer-footer">
+                                        <select style="flex: 1;">
+                                            <option>Expire Today</option>
+                                            <option>Expire Friday</option>
+                                        </select>
+                                        <button style="flex: 1;">Send 🦉</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tower-screen-caption">Morning briefing: Today's groups, walker assignments, open flags, and quick action panel for unassigned walkers.</div>
+            </div>
+
+            <!-- SCREEN F: WEEKLY BOARD -->
+            <div class="tower-screen-section">
+                <div class="tower-screen-title">Screen F: Weekly Board</div>
+                <div style="height: 700px; overflow: hidden; background: white; border-radius: 10px; display: flex; flex-direction: column;">
+                    <!-- NAV -->
+                    <div class="nav-header">
+                        <div class="nav-left">
+                            <div class="nav-logo">🐾 Tower Control</div>
+                            <ul class="nav-tabs">
+                                <li>Today</li>
+                                <li class="active">Weekly</li>
+                                <li>Dogs</li>
+                                <li>Billing</li>
+                                <li>Staff</li>
+                                <li>Beast</li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <div class="user-badge">Gen</div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENT -->
+                    <div class="content" style="flex: 1; overflow-y: auto;">
+                        <!-- PLATEAU SECTION -->
+                        <div class="grid-section">
+                            <div class="grid-section-title plateau">Plateau</div>
+                            <div class="weekly-grid">
+                                <div class="week-header today">Mon</div>
+                                <div class="week-header">Tue</div>
+                                <div class="week-header">Wed</div>
+                                <div class="week-header">Thu</div>
+                                <div class="week-header">Fri</div>
+
+                                <div class="grid-cell today">
+                                    <span class="dog-chip confirmed">Halloumi</span>
+                                    <span class="dog-chip confirmed">Mochi</span>
+                                    <span class="dog-chip confirmed">Biscuit</span>
+                                    <span class="dog-chip confirmed">Luna</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip">Halloumi</span>
+                                    <span class="dog-chip">Scotch</span>
+                                    <span class="dog-chip">Eva</span>
+                                    <span class="dog-chip">Biscuit</span>
+                                </div>
+
+                                <div class="grid-cell conflict">
+                                    <span class="dog-chip">Halloumi</span>
+                                    <span class="dog-chip">Mochi</span>
+                                    <span class="dog-chip">Chaska</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip">Scotch</span>
+                                    <span class="dog-chip">Eva</span>
+                                    <span class="dog-chip">Moose</span>
+                                    <span class="dog-chip">Biscuit</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip confirmed">Halloumi</span>
+                                    <span class="dog-chip confirmed">Luna</span>
+                                    <span class="dog-chip confirmed">Chaska</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LAURIER SECTION -->
+                        <div class="grid-section">
+                            <div class="grid-section-title laurier">Laurier</div>
+                            <div class="weekly-grid">
+                                <div class="week-header today">Mon</div>
+                                <div class="week-header">Tue</div>
+                                <div class="week-header">Wed</div>
+                                <div class="week-header">Thu</div>
+                                <div class="week-header">Fri</div>
+
+                                <div class="grid-cell today">
+                                    <span class="dog-chip confirmed">Poutine</span>
+                                    <span class="dog-chip confirmed">Coco</span>
+                                    <span class="dog-chip confirmed">Murphy</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip">Poutine</span>
+                                    <span class="dog-chip">Rusty</span>
+                                    <span class="dog-chip">Pepper</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip">Coco</span>
+                                    <span class="dog-chip">Murphy</span>
+                                    <span class="dog-chip">Bella</span>
+                                    <span class="dog-chip">Rusty</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip">Poutine</span>
+                                    <span class="dog-chip">Pepper</span>
+                                </div>
+
+                                <div class="grid-cell">
+                                    <span class="dog-chip confirmed">Coco</span>
+                                    <span class="dog-chip confirmed">Murphy</span>
+                                    <span class="dog-chip confirmed">Bella</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PENDING DRAFTS -->
+                        <div class="pending-drafts">
+                            📋 10 pending drafts from Mini Gen — <a href="#">Review →</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="tower-screen-caption">Weekly schedule grid: dogs booked by sector and day, with conflict indicators and today highlighted in coral.</div>
+            </div>
+
+            <!-- SCREEN G: DOGS TAB -->
+            <div class="tower-screen-section">
+                <div class="tower-screen-title">Screen G: Dogs Tab</div>
+                <div style="height: 700px; overflow: hidden; background: white; border-radius: 10px; display: flex; flex-direction: column;">
+                    <!-- NAV -->
+                    <div class="nav-header">
+                        <div class="nav-left">
+                            <div class="nav-logo">🐾 Tower Control</div>
+                            <ul class="nav-tabs">
+                                <li>Today</li>
+                                <li>Weekly</li>
+                                <li class="active">Dogs</li>
+                                <li>Billing</li>
+                                <li>Staff</li>
+                                <li>Beast</li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <div class="user-badge">Gen</div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENT -->
+                    <div class="content" style="flex: 1; overflow-y: auto;">
+                        <!-- SEARCH -->
+                        <div style="margin-bottom: 16px;">
+                            <input type="text" placeholder="Search 95 dogs..." style="width: 100%; padding: 10px 14px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px;">
+                        </div>
+
+                        <!-- FILTERS -->
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                            <div style="padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 12px; cursor: pointer; background: #E8634A; color: white; border-color: #E8634A;">All (95)</div>
+                            <div style="padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 12px; cursor: pointer; background: white; color: #475569;">Plateau (56)</div>
+                            <div style="padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 12px; cursor: pointer; background: white; color: #475569;">Laurier (39)</div>
+                            <div style="padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 20px; font-size: 12px; cursor: pointer; background: white; color: #475569;">Has Notes (25)</div>
+                        </div>
+
+                        <!-- TABLE -->
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Sector</th>
+                                    <th>Forever Note</th>
+                                    <th>Level</th>
+                                    <th>Owner</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span style="color: #534AB7; margin-right: 4px;">★</span><span class="tower-dog-name">Halloumi</span></td>
+                                    <td><span class="tower-sector-badge plateau-badge">Plateau</span></td>
+                                    <td><span style="color: #8C857E; font-size: 12px;">Pulls hard on leash in wind...</span></td>
+                                    <td><span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: #E8F5EF; color: #2D8F6F; text-align: center; font-weight: 700; font-size: 10px; line-height: 16px;">●</span></td>
+                                    <td>Sophie L.</td>
+                                </tr>
+                                <tr>
+                                    <td><span style="color: #534AB7; margin-right: 4px;">★</span><span class="tower-dog-name">Mochi</span></td>
+                                    <td><span class="tower-sector-badge plateau-badge">Plateau</span></td>
+                                    <td><span style="color: #8C857E; font-size: 12px;">Reactive with small dogs...</span></td>
+                                    <td><span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: #FDF3E3; color: #C4851C; text-align: center; font-weight: 700; font-size: 10px; line-height: 16px;">●</span></td>
+                                    <td>Marc D.</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="tower-dog-name">Biscuit</span></td>
+                                    <td><span class="tower-sector-badge plateau-badge">Plateau</span></td>
+                                    <td>—</td>
+                                    <td><span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: #E8F5EF; color: #2D8F6F; text-align: center; font-weight: 700; font-size: 10px; line-height: 16px;">●</span></td>
+                                    <td>Julie P.</td>
+                                </tr>
+                                <tr>
+                                    <td><span style="color: #534AB7; margin-right: 4px;">★</span><span class="tower-dog-name">Luna</span></td>
+                                    <td><span class="tower-sector-badge laurier-badge">Laurier</span></td>
+                                    <td><span style="color: #8C857E; font-size: 12px;">Early pickup Mondays...</span></td>
+                                    <td><span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: #E8F5EF; color: #2D8F6F; text-align: center; font-weight: 700; font-size: 10px; line-height: 16px;">●</span></td>
+                                    <td>Sarah K.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tower-screen-caption">Complete dog roster with filterable search, forever notes, difficulty levels, and admin interface for editing profiles.</div>
+            </div>
+
+            <!-- SCREEN H: BILLING TAB -->
+            <div class="tower-screen-section">
+                <div class="tower-screen-title">Screen H: Billing Tab (Phase 3 Vision)</div>
+                <div style="height: 700px; overflow: hidden; background: white; border-radius: 10px; display: flex; flex-direction: column;">
+                    <!-- NAV -->
+                    <div class="nav-header">
+                        <div class="nav-left">
+                            <div class="nav-logo">🐾 Tower Control</div>
+                            <ul class="nav-tabs">
+                                <li>Today</li>
+                                <li>Weekly</li>
+                                <li>Dogs</li>
+                                <li class="active">Billing</li>
+                                <li>Staff</li>
+                                <li>Beast</li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <div class="user-badge">Gen</div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENT -->
+                    <div class="content" style="flex: 1; overflow-y: auto;">
+                        <!-- INFO BANNER -->
+                        <div style="background: #EEEDFE; border: 1px solid #D5C8EE; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 12px; color: #534AB7; text-align: center;">
+                            🔮 Phase 3 — This is the vision. Not yet built.
+                        </div>
+
+                        <!-- PACKAGES GRID -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                            <div style="background: white; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #2D2926; margin-bottom: 4px;">Halloumi</div>
+                                <div style="font-size: 11px; color: #8C857E; margin-bottom: 12px;">Sophie L.</div>
+                                <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px;">Package: 20 walks</div>
+                                <div style="height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                                    <div style="height: 100%; background: #2D8F6F; width: 70%; border-radius: 4px;"></div>
+                                </div>
+                                <div style="font-size: 12px; font-weight: 600; color: #2D2926; margin-bottom: 4px;">6 remaining</div>
+                                <div style="font-size: 11px; color: #8C857E;">Renews May 1</div>
+                            </div>
+
+                            <div style="background: white; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #2D2926; margin-bottom: 4px;">Mochi</div>
+                                <div style="font-size: 11px; color: #8C857E; margin-bottom: 12px;">Marc D.</div>
+                                <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px;">Package: 12 walks</div>
+                                <div style="height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                                    <div style="height: 100%; background: #C4851C; width: 92%; border-radius: 4px;"></div>
+                                </div>
+                                <div style="font-size: 12px; font-weight: 600; color: #C4851C; margin-bottom: 4px;">⚠️ 1 remaining</div>
+                                <div style="font-size: 11px; color: #8C857E;"><span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; background: #FDF3E3; color: #C4851C;">LOW</span></div>
+                            </div>
+
+                            <div style="background: white; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #2D2926; margin-bottom: 4px;">Biscuit</div>
+                                <div style="font-size: 11px; color: #8C857E; margin-bottom: 12px;">Julie P.</div>
+                                <div style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px;">Package: 8 walks</div>
+                                <div style="height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+                                    <div style="height: 100%; background: #E8634A; width: 100%; border-radius: 4px;"></div>
+                                </div>
+                                <div style="font-size: 12px; font-weight: 600; color: #2D2926; margin-bottom: 4px;">Invoice ready</div>
+                                <div style="font-size: 11px; color: #8C857E;"><span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; background: #FAECE7; color: #E8634A;">EMPTY</span></div>
+                            </div>
+                        </div>
+
+                        <!-- SUMMARY -->
+                        <div style="background: #F8FAFC; padding: 12px; border-radius: 8px; font-size: 12px; color: #475569; margin-bottom: 16px;">
+                            <strong>47 dogs OK</strong> · 12 dogs <strong style="color: #C4851C;">LOW</strong> · 3 dogs <strong style="color: #E8634A;">EMPTY</strong> · Revenue this month: — (pending invoices)
+                        </div>
+
+                        <!-- ACTION -->
+                        <button style="width: 100%; padding: 10px; background: #E2E8F0; color: #64748B; border: none; border-radius: 6px; font-weight: 600; cursor: not-allowed;">Generate & Email Invoices</button>
+                    </div>
+                </div>
+                <div class="tower-screen-caption">Billing dashboard: package status, remaining walks, low inventory warnings, and invoice generation (Phase 3 planned feature).</div>
+            </div>
+
+            <!-- SCREEN I: BEAST TAB -->
+            <div class="tower-screen-section">
+                <div class="tower-screen-title">Screen I: The Beast (Claude AI Chat)</div>
+                <div style="height: 700px; overflow: hidden; background: white; border-radius: 10px; display: flex; flex-direction: column;">
+                    <!-- NAV -->
+                    <div class="nav-header">
+                        <div class="nav-left">
+                            <div class="nav-logo">🐾 Tower Control</div>
+                            <ul class="nav-tabs">
+                                <li>Today</li>
+                                <li>Weekly</li>
+                                <li>Dogs</li>
+                                <li>Billing</li>
+                                <li>Staff</li>
+                                <li class="active">Beast</li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <div class="user-badge">Gen</div>
+                        </div>
+                    </div>
+
+                    <!-- BEAST HEADER -->
+                    <div style="background: linear-gradient(135deg, #E8762B 0%, #C94A34 100%); color: white; padding: 12px 20px; font-size: 14px; font-weight: 700; border-bottom: 1px solid #D65A20;">🧠 The Beast</div>
+
+                    <!-- CHAT -->
+                    <div style="padding: 16px; height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; gap: 10px;">
+                            <div style="max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.4; background: #FDF3E3; color: #2D2926; border: 1px solid #F0C76E;">
+                                Good morning, Gen. I've reviewed today's schedule. I found 2 items that need your attention.
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <div style="max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.4; background: #FDF3E3; color: #2D2926; border: 1px solid #F0C76E;">
+                                1. Chaska is booked for Wednesday but has a conflict with Mochi (same group). Should I move Chaska to Thursday's Laurier group?
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <div style="max-width: 70%; padding: 12px; border: 2px solid #C4851C; border-radius: 8px; background: white;">
+                                <div style="font-size: 11px; font-weight: 700; color: #C4851C; text-transform: uppercase; margin-bottom: 8px; display: flex; gap: 6px; align-items: center;">⚡ Proposed Action</div>
+                                <div style="font-size: 12px; color: #2D2926; margin-bottom: 10px;">Move Chaska from Wednesday Plateau → Thursday Laurier</div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button style="flex: 1; padding: 6px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 4px; background: #E8F5EF; color: #2D8F6F; border: 1px solid #6DCAA8; cursor: pointer;">✅ Approve</button>
+                                    <button style="flex: 1; padding: 6px 10px; font-size: 11px; font-weight: 600; border: none; border-radius: 4px; background: transparent; color: #E8634A; border: 1px solid #E8634A; cursor: pointer;">❌ Reject</button>
+                                </div>
+                                <div style="font-size: 10px; color: #8C857E; margin-top: 8px;">Beast never acts without your approval.</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <div style="max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.4; background: #FDF3E3; color: #2D2926; border: 1px solid #F0C76E;">
+                                2. Scotch's owner sent a note via Acuity: "Scotch has a new harness, it's on the hook by the door." Want me to create an owl note for Scotch's walkers?
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <div style="max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.4; background: #FAECE7; color: #2D2926; border: 1px solid #E8C9B8;">
+                                Yes, create the owl note. Expire Friday.
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <div style="max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.4; background: #FDF3E3; color: #2D2926; border: 1px solid #F0C76E;">
+                                Done. Owl note created for Scotch, expires Friday April 10. 🦉
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INPUT -->
+                    <div style="padding: 12px; border-top: 1px solid #E2E8F0; display: flex; gap: 8px;">
+                        <input type="text" placeholder="Ask Beast anything..." style="flex: 1; padding: 8px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px;">
+                        <button style="padding: 8px 16px; background: #E8634A; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">Send</button>
+                    </div>
+                </div>
+                <div class="tower-screen-caption">Claude AI assistant: reviews schedule, flags conflicts, proposes actions, creates walker notes—always awaiting Gen's approval before acting.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: THE ROUTE -->
+    <div id="route" class="section">
+        <div class="roadmap-section">
+            <div class="subsection-title">The Route — Visual Roadmap</div>
+            <p class="tagline">"Five phases. One journey. From foundation to full picture."</p>
+
+            <div class="timeline">
+                <div class="phases-container">
+                    <!-- Phase 0: Foundation -->
+                    <div class="phase phase-0">
+                        <div class="phase-marker">✓</div>
+                        <div class="phase-title">PHASE 0</div>
+                        <div class="phase-title" style="font-size: 14px; color: #8C857E;">FOUNDATION</div>
+                        <div class="phase-tagline">"The floor is built."</div>
+                        <div class="phase-content">
+                            <strong>Live & Tested:</strong>
+                            <ul>
+                                <li>Walk groups core</li>
+                                <li>Interlock (2 walkers)</li>
+                                <li>Purple forever notes</li>
+                                <li>Owl notes + animation</li>
+                                <li>Note Composer</li>
+                                <li>Mini Gen (100%)</li>
+                                <li>Tower Mini Gen panel</li>
+                            </ul>
+                            <strong style="display: block; margin-top: 8px;">4 Known Bugs</strong>
+                        </div>
+                    </div>
+
+                    <!-- Phase 1: Tower -->
+                    <div class="phase phase-1">
+                        <div class="phase-marker">→</div>
+                        <div class="phase-title">PHASE 1</div>
+                        <div class="phase-title" style="font-size: 14px; color: #8C857E;">TOWER BACK-OF-HOUSE</div>
+                        <div class="phase-tagline">"Command center."</div>
+                        <div class="phase-content">
+                            <ul>
+                                <li>Today view redesign</li>
+                                <li>Action center layout</li>
+                                <li>Group status table</li>
+                                <li>Owl composer</li>
+                                <li>Flag dashboard</li>
+                                <li>Cool gray palette</li>
+                            </ul>
+                            <strong style="display: block; margin-top: 8px;">2–3 weeks</strong>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2: Close the Loop -->
+                    <div class="phase phase-2">
+                        <div class="phase-marker">○</div>
+                        <div class="phase-title">PHASE 2</div>
+                        <div class="phase-title" style="font-size: 14px; color: #8C857E;">CLOSE THE LOOP</div>
+                        <div class="phase-tagline">"Self-sustaining."</div>
+                        <div class="phase-content">
+                            <ul>
+                                <li>Promote step fully wired</li>
+                                <li>Beast actions + confirm</li>
+                                <li>Activity notes</li>
+                                <li>Forever note editor</li>
+                                <li>Must-ask contact list</li>
+                                <li>Realtime subscriptions</li>
+                            </ul>
+                            <strong style="display: block; margin-top: 8px;">4–6 weeks</strong>
+                        </div>
+                    </div>
+
+                    <!-- Phase 3: Expand -->
+                    <div class="phase phase-3">
+                        <div class="phase-marker">◆</div>
+                        <div class="phase-title">PHASE 3</div>
+                        <div class="phase-title" style="font-size: 14px; color: #8C857E;">EXPAND</div>
+                        <div class="phase-tagline">"Intelligence & flow."</div>
+                        <div class="phase-content">
+                            <ul>
+                                <li>SMS inbox (RingCentral)</li>
+                                <li>Billing tab + invoices</li>
+                                <li>Acuity Notes (blue)</li>
+                                <li>Goals feature</li>
+                                <li>Map Health panel</li>
+                            </ul>
+                            <strong style="display: block; margin-top: 8px;">6–8 weeks</strong>
+                        </div>
+                    </div>
+
+                    <!-- Phase 4: Full Picture -->
+                    <div class="phase phase-4">
+                        <div class="phase-marker">★</div>
+                        <div class="phase-title">PHASE 4</div>
+                        <div class="phase-title" style="font-size: 14px; color: #8C857E;">FULL PICTURE</div>
+                        <div class="phase-tagline">"The Utopia."</div>
+                        <div class="phase-content">
+                            <ul>
+                                <li>Public website</li>
+                                <li>Client portal</li>
+                                <li>Explorer Badges</li>
+                                <li>Walk Report Card</li>
+                                <li>Watermelon Club</li>
+                                <li>Referral program</li>
+                            </ul>
+                            <strong style="display: block; margin-top: 8px;">Phase 3 stable first</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: THE CURRENT LOCATION -->
+    <div id="location" class="section">
+        <div class="assessment-section">
+            <div class="subsection-title">The Current Location — Assessment Matrix</div>
+            <p class="tagline">"Here is exactly where we are today. No spin."</p>
+            <div class="intro-text">
+                <strong>Live Data:</strong> 95 dogs · 25 with forever notes · 12 profiles · 7 active owl notes · 5 upcoming walk groups · 27 pending + 1 approved mini gen drafts
+            </div>
+
+            <table class="assessment-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Status</th>
+                        <th>Evidence</th>
+                        <th>Gap to Close</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Walker App (walk flow)</strong></td>
+                        <td><span class="status-badge status-partial">🟡 PARTIAL</span></td>
+                        <td>Walk groups, pickup, back home, not walking all functional. 4 bugs unresolved: undo pickup local state, drawer close, not walking untested, interlock compact broken.</td>
+                        <td>Fix 4 bugs, device-test every flow</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Walker App (notes)</strong></td>
+                        <td><span class="status-badge status-live">🟢 LIVE</span></td>
+                        <td>Note Composer live with chips + flag + warn toggle. Owl notes display with animated 🦉. Forever notes show purple names (25 dogs). Activity notes in drawer.</td>
+                        <td>Acuity Notes (Phase 2)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Walker App (interlock)</strong></td>
+                        <td><span class="status-badge status-partial">🟡 PARTIAL</span></td>
+                        <td>Interlock works: sync, offset, unlink. But isCompact mode strips essential info (name/address/door code) and swipe is broken.</td>
+                        <td>Fix BUG 4 — blocks real 2-walker use</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tower Today view</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>In Figma design (10 components, 8 screens). Only Mini Gen Review Panel is live at /tower/mini-gen.</td>
+                        <td>Build full React pages from Figma after design approval</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tower Weekly Board</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>In Figma design. No React implementation yet.</td>
+                        <td>Build after Today view</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tower Dogs tab</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>In Figma design. Dog data exists (95 dogs in Supabase). No admin UI for forever note editing.</td>
+                        <td>Build forever note editor — admin-only</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tower Billing tab</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>Vision only (Phase 3). No package data, no walk count aggregation, no invoice system.</td>
+                        <td>Needs Acuity certificates endpoint + data model</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mini Gen loop</strong></td>
+                        <td><span class="status-badge status-partial">🟡 PARTIAL</span></td>
+                        <td>Mini Gen runs at 100% resolution (50/50 latest). Drafts write to mini_gen_drafts (27 pending, 1 approved). Promote step fires.</td>
+                        <td>Wire realtime subscription so walkers see new groups</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Beast (confirm-before-act)</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>Concept defined. UI in Figma. No Claude API integration, no action framework, no confirm flow.</td>
+                        <td>Full build — Phase 2 after Tower shell</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Acuity integration</strong></td>
+                        <td><span class="status-badge status-partial">🟡 PARTIAL</span></td>
+                        <td>Mini Gen reads Acuity bookings (100% hit rate). acuity_name_map has 74 entries. No Acuity notes in app, no package balance check.</td>
+                        <td>Phase 2 (notes) + Phase 3 (packages)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Website</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>Current site is on Wix, feels dated. Plan: build as public route in same React codebase.</td>
+                        <td>Full build — Phase 4</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TELUS SMS inbox</strong></td>
+                        <td><span class="status-badge status-not-built">🔴 NOT BUILT</span></td>
+                        <td>Concept only. Needs RingCentral webhook integration.</td>
+                        <td>Phase 3</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 4: THE EVALUATION -->
+    <div id="evaluation" class="section">
+        <div class="evaluation-section">
+            <div class="subsection-title">The Software Evaluation</div>
+            <p class="tagline">"Here is what an expert would say about this product."</p>
+            <div class="intro-text">
+                A $20K evaluation. Seven dimensions. Honest scoring.
+            </div>
+
+            <div class="eval-grid">
+                <!-- Architecture -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">7</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 70%;"></div>
+                    </div>
+                    <div class="eval-title">Architecture</div>
+                    <div class="eval-evidence">
+                        Clean separation — React + Vite + Tailwind, Supabase backend, Vercel serverless APIs. worker_notes as single source of walk state. Four-filter decision framework keeps scope honest.
+                    </div>
+                    <div class="eval-improvement">
+                        Tower Control will test whether architecture holds with two different interfaces sharing one data layer. Need clean component boundaries.
+                    </div>
+                </div>
+
+                <!-- Walker App UX -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">7</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 70%;"></div>
+                    </div>
+                    <div class="eval-title">Walker App UX</div>
+                    <div class="eval-evidence">
+                        WWRS baked in. Dog cards show name, address, door code without tap. Owl notes animate on name. Drawer opens to action centre. One-hand design visible.
+                    </div>
+                    <div class="eval-improvement">
+                        Fix 4 bugs—especially interlock compact (BUG 4) which breaks multi-walker use. Then device-test end-to-end.
+                    </div>
+                </div>
+
+                <!-- Tower Control UX -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">3</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 30%;"></div>
+                    </div>
+                    <div class="eval-title">Tower Control UX</div>
+                    <div class="eval-evidence">
+                        Only Mini Gen Review Panel is live. Full Tower is in Figma—10 components and 8 screens designed but not built. Gen uses Google Sheets V3.9 as fallback.
+                    </div>
+                    <div class="eval-improvement">
+                        Build Today view. Single highest-leverage screen. Replaces Gen's morning routine of checking 4 different sources.
+                    </div>
+                </div>
+
+                <!-- Data Model -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">8</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 80%;"></div>
+                    </div>
+                    <div class="eval-title">Data Model</div>
+                    <div class="eval-evidence">
+                        worker_notes as single source of walk state is strong. dog_ids as text[] (names, not UUIDs) works because names are unique per sector. acuity_name_map at 74 entries resolves 100% of bookings.
+                    </div>
+                    <div class="eval-improvement">
+                        Consider indexing walker_notes by walk_date for performance. expected_schedule (84 rows) may need more structure as operation grows.
+                    </div>
+                </div>
+
+                <!-- AI Integration -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">6</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%;"></div>
+                    </div>
+                    <div class="eval-title">AI Integration (Mini Gen + Beast)</div>
+                    <div class="eval-evidence">
+                        Mini Gen is standout—real production agent doing mechanical admin with 100% accuracy. Writes to staging, requires human approval before live. "Stop and wait" philosophy is exactly right. Beast is concept-only.
+                    </div>
+                    <div class="eval-improvement">
+                        Build Beast with same discipline—confirm-before-act, never direct production access. Confirm block UI is designed; needs implementation.
+                    </div>
+                </div>
+
+                <!-- Completeness -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">4</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 40%;"></div>
+                    </div>
+                    <div class="eval-title">Completeness</div>
+                    <div class="eval-evidence">
+                        Walker app core works. Mini Gen + promote works. But Tower is mostly in Figma, billing is vision-only, website is on Wix, Beast is concept. ~35-40% of surface area is built.
+                    </div>
+                    <div class="eval-improvement">
+                        Phase 1 (Tower Today) and Phase 2 (Close Loop) are highest-leverage builds. Completing these brings completeness to ~65%.
+                    </div>
+                </div>
+
+                <!-- Production Readiness -->
+                <div class="eval-card">
+                    <div class="eval-score">
+                        <div class="eval-number">5</div>
+                        <div class="eval-denominator">/10</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="eval-title">Production Readiness</div>
+                    <div class="eval-evidence">
+                        95 dogs and 7 walkers use daily. Mini Gen runs successfully. But 4 bugs including one that breaks interlock (critical for multi-walker). Undo has state sync issue. Not-walking untested. Gen still uses Google Sheets.
+                    </div>
+                    <div class="eval-improvement">
+                        Fix 4 bugs, device-test every flow, run regression. Production readiness jumps to 7+ when bugs resolved and Gen moves to Tower.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verdict -->
+            <div class="verdict-box">
+                <div class="verdict-section">
+                    <div class="verdict-title">What Is Impressive & Must Be Protected</div>
+                    <div class="verdict-text">
+                        The design philosophy. WWRS, the four filters, "no caps without data," "agents stop and wait"—this is a solo founder who thinks like a senior architect. The discipline of worker_notes as single source of truth, dog names as text[], and Mini Gen's staging-table-first approach shows someone building for durability, not speed. Protect the decision-making framework. It's worth more than any single feature.
+                    </div>
+                </div>
+
+                <div class="verdict-section">
+                    <div class="verdict-title">Single Biggest Risk</div>
+                    <div class="verdict-text">
+                        Tower Control. Gen still uses Google Sheets. Every day Tower doesn't exist, the operational bottleneck stays in Gen's head and Rod's text messages. Mini Gen writes perfect drafts that nobody can efficiently review because the review surface is a single panel. The loop is technically connected but practically still has a human-shaped gap.
+                    </div>
+                </div>
+
+                <div class="verdict-section">
+                    <div class="verdict-title">Recommended Next Action</div>
+                    <div class="verdict-text">
+                        Fix the 4 walker app bugs (1-2 sessions), then build Tower Today view—the morning briefing screen that replaces Gen's Google Sheets routine. This single screen unblocks the entire operation.
+                    </div>
+                </div>
+
+                <div class="verdict-section">
+                    <div class="verdict-title">Timeline to $20K-Quality Product</div>
+                    <div class="verdict-text">
+                        <strong>Phase 1 (Tower shell + bugs):</strong> 3–4 weeks<br>
+                        <strong>Phase 2 (Close the Loop):</strong> 5–7 weeks after Phase 1<br>
+                        <strong>Phase 3 (Expand):</strong> 6–8 weeks after Phase 2<br>
+                        <strong>Phase 4 (Full Picture):</strong> 8–12 weeks after Phase 3<br>
+                        <br>
+                        <strong>Total:</strong> 6–8 months from today at current pace (solo founder + AI tools). A 2-person team could compress to 4–5 months.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cover Page -->
+            <div class="cover-page">
+                <p class="cover-text">
+                    "Wiggle has the architecture of a product that will last and the heart of a business that already does — what it needs now is the bridge between the two."
+                </p>
+                <p style="margin-top: 24px; color: #8C857E; font-size: 14px;">
+                    Work smart, play always. 🐾
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    Prepared for Rodrigo · Wiggle Dog Walks · April 2026
+</div>
+
+<script>
+function switchSection(sectionId) {
+    // Hide all sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+    });
+
+    // Remove active from all tabs
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected section
+    document.getElementById(sectionId).classList.add('active');
+
+    // Add active to selected tab
+    event.target.classList.add('active');
+
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+</script>
+
+</body>
+</html>

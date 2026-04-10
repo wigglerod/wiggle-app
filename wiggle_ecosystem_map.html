@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiggle — How It All Works</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --coral:   #E8634A;
+  --orange:  #E8762B;
+  --purple:  #534AB7;
+  --sage:    #2D8F6F;
+  --amber:   #C4851C;
+  --slate:   #475569;
+  --fuschia: #961e78;
+  --dark:    #1A1D23;
+  --pl-blue: #3B82A0;
+  --la-green:#4A9E6F;
+  --peach:   #FFF5F0;
+  --cream:   #FAF7F4;
+  --sand:    #F0ECE8;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #F0EDE8;
+  color: var(--dark);
+  padding: 0 0 80px;
+}
+
+/* ── PAGE HEADER ── */
+.pg-header {
+  background: var(--dark);
+  padding: 24px 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--orange);
+}
+.pg-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -.02em; }
+.pg-sub   { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 4px; font-family: 'DM Mono', monospace; }
+.pg-tag   { font-size: 11px; font-weight: 700; background: var(--orange); color: #fff; padding: 6px 14px; border-radius: 20px; }
+
+/* ── SECTIONS ── */
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+.section { margin-top: 56px; }
+.sec-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; color: #8C857E; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: #D5CFC8; }
+
+/* ── THE ONE SENTENCE ── */
+.one-sentence {
+  background: var(--dark);
+  border-radius: 16px;
+  padding: 32px 40px;
+  margin-top: 32px;
+}
+.os-text {
+  font-size: 22px; font-weight: 700; color: #fff;
+  line-height: 1.5; letter-spacing: -.02em;
+}
+.os-text em { color: var(--orange); font-style: normal; }
+.os-sub {
+  font-size: 14px; color: rgba(255,255,255,.5); margin-top: 16px; line-height: 1.7;
+}
+
+/* ── WHO DOES WHAT ── */
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.who-card {
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid; 
+  box-shadow: 0 2px 0;
+}
+.who-top { padding: 14px 16px 10px; }
+.who-role { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+.who-name { font-size: 16px; font-weight: 700; }
+.who-desc { font-size: 11px; line-height: 1.6; margin-top: 6px; opacity: .8; }
+.who-bottom { padding: 10px 16px 14px; }
+.who-tool-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; opacity: .6; }
+.who-tool { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.who-tool::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* card themes */
+.wc-rod    { border-color: var(--coral); box-shadow-color: #C94A34; background: var(--peach); box-shadow: 0 2px 0 #C94A34; }
+.wc-rod .who-top { background: var(--coral); color: #fff; }
+.wc-gen    { border-color: var(--orange); box-shadow-color: #C45D1A; background: #FFF8F0; box-shadow: 0 2px 0 #C45D1A; }
+.wc-gen .who-top { background: var(--orange); color: #fff; }
+.wc-walker { border-color: var(--sage); box-shadow-color: #1F6B52; background: #F0FAF6; box-shadow: 0 2px 0 #1F6B52; }
+.wc-walker .who-top { background: var(--sage); color: #fff; }
+.wc-owner  { border-color: var(--pl-blue); box-shadow-color: #2B6A8A; background: #EBF4F8; box-shadow: 0 2px 0 #2B6A8A; }
+.wc-owner .who-top { background: var(--pl-blue); color: #fff; }
+
+/* ── SURFACE CARDS ── */
+.surface-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.surf {
+  border-radius: 14px; overflow: hidden;
+  border: 1.5px solid #E2E6EA;
+  background: #fff;
+  box-shadow: 0 2px 0 #D5CFC8;
+}
+.surf-header {
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #E2E6EA;
+}
+.surf-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.surf-title { font-size: 15px; font-weight: 700; }
+.surf-sub   { font-size: 10px; color: #9AA3AE; margin-top: 1px; }
+.surf-body  { padding: 14px 18px; }
+.surf-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.surf-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.surf-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.surf-row-label { font-size: 12px; font-weight: 600; color: var(--dark); }
+.surf-row-desc  { font-size: 11px; color: #5A6270; margin-top: 2px; line-height: 1.45; }
+.surf-footer {
+  padding: 10px 18px 14px;
+  border-top: 1px solid #F1F5F9;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sf-audience { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.sf-status   { font-size: 10px; font-weight: 700; color: #9AA3AE; font-family: 'DM Mono', monospace; }
+
+/* ── THE BRAIN ── */
+.brain-card {
+  background: var(--dark);
+  border-radius: 14px;
+  padding: 28px 32px;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 32px;
+  align-items: start;
+}
+.brain-left {}
+.brain-title { font-size: 20px; font-weight: 700; color: #fff; }
+.brain-sub   { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 8px; line-height: 1.6; font-family: 'DM Mono', monospace; }
+.brain-tables {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.bt {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+.bt-name { font-size: 11px; font-weight: 700; color: #fff; font-family: 'DM Mono', monospace; }
+.bt-desc { font-size: 10px; color: rgba(255,255,255,.45); margin-top: 3px; line-height: 1.4; }
+.bt-accent { border-left: 3px solid; }
+.bt-coral   { border-left-color: var(--coral); }
+.bt-orange  { border-left-color: var(--orange); }
+.bt-sage    { border-left-color: var(--sage); }
+.bt-amber   { border-left-color: var(--amber); }
+.bt-purple  { border-left-color: var(--purple); }
+.bt-blue    { border-left-color: var(--pl-blue); }
+
+/* ── FLOW DIAGRAM ── */
+.flow-wrap {
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px solid #E2E6EA;
+  padding: 32px;
+  overflow-x: auto;
+}
+.flow-title {
+  font-size: 13px; font-weight: 700; color: #9AA3AE;
+  text-transform: uppercase; letter-spacing: .1em; margin-bottom: 28px;
+}
+
+/* The main flow SVG is inline */
+.flow-svg { width: 100%; min-width: 900px; }
+
+/* ── AGENT CARDS ── */
+.agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.agent-card {
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #E2E6EA;
+  background: #fff;
+}
+.ag-header {
+  background: var(--dark); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ag-name   { font-size: 13px; font-weight: 700; color: #fff; }
+.ag-status { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.ag-live   { background: var(--sage); color: #fff; }
+.ag-next   { background: var(--purple); color: #fff; }
+.ag-future { background: #475569; color: #fff; }
+.ag-body   { padding: 14px 16px; }
+.ag-job    { font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 8px; }
+.ag-step   { font-size: 11px; color: #5A6270; line-height: 1.5; margin-bottom: 4px; padding-left: 12px; position: relative; }
+.ag-step::before { content: '→'; position: absolute; left: 0; color: var(--orange); font-size: 10px; }
+.ag-output {
+  margin-top: 10px; background: #F8FAFC; border-radius: 7px;
+  border: 1px solid #E2E6EA; padding: 8px 10px;
+  font-family: 'DM Mono', monospace; font-size: 10px; color: #5A6270; line-height: 1.5;
+}
+
+/* ── SYMBIOSIS LOOP ── */
+.loop-wrap {
+  background: var(--dark); border-radius: 16px;
+  padding: 36px 40px;
+}
+.loop-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.loop-sub   { font-size: 12px; color: rgba(255,255,255,.4); margin-bottom: 32px; }
+.loop-nodes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.ln {
+  border-radius: 10px; padding: 12px 10px;
+  text-align: center; position: relative;
+}
+.ln-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+.ln-title { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.3; }
+.ln-desc  { font-size: 9px; color: rgba(255,255,255,.5); margin-top: 4px; line-height: 1.4; }
+
+/* loop arrow between nodes */
+.loop-arrow-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.la-gap { /* empty */ }
+.la-arr {
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.3); font-size: 12px; font-weight: 700;
+}
+
+/* Return arrow at bottom */
+.return-arrow {
+  margin-top: 20px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.ra-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.ra-flow  { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--orange), transparent); border-radius: 1px; position: relative; }
+.ra-flow::after { content: ''; position: absolute; right: 0; top: -4px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid var(--orange); }
+.ra-text  { font-size: 11px; color: rgba(255,255,255,.5); line-height: 1.5; }
+
+/* ── BILLING FLOW ── */
+.billing-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #E2E6EA;
+}
+.bt-step {
+  padding: 18px 16px;
+  border-right: 1px solid #E2E6EA;
+  position: relative;
+}
+.bt-step:last-child { border-right: none; }
+.bt-step-num {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: #9AA3AE; margin-bottom: 6px;
+}
+.bt-step-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 5px; }
+.bt-step-desc  { font-size: 11px; color: #5A6270; line-height: 1.5; }
+.bt-step-arrow {
+  position: absolute; right: -8px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px; background: #fff;
+  border-right: 1.5px solid #E2E6EA; border-top: 1.5px solid #E2E6EA;
+  transform: translateY(-50%) rotate(45deg);
+  z-index: 1;
+}
+.bt-step.active { background: #FFF8F0; }
+.bt-step.active .bt-step-title { color: var(--orange); }
+
+/* colors */
+.ln-owner  { background: rgba(59,130,160,.25); }
+.ln-acuity { background: rgba(232,118,43,.2); }
+.ln-mini   { background: rgba(83,74,183,.25); }
+.ln-tower  { background: rgba(232,99,74,.2); }
+.ln-app    { background: rgba(45,143,111,.2); }
+.ln-walker { background: rgba(196,133,28,.2); }
+
+/* ── WHAT IT'S NOT ── */
+.not-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.not-card {
+  background: #fff; border-radius: 10px;
+  border: 1px solid #E2E6EA; padding: 16px 18px;
+  display: flex; gap: 12px;
+}
+.not-x { font-size: 18px; font-weight: 700; color: #D94F3D; flex-shrink: 0; }
+.not-check { font-size: 18px; font-weight: 700; color: var(--sage); flex-shrink: 0; }
+.not-text { font-size: 12px; color: #5A6270; line-height: 1.6; }
+.not-text strong { color: var(--dark); display: block; margin-bottom: 3px; font-size: 13px; }
+
+/* ── CLOSING LINE ── */
+.closing {
+  border-left: 4px solid var(--coral);
+  padding: 20px 28px;
+  background: var(--peach);
+  border-radius: 0 12px 12px 0;
+  margin-top: 48px;
+}
+.closing-text {
+  font-size: 18px; font-weight: 700; color: var(--dark);
+  line-height: 1.5; letter-spacing: -.01em;
+}
+.closing-text em { color: var(--coral); font-style: normal; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="pg-header">
+  <div>
+    <div class="pg-title">🐾 Wiggle — How It All Works</div>
+    <div class="pg-sub">wiggle_ecosystem_map · April 2026 · brainstorming + vision</div>
+  </div>
+  <div class="pg-tag">Plain language · Visual map · Road ahead</div>
+</div>
+
+<div class="wrap">
+
+<!-- ══════════════════════════════════════
+  THE ONE SENTENCE
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">What we are building</div>
+  <div class="one-sentence">
+    <div class="os-text">
+      Wiggle is a <em>self-running machine</em> where owners book, agents resolve, Gen approves, walkers execute, and everyone sees the same truth — all day, every day, with as <em>little manual work</em> as possible.
+    </div>
+    <div class="os-sub">
+      It is not an app. It is not a spreadsheet. It is a loop. A booking triggers a chain of events that ends with a dog walked, a note sent, and billing updated — automatically, without anyone emailing anyone.<br>
+      The technology serves the relationships. The relationships are what Wiggle actually is.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  WHO DOES WHAT
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">Who does what</div>
+  <div class="who-grid">
+
+    <div class="who-card wc-rod">
+      <div class="who-top">
+        <div class="who-role">Founder</div>
+        <div class="who-name">Rod</div>
+        <div class="who-desc">Sees everything. Sets the rules. Handles big decisions. Mostly stays out of the daily flow — the system handles it.</div>
+      </div>
+      <div class="who-bottom">
+        <div class="who-tool-label">Uses</div>
+        <div class="who-tool" style="color:var(--coral);">Tower Control — full admin view</div>
+        <div class="who-tool" style="color:var(--coral);">The Beast — AI assistant</div>
+        <div class="who-tool" style="color:var(--coral);">Walker App — when needed</div>
+      </div>
+    </div>
+
+    <div class="who-card wc-gen">
+      <div class="who-top">
+        <div class="who-role">Co-Admin</div>
+        <div class="who-name">Gen</div>
+        <div class="who-desc">Opens Tower every morning. Reviews what Mini Gen prepared. Approves, fixes exceptions. Sends owl notes. Handles flags from walkers.</div>
+      </div>
+      <div class="who-bottom">
+        <div class="who-tool-label">Uses daily</div>
+        <div class="who-tool" style="color:var(--orange);">Tower Today — her morning</div>
+        <div class="who-tool" style="color:var(--orange);">Tower Weekly — plan ahead</div>
+        <div class="who-tool" style="color:var(--orange);">Beast — quick actions</div>
+      </div>
+    </div>
+
+    <div class="who-card wc-walker">
+      <div class="who-top">
+        <div class="who-role">Walker team (7)</div>
+        <div class="who-name">Walkers</div>
+        <div class="who-desc">Open the app before their walk. See their groups. Swipe to pick up each dog. Write notes after. Flag issues. That's it — no admin, no spreadsheets.</div>
+      </div>
+      <div class="who-bottom">
+        <div class="who-tool-label">Uses</div>
+        <div class="who-tool" style="color:var(--sage);">Wiggle App — the only tool</div>
+        <div class="who-tool" style="color:var(--sage);">Dog cards — name, address, door</div>
+        <div class="who-tool" style="color:var(--sage);">Notes — owl, forever, activity</div>
+      </div>
+    </div>
+
+    <div class="who-card wc-owner">
+      <div class="who-top">
+        <div class="who-role">Clients (~95 dogs)</div>
+        <div class="who-name">Owners</div>
+        <div class="who-desc">Book online via Acuity. Leave notes at booking time. Eventually see walk reports and their dog's activity. They never log into Tower or the app.</div>
+      </div>
+      <div class="who-bottom">
+        <div class="who-tool-label">Their touchpoints</div>
+        <div class="who-tool" style="color:var(--pl-blue);">Acuity — book walks</div>
+        <div class="who-tool" style="color:var(--pl-blue);">Website — info + trust</div>
+        <div class="who-tool" style="color:var(--pl-blue);">Walk Report (future) — updates</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  THE THREE SURFACES
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The three surfaces — one database</div>
+  <div class="surface-grid">
+
+    <!-- Walker App -->
+    <div class="surf">
+      <div class="surf-header">
+        <div class="surf-icon" style="background:var(--peach);color:var(--coral);border:1.5px solid var(--coral);">📱</div>
+        <div>
+          <div class="surf-title" style="color:var(--coral);">Wiggle App</div>
+          <div class="surf-sub">wiggle-app-dusky.vercel.app · PWA · warm peach palette</div>
+        </div>
+      </div>
+      <div class="surf-body">
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--sage);"></div>
+          <div>
+            <div class="surf-row-label">Dog cards</div>
+            <div class="surf-row-desc">Name, address, door code. Status dot. Owl indicator walks across the name if there's a note. No photos on the card — clean and fast.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--purple);"></div>
+          <div>
+            <div class="surf-row-label">Groups + lock slider</div>
+            <div class="surf-row-desc">Walk groups assigned by Gen or self-organized. Coral slider to lock a group, purple to unlock. Interlock for shared routes.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--amber);"></div>
+          <div>
+            <div class="surf-row-label">Owl notes + forever notes</div>
+            <div class="surf-row-desc">Timed staff warnings visible on the card. Permanent notes from admins in the dog drawer. Walker reads, acknowledges, moves on.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--fuschia);"></div>
+          <div>
+            <div class="surf-row-label">Dog profile drawer</div>
+            <div class="surf-row-desc">Tap the dog name. Full profile opens. Photo, pickup button, not walking, notes, owner info. Every action on this dog, one place.</div>
+          </div>
+        </div>
+      </div>
+      <div class="surf-footer">
+        <span class="sf-audience" style="background:#E8F5EF;color:var(--sage);border:1px solid var(--sage);">Walkers only</span>
+        <span class="sf-status">V4 live ✓</span>
+      </div>
+    </div>
+
+    <!-- Tower Control -->
+    <div class="surf">
+      <div class="surf-header">
+        <div class="surf-icon" style="background:var(--dark);color:var(--orange);border:1.5px solid var(--orange);">🏰</div>
+        <div>
+          <div class="surf-title" style="color:var(--orange);">Tower Control</div>
+          <div class="surf-sub">/tower · same codebase · white clean palette</div>
+        </div>
+      </div>
+      <div class="surf-body">
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--orange);"></div>
+          <div>
+            <div class="surf-row-label">Today — the morning view</div>
+            <div class="surf-row-desc">Gen opens this first. Problem cards show what needs attention. Group status is live. Flags from walkers. Quick owl note composer.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--orange);"></div>
+          <div>
+            <div class="surf-row-label">Weekly board</div>
+            <div class="surf-row-desc">Orange grid. Mon–Fri. Plateau teal, Laurier green. Dog chips per day. Conflict flags visible before they become a problem.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--orange);"></div>
+          <div>
+            <div class="surf-row-label">Dogs + Staff tabs</div>
+            <div class="surf-row-desc">Full roster search. Edit forever notes (admin only). Walker schedules. Assign walkers to groups before walks start.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--orange);"></div>
+          <div>
+            <div class="surf-row-label">The Beast — AI assistant</div>
+            <div class="surf-row-desc">Orange gradient header. Gen types a plain-language command. Beast shows exactly what it will do. One confirm button. Always waits for yes.</div>
+          </div>
+        </div>
+      </div>
+      <div class="surf-footer">
+        <span class="sf-audience" style="background:#FEF5ED;color:var(--orange);border:1px solid var(--orange);">Gen + Rod only</span>
+        <span class="sf-status">Phase 1 → building</span>
+      </div>
+    </div>
+
+    <!-- Website (future) -->
+    <div class="surf" style="opacity:.75;">
+      <div class="surf-header">
+        <div class="surf-icon" style="background:#EBF4F8;color:var(--pl-blue);border:1.5px solid var(--pl-blue);">🌐</div>
+        <div>
+          <div class="surf-title" style="color:var(--pl-blue);">Website + Client Portal</div>
+          <div class="surf-sub">Public route · same React codebase · Phase 3</div>
+        </div>
+      </div>
+      <div class="surf-body">
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--pl-blue);"></div>
+          <div>
+            <div class="surf-row-label">Public site</div>
+            <div class="surf-row-desc">Peach background, coral CTA. Photography leads. "Book a walk" button points to Acuity. Bilingual EN/FR. Mobile-first.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--pl-blue);"></div>
+          <div>
+            <div class="surf-row-label">Client portal (future)</div>
+            <div class="surf-row-desc">Owners log in and see their dog's walk notes. "Halloumi had a great walk today." Walk Report Card sent after each walk. Builds trust.</div>
+          </div>
+        </div>
+        <div class="surf-row">
+          <div class="surf-dot" style="background:var(--pl-blue);"></div>
+          <div>
+            <div class="surf-row-label">Explorer Badges (future)</div>
+            <div class="surf-row-desc">Gamification for owners. 50 walks milestone. Rainy day badge. Social Butterfly. Makes the relationship feel alive.</div>
+          </div>
+        </div>
+      </div>
+      <div class="surf-footer">
+        <span class="sf-audience" style="background:#EBF4F8;color:var(--pl-blue);border:1px solid var(--pl-blue);">Owners · public</span>
+        <span class="sf-status">Phase 3</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  THE BRAIN
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The brain — one database, everything reads from here</div>
+  <div class="brain-card">
+    <div class="brain-left">
+      <div class="brain-title" style="color:var(--purple);">Supabase</div>
+      <div class="brain-title" style="color:#fff;margin-top:4px;">is the only truth.</div>
+      <div class="brain-sub" style="margin-top:12px;">
+        The app reads from it.<br>
+        Tower reads from it.<br>
+        Agents write to it.<br>
+        Walkers write to it.<br><br>
+        One row changes →<br>
+        every surface updates.<br>
+        No sync. No delay.<br>
+        No "which version is right."
+      </div>
+    </div>
+    <div class="brain-tables">
+      <div class="bt bt-accent bt-coral">
+        <div class="bt-name">dogs</div>
+        <div class="bt-desc">95 rows. Name, address, door code, breed, sector, owner info, forever notes. The roster.</div>
+      </div>
+      <div class="bt bt-accent bt-sage">
+        <div class="bt-name">walk_groups</div>
+        <div class="bt-desc">Today's groups. Dog names as text[]. Walker IDs. Locked state. What the app shows.</div>
+      </div>
+      <div class="bt bt-accent bt-orange">
+        <div class="bt-name">walker_notes</div>
+        <div class="bt-desc">Every walk event. Pickup, return, not walking, activity note, flag. The complete walk history.</div>
+      </div>
+      <div class="bt bt-accent bt-amber">
+        <div class="bt-name">owl_notes</div>
+        <div class="bt-desc">Timed staff notes. Expire automatically. Sector-filtered so only the right walkers see them.</div>
+      </div>
+      <div class="bt bt-accent bt-purple">
+        <div class="bt-name">mini_gen_drafts</div>
+        <div class="bt-desc">Mini Gen writes here. Gen reviews, approves. Approved rows become walk_groups.</div>
+      </div>
+      <div class="bt bt-accent bt-blue">
+        <div class="bt-name">profiles</div>
+        <div class="bt-desc">14 walker profiles. Role, sector, schedule text. Who works which days in which sector.</div>
+      </div>
+      <div class="bt bt-accent bt-coral">
+        <div class="bt-name">acuity_name_map</div>
+        <div class="bt-desc">74 rows. Owner booking name → dog name. The translation table that makes Mini Gen work.</div>
+      </div>
+      <div class="bt bt-accent bt-sage">
+        <div class="bt-name">expected_schedule</div>
+        <div class="bt-desc">84 rows. 29 must-ask dogs, 55 self-book dogs. Gen contacts must-ask weekly.</div>
+      </div>
+      <div class="bt bt-accent bt-amber">
+        <div class="bt-name">dog_conflicts</div>
+        <div class="bt-desc">Dogs that cannot walk together. Mochi ↔ Chaska. Mini Gen checks this every run.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  THE FULL FLOW — VISUAL MAP
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The full flow — how a walk actually happens</div>
+  <div class="flow-wrap">
+    <div class="flow-title">From booking to walked dog, every step</div>
+    <svg class="flow-svg" viewBox="0 0 1040 520" xmlns="http://www.w3.org/2000/svg" font-family="'DM Sans', sans-serif">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr-ret" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- ── ROW 1: The chain ── -->
+
+      <!-- OWNER -->
+      <g>
+        <rect x="20" y="40" width="130" height="100" rx="12" fill="#EBF4F8" stroke="#3B82A0" stroke-width="1.5"/>
+        <text x="85" y="72" text-anchor="middle" font-size="22" dominant-baseline="central">👤</text>
+        <text x="85" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1D23" dominant-baseline="central">Owner</text>
+        <text x="85" y="120" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">books a walk</text>
+      </g>
+
+      <!-- arrow -->
+      <line x1="150" y1="90" x2="186" y2="90" stroke="#3B82A0" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="168" y="80" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">Acuity</text>
+
+      <!-- ACUITY -->
+      <g>
+        <rect x="186" y="40" width="130" height="100" rx="12" fill="#FFF8F0" stroke="#E8762B" stroke-width="1.5"/>
+        <text x="251" y="72" text-anchor="middle" font-size="22" dominant-baseline="central">📅</text>
+        <text x="251" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1D23" dominant-baseline="central">Acuity</text>
+        <text x="251" y="120" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">booking arrives</text>
+      </g>
+
+      <!-- arrow -->
+      <line x1="316" y1="90" x2="352" y2="90" stroke="#E8762B" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="334" y="80" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">8 AM cron</text>
+
+      <!-- MINI GEN -->
+      <g>
+        <rect x="352" y="30" width="130" height="120" rx="12" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+        <text x="417" y="65" text-anchor="middle" font-size="22" dominant-baseline="central">🤖</text>
+        <text x="417" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#534AB7" dominant-baseline="central">Mini Gen</text>
+        <text x="417" y="113" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">resolves names</text>
+        <text x="417" y="129" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">checks conflicts</text>
+        <rect x="358" y="22" width="54" height="16" rx="8" fill="#534AB7"/>
+        <text x="385" y="30" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" dominant-baseline="central">LIVE ✓</text>
+      </g>
+
+      <!-- arrow -->
+      <line x1="482" y1="90" x2="518" y2="90" stroke="#534AB7" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="500" y="80" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">drafts</text>
+
+      <!-- TOWER (GEN REVIEWS) -->
+      <g>
+        <rect x="518" y="40" width="130" height="100" rx="12" fill="#FFF8F0" stroke="#E8762B" stroke-width="1.5"/>
+        <text x="583" y="72" text-anchor="middle" font-size="22" dominant-baseline="central">🏰</text>
+        <text x="583" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1D23" dominant-baseline="central">Tower</text>
+        <text x="583" y="120" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">Gen approves</text>
+      </g>
+
+      <!-- arrow -->
+      <line x1="648" y1="90" x2="684" y2="90" stroke="#E8762B" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="666" y="80" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">promote</text>
+
+      <!-- SUPABASE -->
+      <g>
+        <rect x="684" y="30" width="130" height="120" rx="12" fill="#F5F0FF" stroke="#534AB7" stroke-width="2"/>
+        <text x="749" y="65" text-anchor="middle" font-size="22" dominant-baseline="central">🧠</text>
+        <text x="749" y="93" text-anchor="middle" font-size="13" font-weight="700" fill="#534AB7" dominant-baseline="central">Supabase</text>
+        <text x="749" y="111" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">walk_groups live</text>
+        <text x="749" y="127" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">single source</text>
+      </g>
+
+      <!-- arrow -->
+      <line x1="814" y1="90" x2="850" y2="90" stroke="#2D8F6F" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="832" y="80" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">realtime</text>
+
+      <!-- APP -->
+      <g>
+        <rect x="850" y="40" width="130" height="100" rx="12" fill="#F0FAF6" stroke="#2D8F6F" stroke-width="1.5"/>
+        <text x="915" y="72" text-anchor="middle" font-size="22" dominant-baseline="central">📱</text>
+        <text x="915" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1D23" dominant-baseline="central">Walker App</text>
+        <text x="915" y="120" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">walker walks dogs</text>
+      </g>
+
+      <!-- ── ROW 2: The return loop ── -->
+
+      <!-- WALKER notes back to Supabase -->
+      <!-- Downward from App -->
+      <line x1="915" y1="140" x2="915" y2="200" stroke="#C4851C" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- WALKER ACTION box -->
+      <g>
+        <rect x="840" y="200" width="150" height="90" rx="10" fill="#FDF3E3" stroke="#C4851C" stroke-width="1.5"/>
+        <text x="915" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#C4851C" dominant-baseline="central">Walker acts</text>
+        <text x="915" y="250" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">swipes pickup</text>
+        <text x="915" y="266" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">writes note / flags</text>
+      </g>
+
+      <!-- Arrow left from walker action to Supabase -->
+      <line x1="840" y1="245" x2="814" y2="245" stroke="#C4851C" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="827" y="236" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">writes</text>
+
+      <!-- Supabase column extended down -->
+      <rect x="684" y="200" width="130" height="90" rx="10" fill="#F5F0FF" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="749" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#534AB7" dominant-baseline="central">Supabase</text>
+      <text x="749" y="250" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">walker_notes</text>
+      <text x="749" y="266" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">owl_notes</text>
+
+      <!-- Arrow left from Supabase to Tower -->
+      <line x1="684" y1="245" x2="648" y2="245" stroke="#534AB7" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+      <text x="666" y="236" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">realtime</text>
+
+      <!-- Tower lower box -->
+      <rect x="518" y="200" width="130" height="90" rx="10" fill="#FFF8F0" stroke="#E8762B" stroke-width="1.5"/>
+      <text x="583" y="228" text-anchor="middle" font-size="12" font-weight="700" fill="#E8762B" dominant-baseline="central">Gen sees it</text>
+      <text x="583" y="248" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">live in Tower</text>
+      <text x="583" y="264" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">flags + pickups</text>
+
+      <!-- Arrow from Tower to Mini Gen next week -->
+      <line x1="518" y1="245" x2="482" y2="245" stroke="#E8762B" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+
+      <!-- Mini Gen lower box -->
+      <rect x="352" y="200" width="130" height="90" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+      <text x="417" y="226" text-anchor="middle" font-size="12" font-weight="700" fill="#534AB7" dominant-baseline="central">Next week</text>
+      <text x="417" y="246" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">history informs</text>
+      <text x="417" y="262" text-anchor="middle" font-size="10" fill="#534AB7" dominant-baseline="central">smarter drafts</text>
+
+      <!-- ── BILLING BRANCH ── -->
+      <!-- Down from Walker Action -->
+      <line x1="915" y1="290" x2="915" y2="340" stroke="#2D8F6F" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+
+      <rect x="840" y="340" width="150" height="70" rx="10" fill="#E8F5EF" stroke="#2D8F6F" stroke-width="1.5"/>
+      <text x="915" y="363" text-anchor="middle" font-size="12" font-weight="700" fill="#2D8F6F" dominant-baseline="central">Walk logged</text>
+      <text x="915" y="383" text-anchor="middle" font-size="10" fill="#2D8F6F" dominant-baseline="central">→ billing counter</text>
+
+      <!-- Left from billing counter -->
+      <line x1="840" y1="375" x2="684" y2="375" stroke="#2D8F6F" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+      <text x="762" y="365" text-anchor="middle" font-size="9" fill="#9AA3AE" font-family="'DM Mono',monospace">Phase 3</text>
+
+      <rect x="554" y="340" width="130" height="70" rx="10" fill="#E8F5EF" stroke="#2D8F6F" stroke-width="1.5"/>
+      <text x="619" y="363" text-anchor="middle" font-size="12" font-weight="700" fill="#2D8F6F" dominant-baseline="central">Tower Billing</text>
+      <text x="619" y="383" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">package status</text>
+
+      <line x1="554" y1="375" x2="402" y2="375" stroke="#2D8F6F" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)"/>
+
+      <rect x="272" y="340" width="130" height="70" rx="10" fill="#E8F5EF" stroke="#2D8F6F" stroke-width="1.5"/>
+      <text x="337" y="363" text-anchor="middle" font-size="12" font-weight="700" fill="#2D8F6F" dominant-baseline="central">Invoice sent</text>
+      <text x="337" y="383" text-anchor="middle" font-size="10" fill="#5A6270" dominant-baseline="central">when package low</text>
+
+      <!-- ── LABELS ── -->
+      <text x="520" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#9AA3AE" font-family="'DM Mono',monospace">THE FORWARD FLOW — Mon 8 AM to walk start</text>
+      <text x="520" y="185" text-anchor="middle" font-size="11" font-weight="700" fill="#9AA3AE" font-family="'DM Mono',monospace">THE RETURN LOOP — walk data flows back</text>
+      <text x="620" y="325" text-anchor="middle" font-size="11" font-weight="700" fill="#2D8F6F" font-family="'DM Mono',monospace">BILLING BRANCH — walks → packages → invoices</text>
+
+      <!-- Phase labels -->
+      <rect x="20" y="440" width="80" height="22" rx="11" fill="#E8F5EF"/>
+      <text x="60" y="451" text-anchor="middle" font-size="9" font-weight="700" fill="#2D8F6F" dominant-baseline="central">✓ Live now</text>
+
+      <rect x="110" y="440" width="100" height="22" rx="11" fill="#EEEDFE"/>
+      <text x="160" y="451" text-anchor="middle" font-size="9" font-weight="700" fill="#534AB7" dominant-baseline="central">Phase 1 — building</text>
+
+      <rect x="220" y="440" width="100" height="22" rx="11" fill="#FDF3E3"/>
+      <text x="270" y="451" text-anchor="middle" font-size="9" font-weight="700" fill="#C4851C" dominant-baseline="central">Phase 2 — next</text>
+
+      <rect x="330" y="440" width="100" height="22" rx="11" fill="#F0F2F5"/>
+      <text x="380" y="451" text-anchor="middle" font-size="9" font-weight="700" fill="#5A6270" dominant-baseline="central">Phase 3 — later</text>
+
+      <!-- Phase coloring dots on nodes -->
+      <!-- Owner = Phase 3 (website), Acuity = live, Mini Gen = live, Tower = Phase 1, Supabase = live, App = live -->
+    </svg>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  THE THREE AGENTS
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The three agents — automate the admin</div>
+  <div class="agent-grid">
+
+    <div class="agent-card">
+      <div class="ag-header">
+        <div class="ag-name">🔍 The Watcher</div>
+        <span class="ag-status ag-future">Phase 2</span>
+      </div>
+      <div class="ag-body">
+        <div class="ag-job">Monitors everything coming in. Never acts. Just watches and flags.</div>
+        <div class="ag-step">Reads Acuity bookings as they land</div>
+        <div class="ag-step">Reads email (info@wiggledogwalks.com)</div>
+        <div class="ag-step">Reads Instagram DMs (future)</div>
+        <div class="ag-step">Spots signals: "vacation April 14", "new dog Monday"</div>
+        <div class="ag-step">Writes flag cards to Tower for Gen to see</div>
+        <div class="ag-output">OUTPUT → Tower "Here's what needs your attention today"</div>
+      </div>
+    </div>
+
+    <div class="agent-card">
+      <div class="ag-header">
+        <div class="ag-name">📋 The Briefing</div>
+        <span class="ag-status ag-next">Phase 2</span>
+      </div>
+      <div class="ag-body">
+        <div class="ag-job">Takes what The Watcher found. Builds the complete picture for Gen to decide.</div>
+        <div class="ag-step">Pulls everything The Watcher flagged</div>
+        <div class="ag-step">Checks capacity, conflicts, walker availability</div>
+        <div class="ag-step">Checks package balances (who's running low?)</div>
+        <div class="ag-step">Formats a clean decision surface in Tower</div>
+        <div class="ag-step">Gen makes 3 approvals. Day is clean. Done.</div>
+        <div class="ag-output">OUTPUT → Tower Today tab every morning, before Gen touches anything</div>
+      </div>
+    </div>
+
+    <div class="agent-card">
+      <div class="ag-header">
+        <div class="ag-name">⚙️ Mini Gen</div>
+        <span class="ag-status ag-live">Live ✓</span>
+      </div>
+      <div class="ag-body">
+        <div class="ag-job">Does the mechanical Monday morning work. What used to take Gen 30 minutes now takes 0.</div>
+        <div class="ag-step">Fetches Acuity bookings Mon–Fri, both sectors</div>
+        <div class="ag-step">Resolves every name via acuity_name_map (74 entries)</div>
+        <div class="ag-step">Checks dog_conflicts (Mochi ↔ Chaska)</div>
+        <div class="ag-step">Flags unresolved names for Gen to review</div>
+        <div class="ag-step">Writes draft rows to mini_gen_drafts</div>
+        <div class="ag-output">OUTPUT → Gen approves → walk_groups promoted → app shows groups</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  THE SYMBIOSIS LOOP
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">The symbiotic relationship — how it feeds itself</div>
+  <div class="loop-wrap">
+    <div class="loop-title">Every walk makes the next one easier.</div>
+    <div class="loop-sub">This is not a one-way flow. Every node feeds every other node. That is the design.</div>
+
+    <div class="loop-nodes">
+      <div class="ln ln-owner">
+        <span class="ln-icon">👤</span>
+        <div class="ln-title">Owner books</div>
+        <div class="ln-desc">Acuity. Name goes into the system.</div>
+      </div>
+      <div class="ln ln-acuity">
+        <span class="ln-icon">🤖</span>
+        <div class="ln-title">Mini Gen resolves</div>
+        <div class="ln-desc">Maps owner name to dog name. No manual work.</div>
+      </div>
+      <div class="ln ln-mini">
+        <span class="ln-icon">🏰</span>
+        <div class="ln-title">Gen approves</div>
+        <div class="ln-desc">3 clicks. Week is clean. Exceptions handled.</div>
+      </div>
+      <div class="ln ln-tower">
+        <span class="ln-icon">📱</span>
+        <div class="ln-title">Walker walks</div>
+        <div class="ln-desc">Sees groups, picks up dogs, writes notes.</div>
+      </div>
+      <div class="ln ln-app">
+        <span class="ln-icon">🦉</span>
+        <div class="ln-title">Notes travel</div>
+        <div class="ln-desc">Owl notes warn next walker. Flags reach Gen.</div>
+      </div>
+      <div class="ln ln-walker">
+        <span class="ln-icon">💰</span>
+        <div class="ln-title">Walk is logged</div>
+        <div class="ln-desc">Package decrements. Invoice triggered when low.</div>
+      </div>
+    </div>
+
+    <div class="return-arrow">
+      <div class="ra-label">Loop back ↺</div>
+      <div class="ra-flow"></div>
+      <div class="ra-text">Walk history → Mini Gen uses it → smarter drafts next week → Gen approves faster → walkers walk better-prepared → more notes → better history → repeat</div>
+    </div>
+
+    <div class="return-arrow" style="margin-top:8px;">
+      <div class="ra-label">Owner loop ↺</div>
+      <div class="ra-flow" style="background:linear-gradient(90deg,transparent,var(--pl-blue),transparent);"></div>
+      <div class="ra-text">Walk completed → Walk Report Card sent to owner → owner trusts Wiggle more → owner books again → package renews → business grows → Rod hires another walker</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  BILLING — HOW IT CLOSES
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">Billing — how money flows automatically (Phase 3)</div>
+  <div class="billing-track">
+    <div class="bt-step" style="background:#F8FAFC;">
+      <div class="bt-step-num">Step 1</div>
+      <div class="bt-step-title">Walk happens</div>
+      <div class="bt-step-desc">Walker marks dog as picked up and returned. walker_notes row written.</div>
+      <div class="bt-step-arrow"></div>
+    </div>
+    <div class="bt-step" style="background:#F8FAFC;">
+      <div class="bt-step-num">Step 2</div>
+      <div class="bt-step-title">Counter decrements</div>
+      <div class="bt-step-desc">Billing table in Supabase tracks walks remaining per dog. Each walk = -1.</div>
+      <div class="bt-step-arrow"></div>
+    </div>
+    <div class="bt-step active">
+      <div class="bt-step-num">Step 3</div>
+      <div class="bt-step-title">Tower flags low packages</div>
+      <div class="bt-step-desc">Tower Billing tab shows red for 0 walks, amber for ≤2. Gen sees it immediately.</div>
+      <div class="bt-step-arrow"></div>
+    </div>
+    <div class="bt-step active">
+      <div class="bt-step-num">Step 4</div>
+      <div class="bt-step-title">Beast sends nudge</div>
+      <div class="bt-step-desc">Gen tells Beast: "send renewal nudge to Raku." Beast confirms. Sends. Done.</div>
+      <div class="bt-step-arrow"></div>
+    </div>
+    <div class="bt-step" style="background:#F0FAF5;">
+      <div class="bt-step-num">Step 5</div>
+      <div class="bt-step-title">Owner renews</div>
+      <div class="bt-step-desc">Pays. Counter resets. No gap in service. No awkward follow-up call.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  WHAT IT'S NOT
+══════════════════════════════════════ -->
+<div class="section">
+  <div class="sec-label">What this is and what it is not</div>
+  <div class="not-grid">
+    <div class="not-card">
+      <div class="not-x">✕</div>
+      <div class="not-text">
+        <strong>Not a scheduling app</strong>
+        A scheduling app just stores bookings. Wiggle takes bookings and turns them into walk groups, resolves name mismatches, checks conflicts, and puts the right dogs in front of the right walkers automatically.
+      </div>
+    </div>
+    <div class="not-card">
+      <div class="not-check">✓</div>
+      <div class="not-text">
+        <strong>A self-running operations engine</strong>
+        Gen approves. She doesn't build. The system builds. She manages exceptions. That's the shift — from doing the work to reviewing the work.
+      </div>
+    </div>
+    <div class="not-card">
+      <div class="not-x">✕</div>
+      <div class="not-text">
+        <strong>Not two separate tools</strong>
+        Tower and the app are not a desktop app and a mobile app that happen to share data. They are one system viewed from two angles. Every row written in one surface is instantly visible in the other.
+      </div>
+    </div>
+    <div class="not-card">
+      <div class="not-check">✓</div>
+      <div class="not-text">
+        <strong>One truth, two windows</strong>
+        Supabase is the only source of truth. The app is the field window. Tower is the desk window. Change anything in either place — the other sees it in under a second.
+      </div>
+    </div>
+    <div class="not-card">
+      <div class="not-x">✕</div>
+      <div class="not-text">
+        <strong>Not automation for automation's sake</strong>
+        Mini Gen doesn't send walkers anywhere. The Beast doesn't write to the database until a human confirms. Every autonomous action stops at a human checkpoint. The walkers and Gen stay in control.
+      </div>
+    </div>
+    <div class="not-card">
+      <div class="not-check">✓</div>
+      <div class="not-text">
+        <strong>Technology that serves the relationship</strong>
+        8 years of client trust wasn't built by software. It was built by walkers who knew every dog by name. The app removes friction so walkers can focus on the dog in front of them — not their phone.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+  CLOSING
+══════════════════════════════════════ -->
+<div class="closing">
+  <div class="closing-text">
+    Wiggle is a small business that runs like a <em>large one</em> — because the system does the admin work, and the people do the work that <em>only people can do</em>.
+  </div>
+</div>
+
+</div><!-- /wrap -->
+</body>
+</html>

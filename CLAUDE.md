@@ -1,326 +1,107 @@
-# WIGGLE DOG WALKS — DESIGN CONSTITUTION
-## Loaded automatically every Claude Code and Antigravity session.
-## Lives at: ~/Documents/wiggle-v4/CLAUDE.md
-## Do not edit without Rodrigo's approval.
-## Last updated: April 5, 2026 — color system clarified, fuschia/purple ruling final
+# CLAUDE.md
+*Read this first. Every session. Before writing a single line.*
 
 ---
 
-## WHO WE ARE
+## What this repo is
 
-Wiggle Dog Walks. Montréal's Plateau and Laurier.
-~95 dogs. ~7 walkers. One co-admin. Founded and operated by Rodrigo.
+**Wiggle World** — a new product for Wiggle Dog Walks, a Montréal dog walking company (~95 dogs, 7 walkers, Plateau + Laurier sectors). This repo builds two surfaces on one Supabase brain:
 
-Brand voice: "Work smart, play always."
-Philosophy: Occam's razor — simplest truth, strongest foundation.
+- **The Neighbourhood HQ** — walker-facing PWA (phone, one hand, winter coat) — Phase 1
+- **The Studio (Tower Control)** — admin desktop dashboard for Gen and Rod — Live V4
 
-We are not a logistics platform. Not a startup.
-A small business built on personality, trust, and 8 years of
-relationships with dogs and their families.
-The technology serves that. Never the other way around.
+The existing walker app at `wiggle-app-dusky.vercel.app` is **untouchable**. It keeps running for walkers throughout this build. Wiggle World eventually replaces it. Not yet.
+
+**Full architecture, all design tokens, all rules → `WIGGLE_WORLD_SPEC.md`**
 
 ---
 
-## THE FOUR FILTERS
-### Run before building anything. In this order. No exceptions.
+## Current build state
 
-**WWRS** — What would the walker need right now, one hand, winter coat?
-If the answer is "not this" — stop.
+| Surface | Status |
+|---|---|
+| Tower Control (The Studio) | Live — V4 (confirmed April 5–6, 2026) |
+| Wiggle World Phase 1 scaffold | **NEXT** — new repo (`wiggle-world/`), same Supabase project |
+| The Neighbourhood HQ | Phase 1 — builds inside Wiggle World scaffold |
+| WeekScreen | Placeholder — "coming soon" |
+| BeastScreen (HQ) | Placeholder — Beast lives in Tower |
 
-**ONE PLACE** — Does this action or information already have a home?
-If yes — put it there. Do not create a second home.
-
-**SIMPLEST** — What is the smallest version that solves the real problem?
-Strip it to the bone. Ask this BEFORE opening the editor.
-
-**BOTH VIEWS** — Does this work for the app AND Tower Control?
-If it only works in one view — it is incomplete.
+**What's already done in wiggle-v4 (do not rebuild, do not port blindly):** walk groups, dog cards, pickup/return/not-walking state, dog drawer, note composer, owl notes, forever notes, flag system, Mini Gen pipeline, Tower Control V4. All of this is documented and needs to be re-implemented cleanly in the Wiggle World repo with The Field design system.
 
 ---
 
-## COLOR SYSTEM
-### Every color earns its place. Every color has exactly one job.
+## The design system — The Field
 
-A color that does two jobs does neither — it becomes noise.
-Before adding any color, ask: what does this color already mean?
-If it has a job → you cannot reassign it.
-If it has no job → define one before using it.
-Blue is allowed — but only when it has a defined functional purpose.
+Two fonts. Two registers. Non-negotiable.
 
-### Brand & Functional Colors
+**Fraunces** (serif, optical sizing on) — everything Wiggle *says*: wordmark, session hero, group names, dog names (italic 700).
+**DM Mono** (monospace) — everything Wiggle *delivers*: door codes, addresses, timestamps, walker badges, data labels.
 
-| Token         | Hex       | Job                                                              |
-|---------------|-----------|------------------------------------------------------------------|
-| Coral         | `#E8634A` | Primary action — CTAs, lock slider, brand identity hero          |
-| Coral Dark    | `#C94A34` | Pressed/active state of coral only                               |
-| Coral Light   | `#FAECE7` | Coral tint — status highlights, light backgrounds                |
-| Purple        | `#534AB7` | Dog name signal (has forever note) · walker names · group structure |
-| Purple bg     | `#EEEDFE` | Purple tint — walker buttons, group tints, interlock bars        |
-| Purple Dark   | `#3D3590` | Unlock slider, deep purple accents                               |
-| Fuschia       | `#961e78` | Forever note CONTENT — section bg, expand block, editor sheet    |
-| Fuschia bg    | `#fdf4fb` | Forever note section backgrounds                                 |
-| Fuschia border| `#e8d0e3` | Forever note section borders                                     |
-| Sage          | `#2D8F6F` | Picked up, positive, done, success                               |
-| Sage bg       | `#E8F5EF` | Picked up card background                                        |
-| Sage border   | `#6DCAA8` | Picked up card border                                            |
-| Amber         | `#C4851C` | Needs attention, not walking, warnings · owl note labels         |
-| Amber bg      | `#FDF3E3` | Not walking card bg · owl note sections                          |
-| Amber border  | `#F0C76E` | Warning borders · owl note borders                               |
-| Slate         | `#475569` | Utilitarian info — door codes, addresses, metadata               |
+Never use DM Sans. That is the old system.
 
-### Surface Colors
+The visual frame: forest green top bar (`#111A14`) + forest green bottom nav (`#111A14`) surrounding warm peach/cream content. Like a book — cover, pages, cover. Do not change the bar or nav color.
 
-| Token       | Hex       | Job                                                        |
-|-------------|-----------|------------------------------------------------------------|
-| Background  | `#FFF5F0` | Peach — app bg, never white                                |
-| Card        | `#FAF7F4` | Cream — all cards and panels, never pure white             |
-| Sand        | `#F0ECE8` | Secondary surfaces, back-home card, done states            |
-| Border      | `#E8E4E0` | Warm gray — all borders, never cold gray                   |
-| Shadow      | `#D5CFC8` | Card bottom shadow — clay 3D effect                        |
-
-### Text Colors
-
-| Token       | Hex       | Job                                                        |
-|-------------|-----------|------------------------------------------------------------|
-| Text        | `#2D2926` | Primary — warm black. NEVER #000 or #333.                  |
-| Text mid    | `#8C857E` | Secondary text, labels                                     |
-| Text light  | `#B5AFA8` | Tertiary, hints                                            |
-| Text faint  | `#D5CFC8` | Disabled, placeholder                                      |
-
-### Dog Name Color Logic — FINAL RULING (hard rule, no exceptions)
-
-Purple and Fuschia have two DIFFERENT jobs. They are not interchangeable.
-
-**Purple `#534AB7` on dog name** = "this dog has a forever note — tap to see it"
-- This is the SIGNAL. It lives on the name text only.
-- Fires when `dogs.notes` is not null AND not empty string.
-- Also used for: walker names, group structure, interlock — never reassigned.
-
-**Fuschia `#961e78` on sections/content** = "this IS the forever note content"
-- This is the CONTENT color. It lives on section backgrounds, expand blocks, editor sheets.
-- Never appears on dog name text. Never appears on cards.
-- Fuschia on a name = wrong. Fuschia on a drawer section = correct.
-
-Summary:
-- Dog name → **purple** when forever note exists
-- Forever note section/expand/editor → **fuschia** bg and borders
-- These two colors coexist. They serve different purposes. Neither is retired.
-
-### Sector Colors (map + visual identity only)
-
-- Plateau: Teal-Blue `#3B82A0`
-- Laurier: Forest Green `#4A9E6F`
-- These are reserved for sector identification on maps and visual indicators.
-  Not for general UI use.
-
-### Hard Rules
-
-- NEVER use Tailwind cold grays (gray-100, gray-200, slate-100 without warm override)
-- NEVER use pure white (#ffffff) — use cream #FAF7F4
-- Coral is the CTA on every surface — always
-- Background is always warm — if it feels like a bank app, it is wrong
-- Purple on dog name = forever note signal. Fuschia on sections = forever note content.
-  Both are active. Neither is retired. Do not confuse them.
+Full token table → `WIGGLE_WORLD_SPEC.md § 4`
 
 ---
 
-## TYPOGRAPHY
+## The rules most likely to be broken — read these twice
 
-Font: **DM Sans** — weights 400, 500, 600, 700.
-This is the Wiggle voice in text form.
-Do not introduce other fonts without Rodrigo's explicit approval.
-Applies to the app, website, and all graphic templates.
+**No blue.** Blue has no defined job in this app. Not for links, not for focus rings, not for anything.
 
-Minimum touch targets: **44px height** for any tappable element on mobile.
+**Dog names are Fraunces italic.** Not bold sans-serif. Not DM Mono. Fraunces italic 700. This is the single most important typographic decision in the app.
 
----
+**No avatar circles or emoji on walk cards.** No breed label on walk cards. No dog photo on walk cards — ever. Fails WWRS.
 
-## DOG CARD — THE MOST IMPORTANT COMPONENT
-### The card is a promise. Everything to get through that door, visible without a tap.
+**No "All" tab in DogsScreen.** Plateau and Laurier only. No exceptions.
 
-### Always show — no exceptions, no layout mode overrides:
-1. Dog name — tappable → opens DogProfileDrawer
-   - Default: black `#2D2926`
-   - If dogs.notes has content: **purple `#534AB7`** (the signal)
-2. Address — street number + street name only (no postal code, no city)
-3. Door code — slate pill `#475569`, white text, only if exists
-4. Difficulty dot — sage = easy, amber = needs attention, coral = caution
+**No Admin Panel in HQ Settings.** That belongs in Tower. If a walker can see it, something is wrong.
 
-`isCompact` mode (interlock): may reduce padding and font size ONLY.
-Never removes name, address, or door code. Ever.
+**No Beast color (`#E8762B`) in HQ.** Tower only.
 
-### Card States
+**`owl_notes` always filter by `target_sector`.** Notes must never bleed across sectors.
 
-| State       | Background        | Name color          | Notes                          |
-|-------------|-------------------|---------------------|--------------------------------|
-| Waiting     | `#FAF7F4` cream   | Black or purple     | Default                        |
-| Picked up   | `#E8F5EF` sage    | Struck through      | Show pickup time               |
-| Back home   | `#F0ECE8` sand    | Normal, opacity 0.55| Show both times                |
-| Not walking | `#FDF3E3` amber   | Struck amber        | Amber border + badge           |
-
-### Card Styling
-- Background: cream `#FAF7F4`
-- Border: 1px solid `#E8E4E0`
-- Border-bottom: 2.5px solid `#D5CFC8` (clay shadow effect)
-- Border-radius: 10px
-- Font: DM Sans 12px
-- Padding: 8px 10px
-
-### Address Display
-- 10px, slate `#475569`, font-weight 500
-- Split on first comma, strip Canadian postal codes
-- Result: street number + street name only (e.g. "4200 Esplanade")
-
-### Door Code Pill
-- 9px white text, bold
-- Background: slate `#475569`
-- Padding: 2px 7px, border-radius: 5px
+**No anonymous writes.** Every mutation carries `walker_id`, `walker_name`, and `walk_date`. Always.
 
 ---
 
-## GROUP HEADER RULES
+## The AI layer — the most important rule in the product
 
-### Walker Buttons (not static text — tappable)
-- Two walker slots per group
-- Tap → opens picker to assign/switch walker
-- Picker shows: scheduled-today walkers first (sage bg), others second (cream bg)
-- Exclude: "Wiggle Pro", "Pup Walker", null names, Gen (admin)
-- Rod (sector: both) appears in both Plateau and Laurier pickers
+**Every AI agent stops and waits for human approval before touching production data.**
 
-### Walker Schedule Parsing
-- profiles.schedule = text string "Mon, Tue, Wed"
-- Parse with regex to check today's day name
-- profiles.sector determines which sector they appear in
+🤖 **Mini Gen** is live. Pipeline: `Acuity → The Watcher → The Briefing → Mini Gen → mini_gen_drafts`. Gen approves in Tower. `api/tower-approve.js` promotes to `walk_groups`. Mini Gen never writes directly to `walk_groups`. 100% resolution rate (114/114). Do not build anything that alters this flow without a new prompt.
 
-### Group Header Format
-- Left: group name
-- Right: walker name(s) as purple buttons + dog count
-- Walker names always visible — always on the header line
-
-### Group States
-- Active: coral solid border, cream bg
-- Done: collapsed, tappable to expand, faded
-- Done expanded: all dogs shown in final state, names tappable → drawer with undo
-- Interlock: purple sync bar between linked groups
+🦍 **Beast** is next (Tower only). Surfaces suggestions with a "Do it" confirm block. Never executes without a human pressing that button.
 
 ---
 
-## DOG PROFILE DRAWER — ACTION CENTRE
-### One dog. One place. Every action that changes a dog's state lives here.
+## The four filters — run before building anything
 
-### Drawer Close Rules (hard)
-CLOSE after: Picked Up, Back Home, Not Walking, any Undo
-NEVER CLOSE after: edit times, info taps, note viewing
-WHY: Status action = walker moves to next door. App moves with them.
-
-### Actions (contextual by state)
-- Waiting: "Mark as Picked Up"
-- Picked up: "Mark as Back Home" + "Undo pickup"
-- Back home: "Undo return"
-- Not walking: "Undo — pick up after all"
-- Any state: "Not Walking today" if not already set
-
-### Information Sections (order in drawer)
-1. **Walk Times** — pickup/return times, duration, edit buttons
-2. **★ Forever Notes** — dogs.notes, fuschia bg `#fdf4fb`, permanent, never expires
-   - Admin (chief_pup) sees Edit button. Walkers see read-only + "admin-only" label.
-3. **🦉 Owl Notes** — staff-written, expires weekly, sector-filtered, amber bg
-4. **📅 Acuity Notes** — client-written, expires today, blue bg (Phase 2 — not built yet)
-5. **📝 Activity Notes** — walker_notes note_type='note', permanent history
+1. **WWRS** — Would a walker with one hand in a winter coat use this without thinking? If not, reconsider.
+2. **ONE PLACE** — Does this action already have a home? Put it there.
+3. **SIMPLEST** — Strip it to the bone. Build that.
+4. **BOTH VIEWS** — Does it work in HQ and Tower? If only one, it's incomplete.
 
 ---
 
-## LOCK SLIDER
+## Supabase
 
-- Lock (slide RIGHT): coral gradient
-- Unlock (slide LEFT): purple dark gradient
-- Thumb: light bg with shadow, 44×44px, border-radius 12px
-- Height: 60px total, border-radius 16px
-
----
-
-## DATABASE RULES
-
-- Walk state lives in `walker_notes` ONLY — never `walk_logs` (empty, unused)
-- `note_type` values: `pickup` | `returned` | `not_walking` | `group_done` | `note` | `resolver_flag`
-- Query Supabase FIRST — never ask Rodrigo for data in the DB
-- Every write must carry `walker_id`, `walker_name`, `walk_date`
-- `walk_groups.dog_ids` stores dog names as text[] — intentional, names are unique per sector
-- `owl_notes` requires `target_sector` filter — never query without it or notes bleed across sectors
-- Mini Gen writes to `mini_gen_drafts` ONLY — never directly to `walk_groups`
+- **Project ID:** `ifhniwjdrsswgemmqddn`
+- **URL:** `https://ifhniwjdrsswgemmqddn.supabase.co`
+- **Anon key:** from wiggle-v4 `.env` — never commit raw keys
+- **Walk state lives in `walker_notes` only.** `walk_logs` is empty — ignore it.
+- **Full table reference → `WIGGLE_WORLD_SPEC.md § 3`**
 
 ---
 
-## TOOL ASSIGNMENT
+## What not to do without a new prompt
 
-| Task                                         | Tool          |
-|----------------------------------------------|---------------|
-| Visual fix, swipe, card state, drawer        | Antigravity   |
-| Architecture, hooks, multi-file, Tower       | Claude Code   |
-| Strategy, Supabase queries, prompt writing   | Claude Chat   |
-
-Clean build ≠ working feature. Device test is the only proof.
-Test at: https://wiggle-app-dusky.vercel.app
-Login: test@wiggledogwalks.com / WiggleTest2026!
+Tower Control V4 is live — do not regress it. Do not build billing, maps, SMS, push notifications, Instagram integration, or the client portal. Do not deploy — Rod reviews and deploys manually.
 
 ---
 
-## TECHNICAL REFERENCE
+## Where to go when you're unsure
 
-- Stack: React 19, Vite, Tailwind CSS, Framer Motion, @dnd-kit,
-  Supabase realtime, Workbox PWA, Sonner toast
-- Code: ~/Documents/wiggle-v4/
-- Supabase: ifhniwjdrsswgemmqddn
-- Production: wiggle-app-dusky.vercel.app
-- Sectors: Plateau (#3B82A0) — 56 dogs | Laurier (#4A9E6F) — 39 dogs
-- Roles: Chief Pup (admin) | Wiggle Pro (senior_walker) | Pup Walker (junior_walker)
-- Acuity: User ID 36833686 | Type IDs: 80336576 Plateau, 80336804 Laurier, 81191222 Private
-- Tower: ~/Documents/wiggle-v4/apps-script/Code.js
-- Mini Gen: api/mini-gen.js — POST /api/mini-gen — writes to mini_gen_drafts + walker_notes
-- Gen UUID: db94d31c-90b7-410e-9ce1-e8f79a752925
+`WIGGLE_WORLD_SPEC.md` → `wiggle-principles/SKILL.md` → make the call Rod would make.
 
-Do not add npm packages without asking Rodrigo.
-Do not introduce new font families.
-Do not use cold gray Tailwind classes.
-Do not remove dog name, address, or door code from any card state.
-Purple on dog name = forever note signal. Fuschia on sections = forever note content.
-
----
-
-## THE DRIFT CHECK
-### Run before every PR, design review, or new component.
-
-- [ ] Background is warm — peach or cream, never white
-- [ ] Every color has a defined job in the table above
-- [ ] No color is doing two jobs on the same screen
-- [ ] No cold Tailwind grays without warm override
-- [ ] Dog name is black (default) or purple (has forever note) — never fuschia
-- [ ] Forever note sections use fuschia bg — never amber or purple
-- [ ] All touch targets ≥ 44px
-- [ ] Door codes always visible as slate pill — never hidden
-- [ ] Font is DM Sans — nothing else
-- [ ] Coral is the CTA — not blue, not green, not gray
-- [ ] Screen passes WWRS: one hand, one eye on the dog
-- [ ] Does this feel like Wiggle — or something else?
-
----
-
-## WEBSITE (upcoming)
-
-Client-facing trust surface. Neighbourhood institution's front door.
-Peach background, cream sections, coral CTA — same palette as the app.
-Photography leads — dogs, walkers, Plateau and Laurier streets.
-Mobile-first always. Bilingual EN/FR from day one.
-Coral is the only booking CTA. Never blue, never green.
-
-## INSTAGRAM (upcoming)
-
-Lifestyle and community channel. Not a promotions feed.
-Coral accent in every graphic. DM Sans for text overlays.
-Dog names and personalities are the content. Neighbourhood energy.
-Same color tokens as the app — warmth carries across every surface.
-
----
-
-*This file is a living document. Update when the design system evolves.
-Not when you feel like improvising. Work smart, play always. 🐾*
+The mantra: **Work smart. Play always.**
