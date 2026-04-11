@@ -7,12 +7,12 @@ function fmtDate(d) {
   })
 }
 
-export default function DraftCard({ draft, flags, onAction }) {
+export default function DraftCard({ draft, miniGenFlags, onAction }) {
   const [busy, setBusy] = useState(null)
   const [result, setResult] = useState(null) // 'approved' | 'rejected'
 
   const dogs = draft.dog_names || []
-  const dayFlags = (flags || []).filter((f) => f.walk_date === draft.walk_date)
+  const dayFlags = (miniGenFlags || []).filter((f) => f.walk_date === draft.walk_date)
   const hasFlags = dayFlags.length > 0
 
   async function handleAction(status) {

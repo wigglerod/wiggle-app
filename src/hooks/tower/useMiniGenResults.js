@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 /**
- * Fetches the latest Mini Gen drafts and flags from existing tables.
- * Reads mini_gen_drafts (pending) + walker_notes (resolver_flag).
+ * Fetches the latest Mini Gen drafts and Mini Gen flags from existing tables.
+ * Reads mini_gen_drafts (pending) + walker_notes (note_type='resolver_flag').
  * Call refetch() after approve/reject or after triggering a new run.
  */
 export default function useMiniGenResults() {
   const [drafts, setDrafts] = useState([])
-  const [flags, setFlags] = useState([])
+  const [miniGenFlags, setMiniGenFlags] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -47,9 +47,9 @@ export default function useMiniGenResults() {
           .order('tags')
 
         if (flagErr) throw flagErr
-        setFlags(flagRows || [])
+        setMiniGenFlags(flagRows || [])
       } else {
-        setFlags([])
+        setMiniGenFlags([])
       }
     } catch (e) {
       setError(e.message || 'Failed to load Mini Gen results')
@@ -67,9 +67,9 @@ export default function useMiniGenResults() {
 
   const stats = {
     pendingDrafts: drafts.length,
-    flagCount: flags.length,
+    flagCount: miniGenFlags.length,
     lastRunDate,
   }
 
-  return { drafts, flags, stats, loading, error, refetch: fetch_ }
+  return { drafts, miniGenFlags, stats, loading, error, refetch: fetch_ }
 }

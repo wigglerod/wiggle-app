@@ -1,10 +1,8 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import useMiniGenResults from '../hooks/tower/useMiniGenResults'
-import StatsBar from '../components/tower/dashboard/StatsBar'
-import DraftCard from '../components/tower/dashboard/DraftCard'
-import FlagCard from '../components/tower/dashboard/FlagCard'
-import { towerSectionLabel } from '../components/tower/tower-utils'
-import BeastSection from '../components/tower/beast/BeastSection'
+import useWalkerFlags from '../hooks/tower/useWalkerFlags'
+import DashboardLeftColumn from '../components/tower/dashboard/DashboardLeftColumn'
+import DashboardRightColumn from '../components/tower/dashboard/DashboardRightColumn'
 
 function getWeekRange() {
   const now = new Date()
@@ -23,9 +21,36 @@ const todayLabel = new Date().toLocaleDateString('en-US', {
 })
 
 export default function TowerDashboard() {
-  const { drafts, flags, stats, loading, refetch } = useMiniGenResults()
+  const { drafts, miniGenFlags, stats, loading, refetch } = useMiniGenResults()
+  const {
+    walkerFlags, loading: walkerFlagsLoading,
+    error: walkerFlagsError, refetch: refetchWalkerFlags, resolveFlag,
+  } = useWalkerFlags()
+
   const [running, setRunning] = useState(false)
   const [runError, setRunError] = useState(null)
+
+  // Optimistic resolve: remove row from list immediately, then persist
+  const [optimisticHidden, setOptimisticHidden] = useState(new Set())
+
+  const handleResolveFlag = useCallback(async (noteId) => {
+    // Optimistic: hide immediately
+    setOptimisticHidden(prev => new Set(prev).add(noteId))
+    try {
+      await resolveFlag(noteId)
+      refetchWalkerFlags()
+    } catch (err) {
+      // Revert optimistic hide
+      setOptimisticHidden(prev => {
+        const next = new Set(prev)
+        next.delete(noteId)
+        return next
+      })
+      throw err
+    }
+  }, [resolveFlag, refetchWalkerFlags])
+
+  const visibleWalkerFlags = walkerFlags.filter(f => !optimisticHidden.has(f.id))
 
   async function runMiniGen() {
     setRunning(true)
@@ -90,75 +115,25 @@ export default function TowerDashboard() {
         </div>
       </div>
 
-      {/* ── 2. STATS BAR ── */}
-      <div className="mb-6">
-        <StatsBar stats={stats} />
+      {/* ── 2. TWO-COLUMN LAYOUT ── */}
+      <div className="flex flex-col lg:grid lg:grid-cols-[320px_1fr] lg:gap-8">
+        <DashboardLeftColumn
+          walkerFlags={visibleWalkerFlags}
+          walkerFlagsLoading={walkerFlagsLoading}
+          walkerFlagsError={walkerFlagsError}
+          onResolveFlag={handleResolveFlag}
+        />
+        <DashboardRightColumn
+          stats={stats}
+          drafts={drafts}
+          miniGenFlags={miniGenFlags}
+          loading={loading}
+          onAction={refetch}
+          runMiniGen={runMiniGen}
+          running={running}
+          runError={runError}
+        />
       </div>
-
-      {/* ── 3. DRAFTS SECTION ── */}
-      <div className="mb-8">
-        <h2 className="mb-3" style={towerSectionLabel}>
-          \ud83d\udccb THIS WEEK&rsquo;S DRAFTS
-        </h2>
-
-        {loading ? (
-          <p style={{ fontSize: 'var(--tower-text-md)', color: 'var(--tower-text-muted)' }}>
-            Loading&hellip;
-          </p>
-        ) : drafts.length === 0 ? (
-          <p
-            style={{
-              fontSize: 'var(--tower-text-md)',
-              color: 'var(--tower-text-muted)',
-              fontStyle: 'italic',
-              textAlign: 'center',
-              padding: '32px 0',
-            }}
-          >
-            Mini Gen hasn&rsquo;t run yet. Use the button above to run it.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {drafts.map((d) => (
-              <DraftCard key={d.id} draft={d} flags={flags} onAction={refetch} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── 4. FLAGS SECTION ── */}
-      <div>
-        <h2 className="mb-3" style={towerSectionLabel}>
-          \ud83d\udea9 FLAGS
-        </h2>
-
-        {loading ? (
-          <p style={{ fontSize: 'var(--tower-text-md)', color: 'var(--tower-text-muted)' }}>
-            Loading&hellip;
-          </p>
-        ) : flags.length === 0 ? (
-          <p
-            style={{
-              fontSize: 'var(--tower-text-md)',
-              color: 'var(--tower-sage)',
-              fontStyle: 'italic',
-              textAlign: 'center',
-              padding: '32px 0',
-            }}
-          >
-            &check; No flags this week.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {flags.map((f) => (
-              <FlagCard key={f.id} flag={f} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── 5. BEAST SECTION ── */}
-      <BeastSection />
     </div>
   )
 }
