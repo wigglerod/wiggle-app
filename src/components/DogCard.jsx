@@ -30,6 +30,7 @@ export default function DogCard({
   onTapName,
   onTapAddress,
   onAcknowledgeOwl,      // () => void — called when walker taps 'Got it'
+  onMarkNotWalking,      // optional async () => void — marks dog not walking today
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -588,7 +589,7 @@ export default function DogCard({
             </div>
           )}
 
-          {/* Bottom button row — Got it (if owl) + ✎ Note (always) */}
+          {/* Bottom button row — Got it (if owl) + ✎ Note (always) + Not Walking today (if applicable) */}
           <div style={{
             display: 'flex', gap: 6, padding: '8px 10px',
             background: '#FAF7F4',
@@ -617,6 +618,25 @@ export default function DogCard({
             >
               ✎ Note
             </button>
+            {onMarkNotWalking && !isNotWalking && !isPickedUp && (
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!onMarkNotWalking) return;
+                  await onMarkNotWalking();
+                  setExpanded(false);
+                }}
+                style={{
+                  flex: 1, padding: '8px 10px', borderRadius: 8,
+                  background: '#FDF3E3', color: '#C4851C',
+                  fontSize: 12, fontWeight: 700, textAlign: 'center',
+                  border: '1px solid #F0C76E', cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Not Walking today
+              </button>
+            )}
           </div>
         </div>
       )}
