@@ -595,6 +595,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
           }}
           onTapName={() => enrichDogClick(ev, groupNum, dogPickup, dogId, date)}
           onTapAddress={() => enrichDogClick(ev, groupNum)}
+          onMarkNotWalking={dogId ? () => markNotWalking(dogId, ev.displayName, groupNum) : undefined}
           showDragHandle={!isLocked && !isCompact}
         />
       </div>
