@@ -282,11 +282,12 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     supabase.from('dog_conflicts').select('*').then(({ data }) => { if (data) setConflicts(data) })
   }, [])
 
-  // Key by dog UUID (matches useWalkGroups allEventIds). Fallback to _id.
+  // Key by dog_name to match walk_groups.dog_ids canonical shape.
+  // Fallback to String(_id) for events without a resolved dog (anonymous Acuity events).
   const eventsMap = useMemo(() => {
     const m = new Map()
     for (const ev of events) {
-      const key = ev.dog?.id || String(ev._id)
+      const key = ev.dog?.dog_name || String(ev._id)
       m.set(key, ev)
     }
     return m
@@ -371,7 +372,7 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     return null
   }
 
-  function eventKey(ev) { return ev.dog?.id || String(ev._id) }
+  function eventKey(ev) { return ev.dog?.dog_name || String(ev._id) }
 
   function handleDogTap(event) {
     const id = eventKey(event)

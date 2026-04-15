@@ -35,9 +35,11 @@ export function useWalkGroups(events, date, sector) {
   useEffect(() => { groupNumsRef.current = groupNums }, [groupNums])
   useEffect(() => { walkerAssignmentsRef.current = walkerAssignments }, [walkerAssignments])
 
-  // Use dog UUID as the canonical ID (stable across sessions).
-  // Fallback to _id for events without a matched dog profile.
-  const allEventIds = events.map((ev) => ev.dog?.id || ev._id?.toString?.() || String(ev._id))
+  // Use dog_name as the canonical ID (matches walk_groups.dog_ids column).
+  // Events without a resolved dog are excluded — no mixed-shape fallback.
+  const allEventIds = events
+    .map((ev) => ev.dog?.dog_name || null)
+    .filter((id) => id !== null)
 
   // Load saved groups from Supabase
   useEffect(() => {
