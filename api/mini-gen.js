@@ -281,6 +281,7 @@ export default async function handler(req, res) {
       dog_uuids: g.dogUuids,
       status: 'pending',
       flags: flagsByKey[`${g.date}_${g.sector}`] || [],
+      source: 'wiggle-v4',
     }))
 
     // Also write rows for days that have flags but no resolved dogs
@@ -295,6 +296,7 @@ export default async function handler(req, res) {
           dog_uuids: [],
           status: 'pending',
           flags,
+          source: 'wiggle-v4',
         })
       }
     }
