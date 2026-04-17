@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
+import { subscribeShared } from './sharedRealtimeChannel'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -79,40 +80,37 @@ export function useOwlNotes(sector) {
   }, [permissions?.canSeeAllSectors, userSector])
 
   // Realtime subscription
+  // Shared channel: hook mounts concurrently in Dashboard + Header (owl count)
+  // + OwlQuickDrawer + DogProfileDrawer. Sharing keeps it to one subscription.
   useEffect(() => {
     const channelName = `owl-notes-realtime-${userSector || 'all'}`
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
+    return subscribeShared(
+      {
+        name: channelName,
+        config: {
           event: '*',
           schema: 'public',
           table: 'owl_notes',
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const note = payload.new
-            // Sector filter for walkers on realtime events
-            if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
-              if (note.target_sector && note.target_sector !== userSector) return
-              if (!note.target_sector && note.target_dog_id) return
-            }
-            setNotes((prev) => [note, ...prev])
-          } else if (payload.eventType === 'UPDATE') {
-            setNotes((prev) =>
-              prev.map((n) => (n.id === payload.new.id ? payload.new : n))
-            )
-          } else if (payload.eventType === 'DELETE') {
-            setNotes((prev) => prev.filter((n) => n.id !== payload.old.id))
+      },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const note = payload.new
+          // Sector filter for walkers on realtime events
+          if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
+            if (note.target_sector && note.target_sector !== userSector) return
+            if (!note.target_sector && note.target_dog_id) return
           }
+          setNotes((prev) => [note, ...prev])
+        } else if (payload.eventType === 'UPDATE') {
+          setNotes((prev) =>
+            prev.map((n) => (n.id === payload.new.id ? payload.new : n))
+          )
+        } else if (payload.eventType === 'DELETE') {
+          setNotes((prev) => prev.filter((n) => n.id !== payload.old.id))
         }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+      }
+    )
   }, [permissions?.canSeeAllSectors, userSector])
 
   // Create a new owl note

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
+import { subscribeShared } from './sharedRealtimeChannel'
 import { useAuth } from '../context/AuthContext'
 
 /** Apply a single walker_notes row to an existing pickup entry */
@@ -69,35 +70,34 @@ export function usePickups(date) {
   }
 
   // ── Realtime subscription ──────────────────────────────────────
+  // Shared channel: hook is mounted in GroupOrganizer + DogDrawer sub-components
+  // concurrently; sharing prevents duplicate walker_notes subscriptions.
   useEffect(() => {
     if (!date) return
 
-    const channel = supabase
-      .channel(`pickups-${date}`)
-      .on(
-        'postgres_changes',
-        {
+    return subscribeShared(
+      {
+        name: `pickups-${date}`,
+        config: {
           event: '*',
           schema: 'public',
           table: 'walker_notes',
           filter: `walk_date=eq.${date}`,
         },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            const oldRow = payload.old
-            if (!oldRow?.dog_id) return
-            setPickups(prev => ({ ...prev, [oldRow.dog_id]: removeRow(prev[oldRow.dog_id], oldRow) }))
-            return
-          }
-
-          const row = payload.new
-          if (!row?.dog_id) return
-          setPickups(prev => ({ ...prev, [row.dog_id]: applyRow(prev[row.dog_id], row) }))
+      },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old
+          if (!oldRow?.dog_id) return
+          setPickups(prev => ({ ...prev, [oldRow.dog_id]: removeRow(prev[oldRow.dog_id], oldRow) }))
+          return
         }
-      )
-      .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+        const row = payload.new
+        if (!row?.dog_id) return
+        setPickups(prev => ({ ...prev, [row.dog_id]: applyRow(prev[row.dog_id], row) }))
+      }
+    )
   }, [date])
 
   // ── Mark picked up ─────────────────────────────────────────────
