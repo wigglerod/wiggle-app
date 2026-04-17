@@ -201,7 +201,7 @@ function VacationRemoveBtn({ draft, flag, onFixed }) {
   )
 }
 
-function FlaggedDraftCard({ draft, onAction }) {
+function FlaggedDraftCard({ draft, onAction, userId }) {
   const [busy, setBusy] = useState(null)
   const sectorColor = draft.sector === 'Plateau' ? '#3B82A0' : '#4A9E6F'
   const flags = draft.flags || []
@@ -212,7 +212,7 @@ function FlaggedDraftCard({ draft, onAction }) {
       const res = await fetch('/api/tower-approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: draft.id, status: action === 'approve' ? 'approved' : 'rejected' }),
+        body: JSON.stringify({ id: draft.id, status: action === 'approve' ? 'approved' : 'rejected', userId }),
       })
       if (!res.ok) throw new Error(await res.text())
       toast.success(action === 'approve' ? 'Approved' : 'Rejected')
@@ -361,7 +361,7 @@ export default function TowerMiniGen() {
           fetch('/api/tower-approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: d.id, status: 'approved' }),
+            body: JSON.stringify({ id: d.id, status: 'approved', userId: session?.user?.id }),
           })
         )
       )
@@ -475,7 +475,7 @@ export default function TowerMiniGen() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {flaggedDrafts.map(d => (
-                <FlaggedDraftCard key={d.id} draft={d} onAction={fetchData} />
+                <FlaggedDraftCard key={d.id} draft={d} onAction={fetchData} userId={session?.user?.id} />
               ))}
             </div>
           </section>

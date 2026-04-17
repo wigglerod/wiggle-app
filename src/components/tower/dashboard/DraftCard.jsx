@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../../../context/AuthContext'
 import { towerCard, sectorColor } from '../tower-utils'
 
 function fmtDate(d) {
@@ -8,6 +9,7 @@ function fmtDate(d) {
 }
 
 export default function DraftCard({ draft, flags, onAction }) {
+  const { user } = useAuth()
   const [busy, setBusy] = useState(null)
   const [result, setResult] = useState(null) // 'approved' | 'rejected'
 
@@ -21,7 +23,7 @@ export default function DraftCard({ draft, flags, onAction }) {
       const res = await fetch('/api/tower-approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: draft.id, status }),
+        body: JSON.stringify({ id: draft.id, status, userId: user?.id }),
       })
       if (!res.ok) throw new Error(await res.text())
       setResult(status === 'approved' ? 'approved' : 'rejected')

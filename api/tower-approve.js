@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { id, status } = req.body || {}
+  const { id, status, userId } = req.body || {}
 
   if (!id || !['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: 'Missing id or invalid status' })
@@ -97,6 +97,8 @@ export default async function handler(req, res) {
           locked_by: null,
           locked_by_name: null,
           dog_order: null,
+          updated_by: userId || null,
+          updated_at: new Date().toISOString(),
         })
 
       if (insertError) throw insertError
