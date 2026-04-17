@@ -110,14 +110,14 @@ export function usePickups(date) {
       [dogId]: { ...(prev[dogId] || {}), pickedUpAt: now, time: now, walkerName: profile?.full_name || 'Walker' }
     }))
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const { error } = await supabase.from('walker_notes').upsert({
       dog_id: dogId,
       dog_name: dogName || 'Unknown',
       walker_id: user.id,
       walker_name: profile?.full_name || 'Walker',
       note_type: 'pickup',
       walk_date: date,
-    })
+    }, { onConflict: 'dog_id,walk_date,note_type', ignoreDuplicates: true })
 
     if (error) {
       toast.error('Failed to save pickup')
@@ -144,14 +144,14 @@ export function usePickups(date) {
       [dogId]: { ...(prev[dogId] || {}), returnedAt: now }
     }))
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const { error } = await supabase.from('walker_notes').upsert({
       dog_id: dogId,
       dog_name: dogName || 'Unknown',
       walker_id: user.id,
       walker_name: profile?.full_name || 'Walker',
       note_type: 'returned',
       walk_date: date,
-    })
+    }, { onConflict: 'dog_id,walk_date,note_type', ignoreDuplicates: true })
 
     if (error) {
       toast.error('Failed to save return')
@@ -233,11 +233,11 @@ export function usePickups(date) {
       return { ...prev, [dogId]: entry }
     })
 
-    // Note: walker_notes has no unique constraint on dog_id+note_type, so we update via delete+insert
+    // Delete then re-insert with new timestamp (UPSERT as safety net for race)
     await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', noteType)
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const { error } = await supabase.from('walker_notes').upsert({
       dog_id: dogId,
       dog_name: 'Unknown',
       walker_id: user.id,
@@ -245,7 +245,7 @@ export function usePickups(date) {
       note_type: noteType,
       walk_date: date,
       created_at: newTimeISO,
-    })
+    }, { onConflict: 'dog_id,walk_date,note_type', ignoreDuplicates: true })
 
     if (error) {
       toast.error('Failed to update time')
@@ -264,7 +264,7 @@ export function usePickups(date) {
       [dogId]: { ...(prev[dogId] || {}), notWalking: true, walkerName: profile?.full_name || 'Walker' }
     }))
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const { error } = await supabase.from('walker_notes').upsert({
       dog_id: dogId,
       dog_name: dogName || 'Unknown',
       walker_id: user.id,
@@ -273,7 +273,7 @@ export function usePickups(date) {
       walk_date: date,
       message: 'Not walking today',
       group_num: groupNum || null,
-    })
+    }, { onConflict: 'dog_id,walk_date,note_type', ignoreDuplicates: true })
 
     if (error) {
       toast.error('Failed to save')
