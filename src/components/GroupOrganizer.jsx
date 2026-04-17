@@ -641,7 +641,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
     const wIds = walkerAssignments[num] || []
     const wNames = wIds.map(id => walkerNameMap[id]).filter(Boolean)
     const isOwn = wIds.includes(user?.id) || wIds.length === 0
-    const isOtherLocked = isGroupLocked && !isOwn && !isAdmin
     const isTarget = selectedId !== null && selectedGroup !== num && !isGroupLocked
 
     // Pickup and return counts
@@ -675,34 +674,6 @@ export default function GroupOrganizer({ events, date, sector, onDogClick, owlDo
             enrichDogClick(ev, num, dogPickup, dogId, date)
           }}
         />
-      )
-    }
-
-    // ── OTHER WALKER'S LOCKED group (collapsed) ────────────────
-    if (isOtherLocked) {
-      return <CollapsedGroup key={num} num={num} gName={gName} lockInfo={lockInfo} dogIds={dogIds} eventsMap={eventsMap} wNames={wNames} pickups={pickups} onDogClick={(ev) => enrichDogClick(ev, num)} />
-    }
-
-    // ── UPCOMING group (not locked, another walker's, walking mode) ──
-    if (anyGroupLocked && !isGroupLocked && !isOwn && wIds.length > 0 && !isAdmin) {
-      const dogNames = dogIds.slice(0, 6).map(id => eventsMap.get(id)?.displayName).filter(Boolean).join(', ')
-      return (
-        <div key={num} style={{
-          background: '#fff', border: '2px dashed #ddd', borderRadius: 14,
-          padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#555' }}>{gName}</span>
-            <span style={{ fontSize: 10, color: '#aaa' }}>{'\u00b7'}</span>
-            <span style={{ fontSize: 10, color: '#aaa' }}>{total} dogs</span>
-            {wNames.length > 0 && (
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap' }}>
-                {wNames.map(n => n.split(' ')[0]).join(' + ')}
-              </span>
-            )}
-          </div>
-          <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: '#f0ece8', color: '#aaa' }}>Up next</span>
-        </div>
       )
     }
 
@@ -1696,64 +1667,6 @@ function DoneGroup({ num, gName, elapsed, dogIds, eventsMap, pickups, onDogClick
                 )}
                 {timeLabel && (
                   <span style={{ fontSize: 9, color: '#0F6E56', fontWeight: 500, flexShrink: 0 }}>{timeLabel}</span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Collapsed locked group (other walker's) ───────────────────────
-function CollapsedGroup({ num, gName, lockInfo, dogIds, eventsMap, wNames, pickups, onDogClick }) {
-  const [expanded, setExpanded] = useState(false)
-  const pickedCount = dogIds.filter(id => { const ev = eventsMap.get(id); return ev?.dog?.id && pickups[ev.dog.id] }).length
-
-  return (
-    <div style={{ borderRadius: 14, border: '1px solid #e0dcd8', overflow: 'hidden', opacity: 0.5 }}>
-      <button onClick={() => setExpanded(p => !p)} style={{
-        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <span style={{ fontSize: 12 }}>{'\u{1F512}'}</span>
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>{gName}</span>
-          {wNames.length > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#534AB7', whiteSpace: 'nowrap' }}>
-              {wNames.map(n => n.split(' ')[0]).join(' + ')}
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, color: '#aaa' }}>{pickedCount}/{dogIds.length} dogs</span>
-          <span style={{ fontSize: 10, color: '#ccc' }}>{expanded ? '\u25B2' : '\u25BC'}</span>
-        </div>
-      </button>
-      {lockInfo?.locked_by_name && (
-        <p style={{ fontSize: 10, color: '#aaa', padding: '0 12px 4px' }}>locked by {lockInfo.locked_by_name}</p>
-      )}
-      {expanded && (
-        <div style={{ padding: '0 12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {dogIds.map((id, idx) => {
-            const ev = eventsMap.get(id)
-            if (!ev) return null
-            const dog = ev.dog || {}
-            const dogPk = dog.id ? pickups[dog.id] : null
-            const timeStr = dogPk?.time ? new Date(dogPk.time).toLocaleTimeString('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : null
-            return (
-              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '2px 0', opacity: dogPk ? 0.5 : 1 }}>
-                <span style={{ color: '#aaa', width: 14, textAlign: 'center' }}>{idx + 1}</span>
-                <span
-                  onClick={(e) => { e.stopPropagation(); onDogClick(ev) }}
-                  style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: dogPk ? 'line-through' : 'none', textDecorationColor: '#534AB7', color: '#534AB7', borderBottom: '1px dashed #AFA9EC', cursor: 'pointer' }}
-                >{ev.displayName}</span>
-                {timeStr && <span style={{ fontSize: 10, color: '#0F6E56' }}>{timeStr}</span>}
-                {dog.address && (
-                  <span onClick={() => onDogClick(ev)} style={{ fontSize: 10, color: '#185FA5', cursor: 'pointer', flexShrink: 0 }}>
-                    {dog.address.split(',')[0]} {'\u203A'}
-                  </span>
                 )}
               </div>
             )
