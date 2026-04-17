@@ -120,6 +120,8 @@ export function usePickups(date) {
     })
 
     if (error) {
+      // Unique constraint — another walker already picked up this dog, not an error
+      if (error.code === '23505') return
       toast.error('Failed to save pickup')
       setPickups(prev => {
         const next = { ...prev }
@@ -154,6 +156,8 @@ export function usePickups(date) {
     })
 
     if (error) {
+      // Unique constraint — already marked returned, not an error
+      if (error.code === '23505') return
       toast.error('Failed to save return')
       setPickups(prev => {
         const next = { ...prev }
@@ -233,7 +237,7 @@ export function usePickups(date) {
       return { ...prev, [dogId]: entry }
     })
 
-    // Note: walker_notes has no unique constraint on dog_id+note_type, so we update via delete+insert
+    // Delete old row then re-insert with new timestamp
     await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', noteType)
 
@@ -248,6 +252,8 @@ export function usePickups(date) {
     })
 
     if (error) {
+      // Unique constraint — another walker's row still exists (RLS blocked our delete)
+      if (error.code === '23505') return
       toast.error('Failed to update time')
     } else {
       toast.success('Time updated')
@@ -276,6 +282,8 @@ export function usePickups(date) {
     })
 
     if (error) {
+      // Unique constraint — already marked not walking, not an error
+      if (error.code === '23505') return
       toast.error('Failed to save')
       setPickups(prev => {
         const next = { ...prev }
