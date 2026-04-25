@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       const sourceId = mid || `ig_${senderId}_${Date.now()}`
       const supabase = getAdminClient()
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('flag_cards')
         .upsert(
           {
@@ -57,11 +57,14 @@ export default async function handler(req, res) {
           },
           { onConflict: 'source,source_id', ignoreDuplicates: true }
         )
+        .select()
 
       if (error) {
         console.error(`[scout-webhook] Supabase upsert error: ${error.message}`)
+      } else if (!data || data.length === 0) {
+        console.warn(`[scout-webhook] Silent skip — upsert matched conflict, no row written. source_id=${sourceId}`)
       } else {
-        console.log(`[scout-webhook] Card written — source_id ${sourceId}`)
+        console.log(`[scout-webhook] Card written — source_id=${sourceId}, row_id=${data[0].id}`)
       }
     } catch (err) {
       console.error(`[scout-webhook] Error processing DM: ${err.message}`)
