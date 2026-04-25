@@ -1,7 +1,8 @@
 // api/scout-webhook.js
 // Instagram DM webhook receiver for The Scout pipeline.
 // GET  → Meta webhook verification (hub.verify_token check)
-// POST → Receives DM payloads, writes to scout_cards in Supabase
+// POST → Receives DM payloads, upserts into flag_cards in Supabase
+//        (source='instagram', onConflict 'source,source_id', status='open')
 //
 // Always returns 200 to Meta on POST — even on error — to prevent retries.
 
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
       const body = req.body
       const messaging = body?.entry?.[0]?.messaging?.[0]
       const messageText = messaging?.message?.text
+      const mid = messaging?.message?.mid
       const senderId = messaging?.sender?.id
 
       if (!messageText || !senderId) {
@@ -39,24 +41,27 @@ export default async function handler(req, res) {
       }
 
       const today = new Date().toISOString().split('T')[0]
+      const sourceId = mid || `ig_${senderId}_${Date.now()}`
       const supabase = getAdminClient()
 
       const { error } = await supabase
-        .from('scout_cards')
-        .insert({
-          source: 'instagram_dm',
-          raw_message: messageText,
-          sender_id: String(senderId),
-          run_date: today,
-          category: null,
-          summary: null,
-          dog_name: null
-        })
+        .from('flag_cards')
+        .upsert(
+          {
+            source: 'instagram',
+            source_id: sourceId,
+            source_thread_id: String(senderId),
+            raw_excerpt: messageText,
+            scout_run_date: today,
+            status: 'open'
+          },
+          { onConflict: 'source,source_id', ignoreDuplicates: true }
+        )
 
       if (error) {
-        console.error(`[scout-webhook] Supabase insert error: ${error.message}`)
+        console.error(`[scout-webhook] Supabase upsert error: ${error.message}`)
       } else {
-        console.log(`[scout-webhook] Card written — sender ${senderId}`)
+        console.log(`[scout-webhook] Card written — source_id ${sourceId}`)
       }
     } catch (err) {
       console.error(`[scout-webhook] Error processing DM: ${err.message}`)
