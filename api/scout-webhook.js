@@ -55,7 +55,7 @@ export default async function handler(req, res) {
             scout_run_date: today,
             status: 'open'
           },
-          { onConflict: 'source,source_id', ignoreDuplicates: true }
+          { onConflict: 'source,source_id' }
         )
         .select()
 
