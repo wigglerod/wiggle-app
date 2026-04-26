@@ -40,6 +40,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true })
       }
 
+      // Decision #46: Meta fires duplicate events on legacy Messenger (16-digit PSID)
+      // and Instagram (17-digit IGSID). Drop the legacy channel; keep IG only.
+      if (/^\d{16}$/.test(String(senderId))) {
+        console.log('[scout-webhook] Dropped legacy Messenger channel duplicate.')
+        return res.status(200).json({ received: true })
+      }
+
       const today = new Date().toISOString().split('T')[0]
       const sourceId = mid || `ig_${senderId}_${Date.now()}`
       const supabase = getAdminClient()
