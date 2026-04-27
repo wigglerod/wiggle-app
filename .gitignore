@@ -26,3 +26,5 @@ dist-ssr
 .vercel
 .env*.local
 .claude/worktrees/
+.claude/launch.json
+supabase/.temp/
