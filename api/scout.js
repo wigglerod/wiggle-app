@@ -82,6 +82,11 @@ export default async function handler(req, res) {
       })
     })
 
+    // Canonical dog-name list for subject-line fallback (Rule 2)
+    const dogNames = (dogs || []).map(d => d.dog_name).filter(Boolean)
+    const dogNameToId = {}
+    dogs?.forEach(d => { if (d.dog_name) dogNameToId[d.dog_name.toLowerCase()] = d.id })
+
     // Acuity name map for resolving booking owner names
     const { data: nameMap } = await supabase
       .from('acuity_name_map')
@@ -230,24 +235,53 @@ export default async function handler(req, res) {
         // Resolve dog from sender email
         const resolvedDog = emailToDog[msg.fromEmail] || null
 
+        // RULE 1 — TELUS SMS forward: strip HTML, mark source_channel in excerpt
+        let classifyMsg = msg
+        let sourceChannel = null
+        if (isTelusForward(msg)) {
+          const stripped = stripHtml(msg.body)
+          classifyMsg = { ...msg, body: stripped }
+          sourceChannel = 'sms'
+          console.log(`[scout] TELUS SMS forward detected: "${msg.subject}" — HTML stripped`)
+        }
+
         // Classify with Claude Haiku
-        const classification = await classifyEmail(msg, resolvedDog)
+        const classification = await classifyEmail(classifyMsg, resolvedDog)
         if (classification.skip) {
           console.log(`[scout] Skipping "${msg.subject}" — classified as skip`)
           continue
         }
 
+        // RULE 2 — subject-line dog-name fallback
+        // Fires when the classifier returned 'unknown' OR we still have no dog name
+        let finalDogName = resolvedDog?.dog_name || null
+        let finalDogId = resolvedDog?.dog_id || null
+        let finalCategory = classification.category
+        if (!finalDogName || classification.category === 'unknown') {
+          const match = findDogInSubject(msg.subject, dogNames)
+          if (match) {
+            finalDogName = match
+            finalDogId = dogNameToId[match.toLowerCase()] || null
+            if (classification.category === 'unknown') finalCategory = 'client_message'
+            console.log(`[scout] Subject-line dog match: "${msg.subject}" → ${match} (category=${finalCategory})`)
+          }
+        }
+
+        const rawExcerpt = sourceChannel
+          ? `[source_channel: ${sourceChannel}]\nSubject: ${msg.subject}\n\n${classifyMsg.body.slice(0, 450)}`
+          : `Subject: ${msg.subject}\n\n${msg.body.slice(0, 450)}`
+
         gmailCards.push({
           source: 'gmail',
           source_id: sourceId,
           source_thread_id: threadId,
-          dog_name: resolvedDog?.dog_name || null,
-          dog_id: resolvedDog?.dog_id || null,
+          dog_name: finalDogName,
+          dog_id: finalDogId,
           owner_name: msg.from,
           owner_email: msg.fromEmail,
-          category: classification.category,
+          category: finalCategory,
           summary: classification.summary,
-          raw_excerpt: `Subject: ${msg.subject}\n\n${msg.body.slice(0, 450)}`,
+          raw_excerpt: rawExcerpt,
           walk_date: classification.walk_date || null,
           priority: classification.priority,
           status: 'open',
@@ -298,6 +332,48 @@ export default async function handler(req, res) {
     summary.errors.push(`Fatal: ${err.message}`)
     return res.status(500).json({ success: false, summary })
   }
+}
+
+// ─────────────────────────────────────────
+// Helpers for TELUS SMS + subject-line dog-name fallback
+// ─────────────────────────────────────────
+
+function stripHtml(html) {
+  if (!html) return ''
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isTelusForward(msg) {
+  const from = `${msg.from || ''} ${msg.fromEmail || ''}`.toLowerCase()
+  if (from.includes('telus business connect')) return true
+  if (/^\s*new text message from .+ on /i.test(msg.subject || '')) return true
+  return false
+}
+
+function findDogInSubject(subject, dogNames) {
+  if (!subject || !dogNames?.length) return null
+  const cleaned = subject
+    .replace(/^(\s*(Re|Fwd|Fw|RE|FWD|FW):\s*)+/g, '')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .toLowerCase()
+  const matches = new Set()
+  for (const name of dogNames) {
+    const n = name.toLowerCase()
+    const re = new RegExp(`(?:^|[^a-z])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^a-z]|$)`)
+    if (re.test(cleaned)) matches.add(name)
+  }
+  return matches.size === 1 ? [...matches][0] : null
 }
 
 // ─────────────────────────────────────────
