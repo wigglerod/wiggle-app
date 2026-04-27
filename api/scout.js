@@ -24,7 +24,14 @@ const SKIP_SENDERS = [
   'noreply@',
   'no-reply@',
   'mailer-daemon@',
-  'notifications@wix'
+  'notifications@wix',
+  'github.com',          // PR/commit notifications, vercel[bot] comments
+  'vercel[bot]',         // also matches in From display name
+  'rbc.com',             // RBC marketing
+  'vistaprint',          // Vistaprint promos
+  'supabase.io',         // product update newsletter
+  'dogpackapp.com',      // feature email
+  'mondou.com'           // receipts
 ]
 
 export default async function handler(req, res) {
