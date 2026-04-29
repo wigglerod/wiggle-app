@@ -4,7 +4,6 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "crons": [
-    { "path": "/api/mini-gen", "schedule": "0 12 * * 1-5" },
     { "path": "/api/scout", "schedule": "0 13 * * 1-5" }
   ],
   "rewrites": [{ "source": "/(.*)", "destination": "/" }],
