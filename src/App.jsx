@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { useChannelHealth } from './lib/useChannelHealth'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import LoadingDog from './components/LoadingDog'
@@ -177,11 +178,19 @@ function AnimatedRoutes() {
   )
 }
 
+// OQ #56 / HIGH-2: mount once above the routes so the visibility handler
+// outlives route changes and remounts.
+function ChannelHealth() {
+  useChannelHealth()
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <UpdateBanner />
       <AuthProvider>
+        <ChannelHealth />
         <OfflineBanner />
         <AnimatedRoutes />
         <Toaster position="top-center" richColors closeButton />

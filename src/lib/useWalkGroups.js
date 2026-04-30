@@ -175,7 +175,12 @@ export function useWalkGroups(events, date, sector) {
           })
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        // OQ #56 / HIGH-3: surface JOIN failures that supabase-js otherwise swallows.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('[realtime] walk-groups', `${date}-${sector}`, status, err)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
