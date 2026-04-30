@@ -27,10 +27,22 @@ export function AuthProvider({ children }) {
       if (s) fetchProfile(s.user.id)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
       if (s) fetchProfile(s.user.id)
       else setProfile(null)
+
+      // OQ #56 / HIGH-1: propagate token to realtime layer on refresh.
+      // supabase-js v2 should do this internally but has shipped regressions
+      // where the WebSocket continues with the old JWT after TOKEN_REFRESHED.
+      // Defensive call; harmless if the client is also doing it.
+      if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && s?.access_token) {
+        try {
+          supabase.realtime.setAuth(s.access_token)
+        } catch (e) {
+          console.warn('[realtime] setAuth failed', e)
+        }
+      }
     })
 
     return () => subscription.unsubscribe()
