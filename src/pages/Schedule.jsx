@@ -9,6 +9,7 @@ import WalkLogModal from '../components/WalkLogModal'
 import RouteBuilder from '../components/RouteBuilder'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { groupEventsByTimeSlot } from '../lib/parseICS'
 import { matchEvents, buildNameMap } from '../lib/matchDogs'
 import { extractDoorCode } from '../lib/extractDoorCode'
@@ -113,6 +114,7 @@ export default function Schedule() {
 
   async function saveDailyNote() {
     if (!noteInput.trim()) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setNoteSaving(true)
     const { data, error } = await supabase
       .from('daily_notes')
@@ -175,8 +177,11 @@ export default function Schedule() {
           walk_date: selectedDate,
         }))
       if (logs.length > 0) {
-        supabase.from('match_log').upsert(logs, { onConflict: 'acuity_name,walk_date' })
-          .then(({ error }) => { if (error) console.error('[match_log] upsert failed:', error) })
+        ;(async () => {
+          try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
+          const { error } = await supabase.from('match_log').upsert(logs, { onConflict: 'acuity_name,walk_date' })
+          if (error) console.error('[match_log] upsert failed:', error)
+        })()
       }
 
       const filtered = enriched.filter((ev) => !/TBD/i.test(ev.displayName || ''))

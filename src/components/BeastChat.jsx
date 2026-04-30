@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 
 const BEAST_ORANGE = '#e8762b'
 
@@ -78,6 +79,7 @@ export default function BeastChat() {
 
   async function sendMessage(text) {
     if (!text.trim() || loading) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     const userMsg = { role: 'user', content: text.trim(), ts: Date.now() }
     const next = [...messages, userMsg]

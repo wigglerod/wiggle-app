@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'sonner'
 
@@ -44,6 +45,7 @@ export default function WalkerNotesSection({ dogId }) {
                 {user?.id === note.walker_id && (
                   <button
                     onClick={async () => {
+                      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
                       const { error } = await supabase.from('walker_notes').delete().eq('id', note.id)
                       if (!error) {
                          setNotes(prev => prev.filter(n => n.id !== note.id))

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { toast } from 'sonner'
 
 /* ── helpers ────────────────────────────────────────── */
@@ -77,6 +78,7 @@ function UnresolvedFixForm({ flag, onFixed }) {
 
   async function handleSave() {
     if (!query.trim()) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     try {
       const res = await fetch('/api/tower-add-name-map', {
@@ -151,6 +153,7 @@ function VacationRemoveBtn({ draft, flag, onFixed }) {
   const [removed, setRemoved] = useState(false)
 
   async function handleRemove() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setBusy(true)
     try {
       const { data: current, error: readErr } = await supabase
@@ -207,6 +210,7 @@ function FlaggedDraftCard({ draft, onAction, userId }) {
   const flags = draft.flags || []
 
   async function handleAction(action) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setBusy(action)
     try {
       const res = await fetch('/api/tower-approve', {
@@ -333,6 +337,7 @@ export default function TowerMiniGen() {
 
   /* ── run Mini Gen ── */
   async function runMiniGen() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setRunning(true)
     setRunSummary(null)
     try {
@@ -354,6 +359,7 @@ export default function TowerMiniGen() {
 
   /* ── bulk approve clean days ── */
   async function approveAllClean() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setApprovingClean(true)
     try {
       const results = await Promise.all(

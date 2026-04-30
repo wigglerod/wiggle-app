@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { useAuth } from '../context/AuthContext'
 
 const EXAMPLE_PILLS = [
@@ -28,6 +29,7 @@ export default function ForeverNoteEditor({ dog, currentNotes, onClose, onSaved 
 
   async function handleSave() {
     if (saving) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     const { error } = await supabase
       .from('dogs')

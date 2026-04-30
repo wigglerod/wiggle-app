@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { useAuth } from '../context/AuthContext'
 import { formatTime } from '../lib/parseICS'
 
@@ -130,6 +131,7 @@ export default function RouteBuilder({ group, onClose }) {
 
   async function saveOrder(events) {
     if (!user) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const eventOrder = events.map((ev) => String(ev._id))
     const { error } = await supabase.from('route_orders').upsert(
       {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { useAuth } from '../context/AuthContext'
 import LoadingDog from '../components/LoadingDog'
 import OwlNotesTab from '../components/OwlNotesTab'
@@ -219,6 +220,7 @@ function DogConflictsSection({ dogs }) {
   async function handleAdd() {
     if (!dog1 || !dog2) { toast.error('Select two dogs'); return }
     if (dog1 === dog2) { toast.error('Select two different dogs'); return }
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setAdding(true)
     const { error } = await supabase.from('dog_conflicts').insert({
       dog_1_name: dog1,
@@ -235,6 +237,7 @@ function DogConflictsSection({ dogs }) {
   }
 
   async function handleDelete(id) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const { error } = await supabase.from('dog_conflicts').delete().eq('id', id)
     if (error) toast.error('Failed to remove')
     else { toast('Conflict removed'); loadConflicts() }
@@ -323,6 +326,7 @@ function DogFormModal({ dog, onClose, onSaved }) {
 
   async function handleSave() {
     if (!form.dog_name.trim()) { setError('Name is required'); return }
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     setError(null)
 
@@ -484,6 +488,7 @@ function SystemSection({ dogs }) {
   }, [])
 
   async function runBackup() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setBacking(true)
     try {
       const res = await fetch('/api/cron/backup-dogs?manual=true', { method: 'POST' })
@@ -849,6 +854,7 @@ export default function Admin() {
 
   async function deleteDog(id) {
     if (!confirm('Delete this dog profile?')) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const { error } = await supabase.from('dogs').delete().eq('id', id)
     if (error) { toast.error('Failed to delete dog profile'); return }
     toast.success('Dog profile deleted')
@@ -856,6 +862,7 @@ export default function Admin() {
   }
 
   async function handlePhotoUpload(dog, file) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const ext = file.name.split('.').pop()
     const path = `dogs/${dog.id}.${ext}`
     const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })

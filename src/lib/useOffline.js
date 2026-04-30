@@ -44,6 +44,11 @@ export function enqueueOfflineAction(action) {
   }
 }
 
+// EXEMPT from the writer-path freshness gate (OQ #27 / Option D). Replay
+// runs queued user actions that were already authored against the previously
+// running bundle; gating here would silently drop those actions when the
+// post-throw page reload interrupts the loop. Fail-open by exemption — same
+// reasoning as freshBundle.assertFreshBundle's network/parse fail-open.
 async function replayOfflineQueue() {
   try {
     const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { subscribeShared } from './sharedRealtimeChannel'
+import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -43,6 +44,7 @@ export function useOwlNotes(sector) {
       setLoading(true)
 
       // Delete expired notes
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
       await supabase
         .from('owl_notes')
         .delete()
@@ -117,6 +119,7 @@ export function useOwlNotes(sector) {
   const createNote = useCallback(
     async ({ noteText, targetType, targetDogId, targetDogName, targetSector, expiresAt, scheduledDate }) => {
       if (!user) return
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
       // Parse duration from text if no explicit expiresAt
       const { cleanText, expiresAt: parsedExpiry } = parseDuration(noteText)
@@ -145,6 +148,7 @@ export function useOwlNotes(sector) {
 
   // Acknowledge a note — daily ack for notes with duration, delete for notes without
   const acknowledgeNote = useCallback(async (noteId) => {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     // Find the note to check if it has a duration (expires_at)
     const note = notes.find(n => n.id === noteId)
 
@@ -184,6 +188,7 @@ export function useOwlNotes(sector) {
 
   // Admin delete a note
   const deleteNote = useCallback(async (noteId) => {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const { error } = await supabase
       .from('owl_notes')
       .delete()

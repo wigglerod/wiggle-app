@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
+import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -186,6 +187,7 @@ export function useWalkGroups(events, date, sector) {
   const saveGroup = useCallback(
     async (groupNum, dogIds) => {
       if (!date || !sector || !user) return
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
       const wIds = walkerAssignmentsRef.current[groupNum] || []
       const { error } = await supabase.from('walk_groups').upsert(
@@ -251,22 +253,24 @@ export function useWalkGroups(events, date, sector) {
 
     // Persist the group row with optional name + walkers
     if (date && sector && user) {
-      supabase.from('walk_groups').upsert(
-        {
-          walk_date: date,
-          group_num: nextNum,
-          sector,
-          dog_ids: [],
-          group_name: name || null,
-          walker_id: walkerIds?.[0] ?? null,
-          walker_ids: walkerIds?.length ? walkerIds : null,
-          updated_by: user.id,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'walk_date,group_num,sector' }
-      ).then(({ error }) => {
+      ;(async () => {
+        try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
+        const { error } = await supabase.from('walk_groups').upsert(
+          {
+            walk_date: date,
+            group_num: nextNum,
+            sector,
+            dog_ids: [],
+            group_name: name || null,
+            walker_id: walkerIds?.[0] ?? null,
+            walker_ids: walkerIds?.length ? walkerIds : null,
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'walk_date,group_num,sector' }
+        )
         if (error) toast.error('Failed to add group')
-      })
+      })()
     }
 
     return nextNum
@@ -278,6 +282,7 @@ export function useWalkGroups(events, date, sector) {
       setGroupNames((prev) => ({ ...prev, [groupNum]: name }))
 
       if (!date || !sector || !user) return
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
       // Upsert with current dog_ids from ref so we don't wipe them
       const { error } = await supabase.from('walk_groups').upsert(
@@ -309,6 +314,7 @@ export function useWalkGroups(events, date, sector) {
   // Lock a single group
   const lockGroup = useCallback(async (groupNum) => {
     if (!date || !sector || !user) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const lockerName = profile?.full_name?.split(' ')[0] || 'Walker'
     setGroupLocks((prev) => ({ ...prev, [groupNum]: { locked: true, locked_by: user.id, locked_by_name: lockerName } }))
 
@@ -328,6 +334,7 @@ export function useWalkGroups(events, date, sector) {
   // Unlock a single group
   const unlockGroup = useCallback(async (groupNum) => {
     if (!date || !sector || !user) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setGroupLocks((prev) => { const next = { ...prev }; delete next[groupNum]; return next })
 
     const { error } = await supabase.from('walk_groups')
@@ -394,6 +401,7 @@ export function useWalkGroups(events, date, sector) {
   // Internal helper: persist walker_ids to Supabase
   async function _persistWalkerIds(groupNum, walkerIds) {
     if (!date || !sector || !user) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const { error } = await supabase.from('walk_groups').upsert(
       {
         walk_date: date,
@@ -416,6 +424,7 @@ export function useWalkGroups(events, date, sector) {
   const linkGroups = useCallback(
     async (groupNumA, groupNumB, syncPosition) => {
       if (!date || !sector) return
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
       const keyA = `${date}_${sector}_${groupNumA}`
       const keyB = `${date}_${sector}_${groupNumB}`
       const { data, error } = await supabase.from('group_links').insert({
@@ -434,6 +443,7 @@ export function useWalkGroups(events, date, sector) {
   // Unlink groups
   const unlinkGroups = useCallback(
     async (linkId) => {
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
       await supabase.from('group_links').delete().eq('id', linkId)
       setGroupLinks(prev => prev.filter(l => l.id !== linkId))
     },

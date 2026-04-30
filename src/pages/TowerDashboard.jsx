@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import useMiniGenResults from '../hooks/tower/useMiniGenResults'
 import StatsBar from '../components/tower/dashboard/StatsBar'
 import DraftCard from '../components/tower/dashboard/DraftCard'
@@ -28,6 +29,7 @@ export default function TowerDashboard() {
   const [runError, setRunError] = useState(null)
 
   async function runMiniGen() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setRunning(true)
     setRunError(null)
     try {

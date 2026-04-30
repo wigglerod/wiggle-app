@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
@@ -297,6 +298,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   }
 
   async function handleSave() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     setSaveError(null)
 
@@ -348,6 +350,7 @@ export default function DogDrawer({ event, onClose, onDogUpdated, owlNotes, onAc
   }
 
   async function handleLink(dog) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setLinkSaving(true)
     const acuityName = event.displayName || event.summary?.trim().split(/\s+/)[0] || ''
     const { error } = await supabase.from('acuity_name_map').upsert(
