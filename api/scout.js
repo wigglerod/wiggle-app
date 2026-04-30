@@ -31,7 +31,10 @@ const SKIP_SENDERS = [
   'vistaprint',          // Vistaprint promos
   'supabase.io',         // product update newsletter
   'dogpackapp.com',      // feature email
-  'mondou.com'           // receipts
+  'mondou.com',          // receipts
+  'figma.com',           // Figma subscription/marketing
+  'netlify.com',         // Netlify outreach + marketing
+  'ringcentral.com'      // RingCentral developer marketing
 ]
 
 export default async function handler(req, res) {
