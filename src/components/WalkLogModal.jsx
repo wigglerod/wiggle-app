@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { useAuth } from '../context/AuthContext'
 import { formatTime } from '../lib/parseICS'
 
@@ -29,6 +30,7 @@ export default function WalkLogModal({ group, onClose, onLogged }) {
 
   async function handleSubmit() {
     if (selectedDogs.size === 0 || saving) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     setError(null)
 

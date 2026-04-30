@@ -2,8 +2,40 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
 
-const APP_VERSION = new Date().toISOString().slice(0, 16).replace('T', '-')
+function resolveAppVersion() {
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim()
+    if (sha) return sha
+  } catch { /* not a git checkout */ }
+  // eslint-disable-next-line no-undef -- process is a Node global in build context
+  if (process.env.VERCEL_GIT_COMMIT_SHA) {
+    // eslint-disable-next-line no-undef -- process is a Node global in build context
+    return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7)
+  }
+  return new Date().toISOString().slice(0, 16).replace('T', '-')
+}
+
+const APP_VERSION = resolveAppVersion()
+const APP_BUILT_AT = new Date().toISOString()
+const VERSION_PAYLOAD = JSON.stringify({ version: APP_VERSION, built_at: APP_BUILT_AT })
+
+const versionEndpointPlugin = {
+  name: 'wiggle-version-endpoint',
+  apply: () => true,
+  configureServer(server) {
+    server.middlewares.use('/version.json', (_req, res) => {
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Cache-Control', 'no-store')
+      res.end(VERSION_PAYLOAD)
+    })
+  },
+  writeBundle() {
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: VERSION_PAYLOAD })
+  },
+}
 
 export default defineConfig({
   define: {
@@ -24,6 +56,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    versionEndpointPlugin,
     VitePWA({
       registerType: 'prompt',
       // Use virtual:pwa-register in main.jsx for aggressive update checks

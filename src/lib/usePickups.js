@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { subscribeShared } from './sharedRealtimeChannel'
+import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
 
 /** Apply a single walker_notes row to an existing pickup entry */
@@ -103,6 +104,7 @@ export function usePickups(date) {
   // ── Mark picked up ─────────────────────────────────────────────
   const markPickup = useCallback(async (dogId, dogName) => {
     if (!user || !date || !dogId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     const now = new Date().toISOString()
     setPickups(prev => ({
@@ -139,6 +141,7 @@ export function usePickups(date) {
   // ── Mark returned home ─────────────────────────────────────────
   const markReturned = useCallback(async (dogId, dogName) => {
     if (!user || !date || !dogId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     const now = new Date().toISOString()
     setPickups(prev => ({
@@ -175,6 +178,7 @@ export function usePickups(date) {
   // ── Undo pickup ──────────────────────────────────────────────────
   const undoPickup = useCallback(async (dogId) => {
     if (!user || !date || !dogId) return false
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return false; throw e }
 
     // Delete pickup AND any returned row — a return without a pickup is invalid state
     const { error } = await supabase.from('walker_notes').delete()
@@ -204,6 +208,7 @@ export function usePickups(date) {
   // ── Undo return only (keep picked-up state) ────────────────────
   const undoReturned = useCallback(async (dogId) => {
     if (!user || !date || !dogId) return false
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return false; throw e }
 
     const { error } = await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'returned')
@@ -228,6 +233,7 @@ export function usePickups(date) {
   // ── Update a timestamp (for profile drawer edit) ───────────────
   const updateTimestamp = useCallback(async (dogId, noteType, newTimeISO) => {
     if (!user || !date || !dogId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     // Optimistic update
     setPickups(prev => {
@@ -264,6 +270,7 @@ export function usePickups(date) {
   // ── Mark not walking ────────────────────────────────────────────
   const markNotWalking = useCallback(async (dogId, dogName, groupNum) => {
     if (!user || !date || !dogId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     setPickups(prev => ({
       ...prev,
@@ -298,6 +305,7 @@ export function usePickups(date) {
   // ── Undo not walking ──────────────────────────────────────────
   const undoNotWalking = useCallback(async (dogId) => {
     if (!user || !date || !dogId) return false
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return false; throw e }
 
     const { error } = await supabase.from('walker_notes').delete()
       .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', 'not_walking')

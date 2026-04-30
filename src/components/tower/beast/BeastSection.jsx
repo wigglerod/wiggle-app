@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { assertFreshOrThrow, StaleBundleError } from '../../../lib/freshBundle'
 import BeastMessage from './BeastMessage'
 import BeastConfirm from './BeastConfirm'
 
@@ -45,6 +46,7 @@ export default function BeastSection() {
   async function send() {
     const text = input.trim()
     if (!text || loading) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
     const userMsg = { role: 'user', content: text }
     const next = [...messages, userMsg]

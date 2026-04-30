@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import PhotoUpload from './PhotoUpload'
 import SmartTextInput from './SmartTextInput'
 import SmartTextDisplay from './SmartTextDisplay'
@@ -134,6 +135,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   }
 
   async function handleSave() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
     setSaveError(null)
 
@@ -171,6 +173,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
 
   async function saveAltAddress() {
     if (!altForm.day_of_week || !altForm.address.trim()) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setAltSaving(true)
     const { error } = await supabase.from('dog_alt_addresses').insert({
       dog_id: dog.id,
@@ -189,6 +192,7 @@ export default function DogProfileDrawer({ dog, onClose, onDogUpdated, onDogName
   }
 
   async function deleteAltAddress(id) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     await supabase.from('dog_alt_addresses').delete().eq('id', id)
     refetchAlt()
   }

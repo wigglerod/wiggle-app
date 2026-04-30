@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, Component } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import { APIProvider, Map as GoogleMap, Marker, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { getTodayDayName } from '../lib/useAltAddress'
 import {
@@ -406,6 +407,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
 
   async function handleLPMenuAssign(groupNum, sectorName) {
     if (!longPressMenu) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const wg = walkGroups.find(w => w.group_num === groupNum && w.sector === sectorName)
     if (!wg) return
     const newDogIds = [...(wg.dog_ids || []), longPressMenu.dogId]
@@ -424,6 +426,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
 
   async function assignToGroup(groupNum, sectorName) {
     if (!selectedId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const wg = walkGroups.find(w => w.group_num === groupNum && w.sector === sectorName)
     if (!wg) return
     const newDogIds = [...(wg.dog_ids || []), selectedId]
@@ -442,6 +445,7 @@ export default function MapView({ events, date, sector, onDogClick, lockedView }
 
   // Within-group reorder handler
   async function handleGroupReorder(groupNum, sectorName, newDogIds) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     const { error } = await supabase.from('walk_groups')
       .update({ dog_ids: newDogIds, updated_at: new Date().toISOString() })
       .eq('walk_date', date)

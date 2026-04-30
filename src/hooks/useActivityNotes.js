@@ -3,6 +3,7 @@
 // Also optionally creates an owl_notes row (warn next walker).
 
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 
 export function useActivityNotes() {
 
@@ -17,6 +18,7 @@ export function useActivityNotes() {
     warnNextWalker, // boolean — if true, also write to owl_notes
     flag,           // boolean — if true, add 'flag' to tags
   }) => {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return { success: false, stale: true }; throw e }
 
     // Build the tags array from chips + flag
     const tags = [...(chips || [])]

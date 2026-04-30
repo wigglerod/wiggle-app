@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 
 function nameToColor(name) {
   const colors = ['#7F77DD','#378ADD','#BA7517','#1D9E75','#D85A30','#5DCAA5','#534AB7','#993C1D'];
@@ -44,6 +45,7 @@ export default function QuickNoteSheet({ isOpen, onClose, dog, groupName, walkDa
 
   async function handleSave() {
     if (selectedTags.length === 0 && !message.trim()) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setSaving(true)
 
     const { data, error } = await supabase.from('walker_notes').insert({
@@ -67,6 +69,7 @@ export default function QuickNoteSheet({ isOpen, onClose, dog, groupName, walkDa
         action: {
           label: 'Undo',
           onClick: async () => {
+            try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
             if (data?.id) {
               await supabase.from('walker_notes').delete().eq('id', data.id)
               toast('Note removed')

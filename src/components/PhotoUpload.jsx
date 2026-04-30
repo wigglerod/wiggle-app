@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 
 export default function PhotoUpload({ dogId, onUploaded }) {
   const [showMenu, setShowMenu] = useState(false)
@@ -10,6 +11,7 @@ export default function PhotoUpload({ dogId, onUploaded }) {
 
   async function handleFile(file) {
     if (!file || !dogId) return
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setUploading(true)
     setShowMenu(false)
 

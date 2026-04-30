@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../../context/AuthContext'
+import { assertFreshOrThrow, StaleBundleError } from '../../../lib/freshBundle'
 import { towerCard, sectorColor } from '../tower-utils'
 
 function fmtDate(d) {
@@ -18,6 +19,7 @@ export default function DraftCard({ draft, flags, onAction }) {
   const hasFlags = dayFlags.length > 0
 
   async function handleAction(status) {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
     setBusy(status)
     try {
       const res = await fetch('/api/tower-approve', {
