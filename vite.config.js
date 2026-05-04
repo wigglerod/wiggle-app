@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 function resolveAppVersion() {
   try {
@@ -32,8 +34,44 @@ const versionEndpointPlugin = {
       res.end(VERSION_PAYLOAD)
     })
   },
-  writeBundle() {
+  generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'version.json', source: VERSION_PAYLOAD })
+  },
+}
+
+const versionAssertPlugin = {
+  name: 'wiggle-version-assert',
+  apply: 'build',
+  closeBundle() {
+    const versionPath = resolve(process.cwd(), 'dist/version.json')
+
+    if (!existsSync(versionPath)) {
+      throw new Error(
+        '[wiggle-version-assert] dist/version.json does not exist after ' +
+        'build. The version-endpoint plugin failed to emit it. The OQ #27 ' +
+        'writer-path version gate will be deployed-but-dead. Refusing to ' +
+        'complete build. (See Decision #117.)'
+      )
+    }
+
+    let parsed
+    try {
+      parsed = JSON.parse(readFileSync(versionPath, 'utf8'))
+    } catch (e) {
+      throw new Error(
+        '[wiggle-version-assert] dist/version.json exists but is not valid ' +
+        'JSON: ' + e.message
+      )
+    }
+
+    if (typeof parsed.version !== 'string' || parsed.version.length === 0) {
+      throw new Error(
+        '[wiggle-version-assert] dist/version.json is JSON but lacks a ' +
+        'non-empty `version` string field. Got: ' + JSON.stringify(parsed)
+      )
+    }
+
+    console.log('[wiggle-version-assert] dist/version.json OK:', parsed.version)
   },
 }
 
@@ -57,6 +95,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     versionEndpointPlugin,
+    versionAssertPlugin,
     VitePWA({
       registerType: 'prompt',
       // Use virtual:pwa-register in main.jsx for aggressive update checks
