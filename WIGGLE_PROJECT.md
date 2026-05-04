@@ -248,7 +248,7 @@ What was verified:
 - ✅ Back home → drawer auto-closes after markBackHome()
 - ✅ Not Walking undo → drawer closes, card resets
 - ✅ isCompact interlock → size reduction only, name/address/door code never stripped
-- ✅ Dog name color → purple (not fuschia) per CLAUDE.md final ruling
+- **Dog name color rule:** see `CLAUDE.md` § Canonical Rules. Default = black `#2D2926`. Purple `#534AB7` = forever-note signal on the name. Fuschia `#961e78` = forever-note content in drawer, never the name.
 - ✅ Swipe gesture works in interlock layout
 
 ### Known non-user-facing issue
