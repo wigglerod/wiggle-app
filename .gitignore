@@ -28,3 +28,7 @@ dist-ssr
 .claude/worktrees/
 .claude/launch.json
 supabase/.temp/
+
+# Playwright run artifacts
+test-results/
+playwright-report/

@@ -191,8 +191,12 @@ export default function DogCard({
     let overrideBg = containerBg;
     let overrideBorder = containerBorder;
     let overrideBorderLeft = containerBorder;
-    let nameColor = isNotWalking ? '#C4851C' : '#534AB7';
+    // CANONICAL RULE — do not change without Rod's explicit approval.
+    // Default = #2D2926 (black). Purple #534AB7 = forever-note signal IFF dogs.notes IS NOT NULL.
+    // Fuschia #961e78 is for drawer content only, NEVER the name.
+    // See CLAUDE.md § Canonical Rules. OQ #64.
     const hasNotes = !!dog.notes;
+    let nameColor = isNotWalking ? '#C4851C' : (hasNotes ? '#534AB7' : '#2D2926');
     let marginLeft = '0';
     let marginRight = '0';
     let width = '100%';
@@ -201,19 +205,18 @@ export default function DogCard({
       overrideBg = '#EEEDFE'; // purple-bg
       overrideBorder = '1px solid transparent';
       overrideBorderLeft = '3px solid #AFA9EC';
-      nameColor = hasNotes ? '#961e78' : '#534AB7';
+      nameColor = isNotWalking ? '#C4851C' : (hasNotes ? '#534AB7' : '#2D2926');
       width = '72%';
       marginRight = 'auto'; // hug left
     } else if (interlockOwner === 'B') {
       overrideBg = '#FAECE7'; // coral-light
       overrideBorder = '1px solid transparent';
       overrideBorderLeft = '3px solid #E8634A';
-      nameColor = hasNotes ? '#961e78' : '#C94A34'; // coral-dark
+      nameColor = isNotWalking ? '#C4851C' : (hasNotes ? '#534AB7' : '#C94A34'); // default coral-dark is state color
       width = '72%';
       marginLeft = 'auto'; // hug right
-    } else {
-      if (hasNotes) nameColor = '#961e78';
     }
+    // No-interlock case: nameColor already set above (#2D2926 default, #534AB7 when hasNotes).
 
     return (
       <div style={{ marginBottom: 5, position: 'relative', width, marginLeft, marginRight }}>
@@ -440,12 +443,16 @@ export default function DogCard({
         }} />
 
         {/* Dog name line — name + optional ★ + animated owl track */}
+        {/* CANONICAL RULE — do not change without Rod's explicit approval.
+            Default = #2D2926 (black). Purple #534AB7 = forever-note signal IFF dogs.notes IS NOT NULL.
+            Fuschia #961e78 is for drawer content only, NEVER the name.
+            See CLAUDE.md § Canonical Rules. OQ #64. */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 3, overflow: 'hidden' }}>
           <span
             onClick={(e) => { if (onTapName) { e.stopPropagation(); onTapName(); } }}
             style={{
               fontSize: 14, fontWeight: 600,
-              color: isNotWalking ? '#C4851C' : (dog.notes ? '#961e78' : '#534AB7'),
+              color: isNotWalking ? '#C4851C' : (dog.notes ? '#534AB7' : '#2D2926'),
               textDecoration: (isPickedUp || isReturned || isNotWalking) ? 'line-through' : 'none',
               textDecorationColor: isNotWalking ? '#C4851C' : '#534AB7',
               borderBottom: isNotWalking ? '1px dashed #F0C76E' : '1px dashed #AFA9EC',
