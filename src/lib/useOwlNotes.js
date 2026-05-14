@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { subscribeShared } from './sharedRealtimeChannel'
 import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
+import { useRealtimeHealth } from '../context/RealtimeHealthContext'
 
 /**
  * Parse duration syntax from the end of note text.
@@ -34,52 +35,65 @@ function parseDuration(text) {
  */
 export function useOwlNotes(sector) {
   const { user, profile, permissions } = useAuth()
+  const { lastResyncAt } = useRealtimeHealth()
+  const hasMountedRef = useRef(false)
   const userSector = profile?.sector
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch non-expired notes and clean up expired ones
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
+  // Fetch non-expired notes and clean up expired ones.
+  // Lifted to useCallback so the resync effect below can re-invoke without
+  // tearing down the load-on-mount effect or the subscription effect.
+  const load = useCallback(async () => {
+    setLoading(true)
 
-      // Delete expired notes
-      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
-      await supabase
-        .from('owl_notes')
-        .delete()
-        .lt('expires_at', new Date().toISOString())
+    // Delete expired notes
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
+    await supabase
+      .from('owl_notes')
+      .delete()
+      .lt('expires_at', new Date().toISOString())
 
-      // Fetch remaining notes — walkers only see their sector + global notes
-      let query = supabase
-        .from('owl_notes')
-        .select('*')
-        .order('created_at', { ascending: false })
+    // Fetch remaining notes — walkers only see their sector + global notes
+    let query = supabase
+      .from('owl_notes')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-      if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
-        query = query.or(`target_sector.eq.${userSector},and(target_sector.is.null,target_dog_id.is.null)`)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        toast.error('Failed to load owl notes')
-        setLoading(false)
-        return
-      }
-
-      // Filter out any that might have expired between delete and select
-      const now = new Date()
-      const valid = (data || []).filter(
-        (n) => !n.expires_at || new Date(n.expires_at) > now
-      )
-
-      setNotes(valid)
-      setLoading(false)
+    if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
+      query = query.or(`target_sector.eq.${userSector},and(target_sector.is.null,target_dog_id.is.null)`)
     }
 
-    load()
+    const { data, error } = await query
+
+    if (error) {
+      toast.error('Failed to load owl notes')
+      setLoading(false)
+      return
+    }
+
+    // Filter out any that might have expired between delete and select
+    const now = new Date()
+    const valid = (data || []).filter(
+      (n) => !n.expires_at || new Date(n.expires_at) > now
+    )
+
+    setNotes(valid)
+    setLoading(false)
   }, [permissions?.canSeeAllSectors, userSector])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Audit 2026-05-13 HIGH #2: backfill on realtime resync.
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    load()
+  }, [lastResyncAt, load])
 
   // Realtime subscription
   // Shared channel: hook mounts concurrently in Dashboard + Header (owl count)

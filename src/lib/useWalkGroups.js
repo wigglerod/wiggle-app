@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
+import { useRealtimeHealth } from '../context/RealtimeHealthContext'
 
 /**
  * Hook for managing walk groups with Supabase persistence + realtime sync.
@@ -17,6 +18,8 @@ import { useAuth } from '../context/AuthContext'
  */
 export function useWalkGroups(events, date, sector) {
   const { user, profile } = useAuth()
+  const { lastResyncAt } = useRealtimeHealth()
+  const hasMountedRef = useRef(false)
   const [groups, setGroups] = useState({ unassigned: [] })
   const [groupNums, setGroupNums] = useState([1, 2, 3])
   const [groupNames, setGroupNames] = useState({})
@@ -42,73 +45,85 @@ export function useWalkGroups(events, date, sector) {
     .map((ev) => ev.dog?.dog_name || null)
     .filter((id) => id !== null)
 
-  // Load saved groups from Supabase
-  useEffect(() => {
+  // Load saved groups from Supabase.
+  // Lifted to useCallback so the resync effect below can re-invoke without
+  // rebuilding the subscription. Deps match the legacy effect (length not
+  // reference, same eslint rationale).
+  const load = useCallback(async () => {
     if (!date || !sector || allEventIds.length === 0) return
 
-    async function load() {
-      // Build query — fetch ALL groups for today. Every walker needs to see
-      // all groups (including ones locked by others) so the organizer renders correctly.
-      const query = supabase
-        .from('walk_groups')
-        .select('*')
-        .eq('walk_date', date)
-        .eq('sector', sector)
+    // Build query — fetch ALL groups for today. Every walker needs to see
+    // all groups (including ones locked by others) so the organizer renders correctly.
+    const query = supabase
+      .from('walk_groups')
+      .select('*')
+      .eq('walk_date', date)
+      .eq('sector', sector)
 
-      const { data, error: loadError } = await query
+    const { data, error: loadError } = await query
 
-      if (loadError) {
-        toast.error('Failed to load walk groups')
-      }
-
-      const saved = {}
-      const names = {}
-      const walkers = {}
-      const locks = {}
-      const assignedSet = new Set()
-      const nums = new Set([1, 2, 3])
-
-      if (data) {
-        for (const row of data) {
-          // Filter to valid event IDs and deduplicate (dog can only be in ONE group)
-          const ids = [...new Set(row.dog_ids || [])].filter((id) => allEventIds.includes(id) && !assignedSet.has(id))
-          saved[row.group_num] = ids
-          ids.forEach((id) => assignedSet.add(id))
-          if (row.group_name) names[row.group_num] = row.group_name
-          const wIds = row.walker_ids?.length ? row.walker_ids : (row.walker_id ? [row.walker_id] : [])
-          if (wIds.length > 0) walkers[row.group_num] = wIds
-          if (row.locked) locks[row.group_num] = { locked: true, locked_by: row.locked_by || null, locked_by_name: row.locked_by_name || null }
-          nums.add(row.group_num)
-        }
-      }
-
-      // Ensure all group nums have an entry
-      for (const n of nums) {
-        if (!saved[n]) saved[n] = []
-      }
-
-      const sortedNums = Array.from(nums).sort((a, b) => a - b)
-      const unassigned = allEventIds.filter((id) => !assignedSet.has(id))
-
-      setGroupNums(sortedNums)
-      setGroupNames(names)
-      setWalkerAssignments(walkers)
-      setGroupLocks(locks)
-      setGroups({ unassigned, ...saved })
-      setLoaded(true)
-
-      // Load group links
-      const { data: links } = await supabase
-        .from('group_links')
-        .select('*')
-        .eq('walk_date', date)
-        .eq('sector', sector)
-      setGroupLinks(links || [])
+    if (loadError) {
+      toast.error('Failed to load walk groups')
     }
 
-    load()
+    const saved = {}
+    const names = {}
+    const walkers = {}
+    const locks = {}
+    const assignedSet = new Set()
+    const nums = new Set([1, 2, 3])
+
+    if (data) {
+      for (const row of data) {
+        // Filter to valid event IDs and deduplicate (dog can only be in ONE group)
+        const ids = [...new Set(row.dog_ids || [])].filter((id) => allEventIds.includes(id) && !assignedSet.has(id))
+        saved[row.group_num] = ids
+        ids.forEach((id) => assignedSet.add(id))
+        if (row.group_name) names[row.group_num] = row.group_name
+        const wIds = row.walker_ids?.length ? row.walker_ids : (row.walker_id ? [row.walker_id] : [])
+        if (wIds.length > 0) walkers[row.group_num] = wIds
+        if (row.locked) locks[row.group_num] = { locked: true, locked_by: row.locked_by || null, locked_by_name: row.locked_by_name || null }
+        nums.add(row.group_num)
+      }
+    }
+
+    // Ensure all group nums have an entry
+    for (const n of nums) {
+      if (!saved[n]) saved[n] = []
+    }
+
+    const sortedNums = Array.from(nums).sort((a, b) => a - b)
+    const unassigned = allEventIds.filter((id) => !assignedSet.has(id))
+
+    setGroupNums(sortedNums)
+    setGroupNames(names)
+    setWalkerAssignments(walkers)
+    setGroupLocks(locks)
+    setGroups({ unassigned, ...saved })
+    setLoaded(true)
+
+    // Load group links
+    const { data: links } = await supabase
+      .from('group_links')
+      .select('*')
+      .eq('walk_date', date)
+      .eq('sector', sector)
+    setGroupLinks(links || [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, sector, allEventIds.length])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Audit 2026-05-13 HIGH #2: backfill on realtime resync.
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    load()
+  }, [lastResyncAt, load])
 
   // Realtime subscription
   useEffect(() => {

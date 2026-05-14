@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { RealtimeHealthProvider } from './context/RealtimeHealthContext'
 import { useChannelHealth } from './lib/useChannelHealth'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -190,10 +191,12 @@ export default function App() {
     <BrowserRouter>
       <UpdateBanner />
       <AuthProvider>
-        <ChannelHealth />
-        <OfflineBanner />
-        <AnimatedRoutes />
-        <Toaster position="top-center" richColors closeButton />
+        <RealtimeHealthProvider>
+          <ChannelHealth />
+          <OfflineBanner />
+          <AnimatedRoutes />
+          <Toaster position="top-center" richColors closeButton />
+        </RealtimeHealthProvider>
       </AuthProvider>
     </BrowserRouter>
   )
