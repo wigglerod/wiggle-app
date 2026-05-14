@@ -1,43 +1,55 @@
 import { useEffect } from 'react'
 import { supabase } from './supabase'
 import { resubscribeAllShared } from './sharedRealtimeChannel'
+import { useRealtimeHealth } from '../context/RealtimeHealthContext'
 
-// OQ #56 / HIGH-2: iOS Safari and installed PWAs aggressively suspend
-// WebSockets on backgrounded tabs. The Supabase channel object's local state
-// stays "joined" but the socket is dead — events stop arriving and nothing
-// reconnects. On visibility return we rebuild any channel not in a healthy
-// state and re-propagate the access token so the new socket auths cleanly.
+// OQ #56 / HIGH-2 (channel rebuild) and audit 2026-05-13 HIGH #2/#3/#4
+// (resync + multi-event + active probe).
 //
-// Mount once at the app top level (above route remounts). Pairs with HIGH-1
-// (setAuth on TOKEN_REFRESHED) and HIGH-3 (status callbacks).
+// iOS Safari and installed PWAs aggressively suspend WebSockets on
+// backgrounded tabs. The Supabase channel object's local state stays
+// "joined" but the socket is dead — events stop arriving and nothing
+// reconnects. We listen on every event browsers may fire when the user
+// returns to the app (visibilitychange, pageshow with persisted, focus)
+// plus an active 30s probe of supabase.getChannels() as a backstop for
+// silent WebSocket death while the tab is foregrounded.
+//
+// On each trigger: refresh auth, rebuild every shared channel in place,
+// rejoin any walk-groups-* channels that fell out of joined/joining, then
+// bumpResync() so hook consumers (usePickups, useOwlNotes, useWalkGroups)
+// re-run their load() and backfill any rows missed while the socket was
+// dead. Channel rebuild without refetch is the audit HIGH #2 root.
+//
+// Mount once at the app top level (above route remounts). Pairs with
+// HIGH-1 (setAuth on TOKEN_REFRESHED in AuthContext) and HIGH-3 (status
+// callbacks in sharedRealtimeChannel + useWalkGroups).
 export function useChannelHealth() {
-  useEffect(() => {
-    const handler = () => {
-      if (document.visibilityState !== 'visible') return
+  const { bumpResync } = useRealtimeHealth()
 
+  useEffect(() => {
+    async function handleResync() {
       // Force a token freshness check first — visibility return is exactly the
       // moment iOS may have suspended us long enough to leave us with stale
       // tokens. Push the latest into the realtime layer before reconnecting.
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
         if (session?.access_token) {
-          try {
-            supabase.realtime.setAuth(session.access_token)
-          } catch (e) {
-            console.warn('[realtime] setAuth on visibility failed', e)
-          }
+          supabase.realtime.setAuth(session.access_token)
         }
-      })
+      } catch (e) {
+        console.warn('[realtime] setAuth on resync failed', e)
+      }
 
       // Rebuild every shared channel — handlers are owned by hook mounts that
-      // won't re-add themselves on visibility return, so removeChannel alone
-      // would silently drop subscriptions. resubscribeAllShared swaps the
-      // channel underneath while preserving the handler set.
+      // won't re-add themselves on resync, so removeChannel alone would
+      // silently drop subscriptions. resubscribeAllShared swaps the channel
+      // underneath while preserving the handler set.
       resubscribeAllShared()
 
       // For non-shared channels (currently only walk-groups-* via useWalkGroups
       // direct subscription), re-issue subscribe() in place on any channel
       // that has fallen out of joined/joining. The hook's useEffect deps don't
-      // change on visibility return, so removeChannel here would orphan it.
+      // change on resync, so removeChannel here would orphan it.
       const channels = supabase.getChannels()
       for (const ch of channels) {
         const state = ch.state
@@ -54,9 +66,52 @@ export function useChannelHealth() {
           }
         }
       }
+
+      // Tell hook consumers to re-run their initial load() so any
+      // postgres_changes events emitted while the socket was dead are
+      // backfilled from the REST endpoint. Debounced inside the context.
+      bumpResync()
     }
 
-    document.addEventListener('visibilitychange', handler)
-    return () => document.removeEventListener('visibilitychange', handler)
-  }, [])
+    function onVisibility() {
+      if (document.visibilityState !== 'visible') return
+      handleResync()
+    }
+
+    function onPageShow(event) {
+      // bfcache restore can skip visibilitychange entirely on iOS Safari.
+      if (event.persisted) handleResync()
+    }
+
+    function onFocus() {
+      // Cross-tab return inside the same browser window can fire focus
+      // without firing visibilitychange.
+      handleResync()
+    }
+
+    function activeProbe() {
+      if (document.visibilityState !== 'visible') return
+      const channels = supabase.getChannels()
+      for (const ch of channels) {
+        const state = ch.state
+        if (state !== 'joined' && state !== 'joining') {
+          console.warn('[realtime] active probe found unhealthy channel', ch.topic, state)
+          handleResync()
+          return
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pageshow', onPageShow)
+    window.addEventListener('focus', onFocus)
+    const probeInterval = setInterval(activeProbe, 30000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pageshow', onPageShow)
+      window.removeEventListener('focus', onFocus)
+      clearInterval(probeInterval)
+    }
+  }, [bumpResync])
 }

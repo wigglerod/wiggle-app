@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { supabase } from './supabase'
 import { subscribeShared } from './sharedRealtimeChannel'
 import { assertFreshOrThrow, StaleBundleError } from './freshBundle'
 import { useAuth } from '../context/AuthContext'
+import { useRealtimeHealth } from '../context/RealtimeHealthContext'
 
 /** Apply a single walker_notes row to an existing pickup entry */
 function applyRow(entry, row) {
@@ -26,6 +27,8 @@ function removeRow(entry, row) {
 }
 export function usePickups(date) {
   const { user, profile } = useAuth()
+  const { lastResyncAt } = useRealtimeHealth()
+  const hasMountedRef = useRef(false)
   const [pickups, setPickups] = useState({}) // { dogId: { pickedUpAt, returnedAt, walkerName } }
 
   // Extract load function so we can call it on custom events
@@ -51,6 +54,19 @@ export function usePickups(date) {
   useEffect(() => {
     load()
   }, [load])
+
+  // Audit 2026-05-13 HIGH #2: backfill on realtime resync. useChannelHealth
+  // bumps lastResyncAt after visibilitychange / pageshow / focus / active
+  // probe rebuilds the socket. Re-running load() backfills any
+  // postgres_changes events that fired while the socket was dead. Skip the
+  // initial render — the load-on-mount effect above already covered it.
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    load()
+  }, [lastResyncAt, load])
 
   // Custom event listener to keep multiple hook instances in sync across components
   useEffect(() => {
