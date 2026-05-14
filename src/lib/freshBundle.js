@@ -46,7 +46,11 @@ export async function assertFreshBundle() {
 
   let serverVersion = null
   try {
-    const res = await fetch(VERSION_URL, { cache: 'no-store' })
+    // Audit 2026-05-13 Finding #8: 3s timeout. Every write path awaits this
+    // gate via assertFreshOrThrow; without an explicit signal the browser
+    // default (~30s) blocks the optimistic UI on a flaky network. AbortError
+    // takes the same fail-open path as the existing network error branch.
+    const res = await fetch(VERSION_URL, { cache: 'no-store', signal: AbortSignal.timeout(3000) })
     if (!res.ok) {
       warnGateInactive('/version.json HTTP ' + res.status)
       return { fresh: true, server_version: null, current_version: currentVersion }
