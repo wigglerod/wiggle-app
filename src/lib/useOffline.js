@@ -44,11 +44,12 @@ export function enqueueOfflineAction(action) {
   }
 }
 
-// EXEMPT from the writer-path freshness gate (OQ #27 / Option D). Replay
-// runs queued user actions that were already authored against the previously
-// running bundle; gating here would silently drop those actions when the
-// post-throw page reload interrupts the loop. Fail-open by exemption — same
-// reasoning as freshBundle.assertFreshBundle's network/parse fail-open.
+// EXEMPT from the writer-path freshness gate (OQ #27 / Option D, PR #11, and
+// audit 2026-05-13 Finding #1 wiring). Replay runs queued user actions that
+// were already authored against the previously running bundle; gating here
+// would silently drop those actions when the post-throw page reload
+// interrupts the loop. Fail-open by exemption — same reasoning as
+// freshBundle.assertFreshBundle's network/parse fail-open.
 async function replayOfflineQueue() {
   try {
     const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
@@ -62,10 +63,25 @@ async function replayOfflineQueue() {
         if (action.type === 'upsert') {
           await supabase.from(action.table).upsert(action.data, action.options || {})
           synced++
+        } else if (action.type === 'insert') {
+          // 23505 from a partial unique index is fine — the realtime echo of
+          // the same row likely arrived between the offline tap and replay.
+          // supabase-js does not throw on PostgrestError; the row is either
+          // already there or this insert puts it there. Either way: synced.
+          await supabase.from(action.table).insert(action.data)
+          synced++
         } else if (action.type === 'update') {
           let q = supabase.from(action.table).update(action.data)
           for (const [col, val] of Object.entries(action.filters || {})) {
             q = q.eq(col, val)
+          }
+          await q
+          synced++
+        } else if (action.type === 'delete') {
+          let q = supabase.from(action.table).delete()
+          for (const [col, val] of Object.entries(action.filters || {})) {
+            if (Array.isArray(val)) q = q.in(col, val)
+            else q = q.eq(col, val)
           }
           await q
           synced++

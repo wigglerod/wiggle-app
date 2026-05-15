@@ -89,6 +89,14 @@ export function useChannelHealth() {
       handleResync()
     }
 
+    function onOnline() {
+      // Audit 2026-05-13 Finding #7: coverage-return path. useOffline replays
+      // the write queue on 'online', but channels themselves stay dead until
+      // the next visibility/focus event. Rebuild here so the basement →
+      // upstairs recovery doesn't depend on the walker also switching tabs.
+      handleResync()
+    }
+
     function activeProbe() {
       if (document.visibilityState !== 'visible') return
       const channels = supabase.getChannels()
@@ -105,12 +113,14 @@ export function useChannelHealth() {
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pageshow', onPageShow)
     window.addEventListener('focus', onFocus)
+    window.addEventListener('online', onOnline)
     const probeInterval = setInterval(activeProbe, 30000)
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('online', onOnline)
       clearInterval(probeInterval)
     }
   }, [bumpResync])
