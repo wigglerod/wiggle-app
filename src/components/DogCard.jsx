@@ -31,6 +31,7 @@ export default function DogCard({
   onTapAddress,
   onAcknowledgeOwl,      // () => void — called when walker taps 'Got it'
   onMarkNotWalking,      // optional async () => void — marks dog not walking today
+  onUndoNotWalking,      // optional async () => void — clears not_walking state from card
   showDragHandle = false,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -324,7 +325,18 @@ export default function DogCard({
             
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
               {isNotWalking && (
-                <span style={{ fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 8, color: '#C4851C', fontWeight: 700, background: '#FDF3E3', border: '1px solid #F0C76E', padding: '1px 4px', borderRadius: 3, flexShrink: 0 }}>
+                  {onUndoNotWalking && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onUndoNotWalking(); }}
+                        style={{ background: 'none', border: 'none', padding: 0, margin: 0, color: '#C4851C', fontWeight: 700, fontSize: 8, textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        Undo
+                      </button>
+                      <span aria-hidden="true">·</span>
+                    </>
+                  )}
                   Not walking
                 </span>
               )}
@@ -483,10 +495,22 @@ export default function DogCard({
         {/* Not walking label */}
         {isNotWalking && (
           <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
             fontSize: 9, color: '#C4851C', fontWeight: 700,
             background: '#FDF3E3', border: '1px solid #F0C76E',
             padding: '2px 6px', borderRadius: 5, flexShrink: 0,
           }}>
+            {onUndoNotWalking && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onUndoNotWalking(); }}
+                  style={{ background: 'none', border: 'none', padding: 0, margin: 0, color: '#C4851C', fontWeight: 700, fontSize: 9, textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Undo
+                </button>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
             Not walking
           </span>
         )}
