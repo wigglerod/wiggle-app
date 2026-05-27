@@ -361,11 +361,19 @@ export function usePickups(date) {
   }, [user, date, pickups])
 
   // ── Update a timestamp (for profile drawer edit) ───────────────
+  // Wheel 2 Bug 3: snapshot the pre-edit state and the original DB row, attempt
+  // delete + insert, and on any error (including post-delete insert failure)
+  // restore both the optimistic UI state AND the deleted DB row. Transport
+  // failures route through enqueueOfflineAction like every other writer.
   const updateTimestamp = useCallback(async (dogId, noteType, newTimeISO) => {
     if (!user || !date || !dogId) return
     try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
-    // Optimistic update
+    // Snapshot before any mutation.
+    const prevEntry = pickups[dogId] ? { ...pickups[dogId] } : null
+    const prevTime = noteType === 'pickup' ? prevEntry?.pickedUpAt : prevEntry?.returnedAt
+
+    // Optimistic update.
     setPickups(prev => {
       const entry = { ...(prev[dogId] || {}) }
       if (noteType === 'pickup') { entry.pickedUpAt = newTimeISO; entry.time = newTimeISO }
@@ -373,11 +381,16 @@ export function usePickups(date) {
       return { ...prev, [dogId]: entry }
     })
 
-    // Delete old row then re-insert with new timestamp
-    await supabase.from('walker_notes').delete()
-      .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', noteType)
+    const restoreLocal = () => {
+      setPickups(prev => {
+        const next = { ...prev }
+        if (prevEntry) next[dogId] = prevEntry
+        else delete next[dogId]
+        return next
+      })
+    }
 
-    const { error } = await supabase.from('walker_notes').insert({
+    const newRow = {
       dog_id: dogId,
       dog_name: 'Unknown',
       walker_id: user.id,
@@ -385,17 +398,75 @@ export function usePickups(date) {
       note_type: noteType,
       walk_date: date,
       created_at: newTimeISO,
-    })
+    }
+
+    // Delete the original row. Check the result — a transport failure here
+    // means the original row may still exist; we can't safely proceed.
+    const delRes = await supabase.from('walker_notes').delete()
+      .eq('dog_id', dogId).eq('walk_date', date).eq('note_type', noteType)
+
+    if (delRes.error) {
+      if (isTransportFailure(delRes.error)) {
+        // Original row still in DB; just roll back local state.
+        restoreLocal()
+        try {
+          // Re-queue the user's intent: they wanted to set the new time.
+          enqueueOfflineAction({ type: 'delete', table: 'walker_notes', filters: { dog_id: dogId, walk_date: date, note_type: noteType } })
+          enqueueOfflineAction({ type: 'insert', table: 'walker_notes', data: newRow })
+          toast('Queued — will sync when online')
+          return
+        } catch {}
+      }
+      toast.error('Failed to update time')
+      restoreLocal()
+      return
+    }
+
+    const { error } = await supabase.from('walker_notes').insert(newRow)
 
     if (error) {
-      // Unique constraint — another walker's row still exists (RLS blocked our delete)
-      if (error.code === '23505') return
-      toast.error('Failed to update time')
+      // 23505 — another row still exists (e.g. RLS blocked our delete, or a
+      // race with realtime). Roll back local state to whatever the realtime
+      // echo will eventually settle on; original DB row is unchanged.
+      if (error.code === '23505') {
+        restoreLocal()
+        return
+      }
+      // Transport failure between delete and insert: DB has nothing.
+      // Restore local state, queue the insert of the *original* row to
+      // reconstruct DB state, and queue the new-time insert as the user's
+      // actual intent. Walker is told their change is queued, not lost.
+      if (isTransportFailure(error)) {
+        restoreLocal()
+        try {
+          if (prevTime) {
+            enqueueOfflineAction({
+              type: 'insert',
+              table: 'walker_notes',
+              data: { ...newRow, created_at: prevTime },
+            })
+          }
+          enqueueOfflineAction({ type: 'insert', table: 'walker_notes', data: newRow })
+          toast('Queued — will sync when online')
+          return
+        } catch {}
+      }
+      // Real DB error (RLS, schema). Restore local; re-insert original DB row
+      // synchronously so the DB doesn't end up empty.
+      restoreLocal()
+      if (prevTime) {
+        try {
+          await supabase.from('walker_notes').insert({ ...newRow, created_at: prevTime })
+        } catch (restoreErr) {
+          console.warn('[updateTimestamp] DB restore failed', restoreErr)
+        }
+      }
+      toast.error('Failed to update time — restored previous')
     } else {
       toast.success('Time updated')
       notifySync()
     }
-  }, [user, profile, date])
+  }, [user, profile, date, pickups])
 
   // ── Mark not walking ────────────────────────────────────────────
   const markNotWalking = useCallback(async (dogId, dogName, groupNum) => {
