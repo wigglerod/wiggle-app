@@ -140,6 +140,47 @@ export function useWalkGroups(events, date, sector) {
           filter: `walk_date=eq.${date}`,
         },
         (payload) => {
+          // Wheel 1 Bug 3: handle DELETE separately. payload.new is null on DELETE;
+          // the deleted row lives on payload.old (REPLICA IDENTITY FULL).
+          if (payload.eventType === 'DELETE') {
+            const oldRow = payload.old
+            if (!oldRow || oldRow.sector !== sector) return
+            const gNum = oldRow.group_num
+
+            setGroupNums((prev) => prev.filter((n) => n !== gNum))
+            setGroupNames((prev) => {
+              if (!(gNum in prev)) return prev
+              const next = { ...prev }
+              delete next[gNum]
+              return next
+            })
+            setGroupLocks((prev) => {
+              if (!(gNum in prev)) return prev
+              const next = { ...prev }
+              delete next[gNum]
+              return next
+            })
+            setWalkerAssignments((prev) => {
+              if (!(gNum in prev)) return prev
+              const next = { ...prev }
+              delete next[gNum]
+              return next
+            })
+            setGroups((prev) => {
+              const next = { ...prev }
+              delete next[gNum]
+              // Rebuild unassigned from remaining known group nums.
+              const remainingNums = groupNumsRef.current.filter((n) => n !== gNum)
+              const assignedSet = new Set()
+              for (const n of remainingNums) {
+                ;(next[n] || []).forEach((id) => assignedSet.add(id))
+              }
+              next.unassigned = allEventIds.filter((id) => !assignedSet.has(id))
+              return next
+            })
+            return
+          }
+
           const row = payload.new
           if (!row || row.sector !== sector) return
 

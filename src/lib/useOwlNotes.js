@@ -9,7 +9,6 @@ import { useRealtimeHealth } from '../context/RealtimeHealthContext'
 /**
  * Parse duration syntax from the end of note text.
  * Supports: (3 days), (2 weeks), (1 month), etc.
- * Returns { cleanText, expiresAt } where expiresAt is an ISO string or null.
  */
 function parseDuration(text) {
   const match = text.match(/\((\d+)\s*(day|days|week|weeks|month|months)\)\s*$/)
@@ -27,34 +26,49 @@ function parseDuration(text) {
   return { cleanText, expiresAt: now.toISOString() }
 }
 
+// Toronto date as YYYY-MM-DD (matches DB scheduled_date / ack_date).
+function todayInToronto() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(new Date())
+}
+
+// End-of-day instant for a YYYY-MM-DD date in America/Toronto, returned as ISO UTC.
+// Default for owl-note expires_at when no duration tail is given.
+function endOfDayInTorontoISO(dateStr) {
+  // Use Intl to get Toronto's offset on this date (handles DST).
+  const probe = new Date(`${dateStr}T17:00:00Z`)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Toronto',
+    timeZoneName: 'longOffset',
+  }).formatToParts(probe)
+  const offsetStr = parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT-05:00'
+  const offset = offsetStr.replace(/^GMT/, '') || '-05:00'
+  return new Date(`${dateStr}T23:59:59.999${offset}`).toISOString()
+}
+
 /**
  * Hook for managing owl notes with Supabase persistence + realtime sync.
  *
  * Owl notes are short messages that can target a specific dog, a sector, or everyone.
- * They optionally auto-expire after a parsed duration.
+ * Acknowledgement is per-walker via the owl_note_acks join table (Wheel 1 Bug 1).
  */
 export function useOwlNotes(sector) {
   const { user, profile, permissions } = useAuth()
   const { lastResyncAt } = useRealtimeHealth()
   const hasMountedRef = useRef(false)
   const userSector = profile?.sector
+  const userId = user?.id
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
+  // Set of note_ids the current walker has acked for today.
+  // We track this in state so realtime updates re-render the filter.
+  const [myAcks, setMyAcks] = useState(() => new Set())
 
-  // Fetch non-expired notes and clean up expired ones.
-  // Lifted to useCallback so the resync effect below can re-invoke without
-  // tearing down the load-on-mount effect or the subscription effect.
+  // Fetch non-expired notes + this walker's acks for today.
+  // No DELETEs from this hook — walker path is SELECT-only (audit HIGH #7).
   const load = useCallback(async () => {
     setLoading(true)
-
-    // Delete expired notes
     try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
-    await supabase
-      .from('owl_notes')
-      .delete()
-      .lt('expires_at', new Date().toISOString())
 
-    // Fetch remaining notes — walkers only see their sector + global notes
     let query = supabase
       .from('owl_notes')
       .select('*')
@@ -72,21 +86,37 @@ export function useOwlNotes(sector) {
       return
     }
 
-    // Filter out any that might have expired between delete and select
+    // Filter out any that might have expired between query and now.
+    // Legacy rows with NULL expires_at: treat scheduled_date < today as stale
+    // (defense in depth for pre-Wheel-1 data that escaped the EOD writer default).
     const now = new Date()
-    const valid = (data || []).filter(
-      (n) => !n.expires_at || new Date(n.expires_at) > now
-    )
-
+    const todayStr = todayInToronto()
+    const valid = (data || []).filter((n) => {
+      if (n.expires_at) return new Date(n.expires_at) > now
+      if (n.scheduled_date && n.scheduled_date < todayStr) return false
+      return true
+    })
     setNotes(valid)
+
+    // Load this walker's acks for today.
+    if (userId) {
+      const today = todayInToronto()
+      const { data: acks } = await supabase
+        .from('owl_note_acks')
+        .select('note_id')
+        .eq('walker_id', userId)
+        .eq('ack_date', today)
+      setMyAcks(new Set((acks || []).map((a) => a.note_id)))
+    }
+
     setLoading(false)
-  }, [permissions?.canSeeAllSectors, userSector])
+  }, [permissions?.canSeeAllSectors, userSector, userId])
 
   useEffect(() => {
     load()
   }, [load])
 
-  // Audit 2026-05-13 HIGH #2: backfill on realtime resync.
+  // Backfill on realtime resync (audit 2026-05-13 HIGH #2).
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
@@ -95,9 +125,7 @@ export function useOwlNotes(sector) {
     load()
   }, [lastResyncAt, load])
 
-  // Realtime subscription
-  // Shared channel: hook mounts concurrently in Dashboard + Header (owl count)
-  // + OwlQuickDrawer + DogProfileDrawer. Sharing keeps it to one subscription.
+  // Realtime: owl_notes table (everyone subscribes; sector filter applied client-side).
   useEffect(() => {
     const channelName = `owl-notes-realtime-${userSector || 'all'}`
     return subscribeShared(
@@ -112,32 +140,73 @@ export function useOwlNotes(sector) {
       (payload) => {
         if (payload.eventType === 'INSERT') {
           const note = payload.new
-          // Sector filter for walkers on realtime events
           if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
             if (note.target_sector && note.target_sector !== userSector) return
             if (!note.target_sector && note.target_dog_id) return
           }
           setNotes((prev) => [note, ...prev])
         } else if (payload.eventType === 'UPDATE') {
-          setNotes((prev) =>
-            prev.map((n) => (n.id === payload.new.id ? payload.new : n))
-          )
+          setNotes((prev) => prev.map((n) => (n.id === payload.new.id ? payload.new : n)))
         } else if (payload.eventType === 'DELETE') {
           setNotes((prev) => prev.filter((n) => n.id !== payload.old.id))
         }
-      }
+      },
     )
   }, [permissions?.canSeeAllSectors, userSector])
 
-  // Create a new owl note
+  // Realtime: owl_note_acks for THIS walker only. Other walkers' acks never affect this UI.
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`owl-note-acks-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'owl_note_acks',
+          filter: `walker_id=eq.${userId}`,
+        },
+        (payload) => {
+          const today = todayInToronto()
+          if (payload.eventType === 'INSERT') {
+            const row = payload.new
+            if (row?.ack_date === today) {
+              setMyAcks((prev) => {
+                const next = new Set(prev)
+                next.add(row.note_id)
+                return next
+              })
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const row = payload.old
+            if (row?.note_id) {
+              setMyAcks((prev) => {
+                const next = new Set(prev)
+                next.delete(row.note_id)
+                return next
+              })
+            }
+          }
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  // Create a new owl note.
+  // Wheel 1 Bug 2: default expires_at to end-of-day-in-Toronto of scheduled_date
+  // when no duration tail and no explicit expiresAt is provided.
   const createNote = useCallback(
     async ({ noteText, targetType, targetDogId, targetDogName, targetSector, expiresAt, scheduledDate }) => {
       if (!user) return
       try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
 
-      // Parse duration from text if no explicit expiresAt
       const { cleanText, expiresAt: parsedExpiry } = parseDuration(noteText)
-      const finalExpiry = expiresAt || parsedExpiry
+      const effectiveScheduledDate = scheduledDate || todayInToronto()
+      const finalExpiry = expiresAt || parsedExpiry || endOfDayInTorontoISO(effectiveScheduledDate)
 
       const { error } = await supabase.from('owl_notes').insert({
         note_text: cleanText,
@@ -146,7 +215,7 @@ export function useOwlNotes(sector) {
         target_dog_name: targetDogName || null,
         target_sector: targetSector || null,
         expires_at: finalExpiry,
-        scheduled_date: scheduledDate || new Date().toISOString().split('T')[0],
+        scheduled_date: effectiveScheduledDate,
         created_by: user.id,
         created_by_name: profile?.full_name || 'Unknown',
       })
@@ -157,102 +226,90 @@ export function useOwlNotes(sector) {
         toast.success('Note sent!')
       }
     },
-    [user, profile]
+    [user, profile],
   )
 
-  // Acknowledge a note — daily ack for notes with duration, delete for notes without
-  const acknowledgeNote = useCallback(async (noteId) => {
-    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
-    // Find the note to check if it has a duration (expires_at)
-    const note = notes.find(n => n.id === noteId)
+  // Acknowledge a note.
+  // Note WITH expires_at (duration): insert a per-walker ack row for today. Hides for THIS walker only.
+  // Note WITHOUT expires_at: legacy "delete permanently" behavior preserved.
+  const acknowledgeNote = useCallback(
+    async (noteId) => {
+      try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
+      const note = notes.find((n) => n.id === noteId)
+      if (!user) return
 
-    if (note && note.expires_at) {
-      // Note WITH duration: mark as acknowledged today, don't delete
-      const today = new Date().toISOString().split('T')[0]
-      const { error } = await supabase
-        .from('owl_notes')
-        .update({
-          last_acknowledged_date: today,
-          acknowledged_by: user?.id || null,
-          acknowledged_by_name: profile?.full_name || 'Unknown',
+      if (note && note.expires_at) {
+        const today = todayInToronto()
+        // Optimistic local hide.
+        setMyAcks((prev) => {
+          const next = new Set(prev)
+          next.add(noteId)
+          return next
         })
-        .eq('id', noteId)
-
-      if (error) {
-        toast.error('Failed to acknowledge note')
+        const { error } = await supabase.from('owl_note_acks').insert({
+          note_id: noteId,
+          walker_id: user.id,
+          ack_date: today,
+        })
+        if (error && error.code !== '23505') {
+          // Roll back optimistic state; surface error.
+          setMyAcks((prev) => {
+            const next = new Set(prev)
+            next.delete(noteId)
+            return next
+          })
+          toast.error('Failed to acknowledge note')
+        } else {
+          toast('🦉 Got it! This note will return tomorrow.')
+        }
       } else {
-        // Update local state to hide immediately
-        setNotes(prev => prev.map(n => n.id === noteId ? { ...n, last_acknowledged_date: today } : n))
-        toast('🦉 Got it! This note will return tomorrow.')
+        const { error } = await supabase.from('owl_notes').delete().eq('id', noteId)
+        if (error) {
+          toast.error('Failed to acknowledge note')
+        } else {
+          toast('Got it!')
+        }
       }
-    } else {
-      // Note WITHOUT duration: delete permanently
-      const { error } = await supabase
-        .from('owl_notes')
-        .delete()
-        .eq('id', noteId)
+    },
+    [notes, user],
+  )
 
-      if (error) {
-        toast.error('Failed to acknowledge note')
-      } else {
-        toast('Got it!')
-      }
-    }
-  }, [notes, user, profile])
-
-  // Admin delete a note
+  // Admin delete.
   const deleteNote = useCallback(async (noteId) => {
     try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
-    const { error } = await supabase
-      .from('owl_notes')
-      .delete()
-      .eq('id', noteId)
-
-    if (error) {
-      toast.error('Failed to delete note')
-    } else {
-      toast('🦉 Note removed')
-    }
+    const { error } = await supabase.from('owl_notes').delete().eq('id', noteId)
+    if (error) toast.error('Failed to delete note')
+    else toast('🦉 Note removed')
   }, [])
 
-  // Split notes into active (scheduled_date <= today) and scheduled (future)
-  // For notes with duration: hide if acknowledged today
-  // For walkers: filter to their sector only
-  const today = new Date().toISOString().split('T')[0]
+  // Split notes by visibility for this walker.
+  const today = todayInToronto()
   const activeNotes = notes.filter((n) => {
     if (n.scheduled_date && n.scheduled_date > today) return false
-    if (n.expires_at && n.last_acknowledged_date === today) return false
-    // Sector filter for walkers
+    if (n.expires_at && myAcks.has(n.id)) return false
     if (!permissions?.canSeeAllSectors && userSector && userSector !== 'both') {
       if (n.target_sector) {
         if (n.target_sector !== userSector) return false
       } else if (n.target_dog_id) {
-        // null target_sector but targets a specific dog — hide (likely other sector)
         return false
       }
-      // null target_sector + null target_dog_id = global note, show to everyone
     }
     return true
   })
-  const scheduledNotes = notes.filter(
-    (n) => n.scheduled_date && n.scheduled_date > today
-  )
+  const scheduledNotes = notes.filter((n) => n.scheduled_date && n.scheduled_date > today)
 
-  // Filter helpers — only return active (visible) notes
   const dogNotes = useCallback(
-    (dogId) =>
-      activeNotes.filter((n) => n.target_type === 'dog' && n.target_dog_id === dogId),
-    [activeNotes]
+    (dogId) => activeNotes.filter((n) => n.target_type === 'dog' && n.target_dog_id === dogId),
+    [activeNotes],
   )
 
   const sectorNotes = useCallback(
     (sectorName) =>
       activeNotes.filter(
         (n) =>
-          (n.target_type === 'sector' && n.target_sector === sectorName) ||
-          n.target_type === 'all'
+          (n.target_type === 'sector' && n.target_sector === sectorName) || n.target_type === 'all',
       ),
-    [activeNotes]
+    [activeNotes],
   )
 
   return {
