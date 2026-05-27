@@ -86,8 +86,12 @@ test('items enqueued mid-replay are not silently wiped', async ({ page }) => {
   // any remaining items (the fix may leave B in the queue if it landed after
   // the snapshot was taken).
   await sleep(3000)
+  const midState = await page.evaluate(() => localStorage.getItem('wiggle_offline_queue'))
+  console.log('mid-state queue:', midState)
   await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await sleep(3500)
+  const endState = await page.evaluate(() => localStorage.getItem('wiggle_offline_queue'))
+  console.log('end-state queue:', endState)
 
   // Both rows must have made it to the DB.
   const { data: rows } = await admin
