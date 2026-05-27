@@ -67,22 +67,46 @@ export async function ensureTestWalker(walker) {
   return user.id
 }
 
+// Sign in via the supabase REST endpoint to grab a fresh session, then inject
+// it into the page's localStorage. Bypasses the Login UI entirely, which
+// turned out to be the dominant source of test flakiness — the React form
+// re-render race made `fill + click + waitFor(Schedule)` unreliable under load.
+//
+// The supabase JS client reads the session from localStorage on init, so
+// when we then navigate to / the AuthContext resolves immediately and
+// ProtectedRoute renders Dashboard without a round-trip to /login.
 export async function loginAs(page, walker) {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || '').replace(/^["']|["']$/g, '')
+  const anonKey = (process.env.VITE_SUPABASE_ANON_KEY || '').replace(/^["']|["']$/g, '')
+  const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1]
+  if (!projectRef) throw new Error('cannot extract project ref from VITE_SUPABASE_URL')
+
+  const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: walker.email, password: walker.password }),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`supabase auth failed for ${walker.email}: ${res.status} ${body}`)
+  }
+  const session = await res.json()
+
+  // Hit the app once to establish origin (localStorage is keyed by origin).
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
+
+  // Seed the supabase JS client storage with our session.
+  const storageKey = `sb-${projectRef}-auth-token`
+  await page.evaluate(({ key, value }) => {
+    localStorage.setItem(key, JSON.stringify(value))
+  }, { key: storageKey, value: session })
+
+  // Navigate to / — supabase JS client reads session from localStorage on init,
+  // AuthContext resolves immediately, ProtectedRoute renders Dashboard.
   await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-
-  const emailInput = page.locator('input[type="email"]')
-  await emailInput.waitFor({ state: 'visible', timeout: 20_000 })
-  await emailInput.fill(walker.email)
-  await page.locator('input[type="password"]').fill(walker.password)
-  await page.getByRole('button', { name: /sign in/i }).click()
-
-  // Wait for password input gone AND for the dashboard's BottomTabs ("Schedule")
-  // to render — confirms ProtectedRoute has session before we navigate away.
-  await expect(page.locator('input[type="password"]')).toBeHidden({ timeout: 20_000 })
-  // Wait for the Dashboard bottom-tab "Schedule" button — only renders inside
-  // ProtectedRoute, so its presence guarantees AuthContext has session and
-  // subsequent page.goto() will not redirect to /login.
   await page.getByRole('button', { name: 'Schedule' }).waitFor({ state: 'visible', timeout: 20_000 })
 }
 

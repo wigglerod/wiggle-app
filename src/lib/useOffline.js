@@ -105,33 +105,39 @@ async function replayOfflineQueue() {
 
       for (const action of snapshot) {
         try {
+          let result
           if (action.type === 'upsert') {
-            await supabase.from(action.table).upsert(action.data, action.options || {})
+            result = await supabase.from(action.table).upsert(action.data, action.options || {})
           } else if (action.type === 'insert') {
-            // 23505 from a partial unique index is fine — the realtime echo of
-            // the same row likely arrived between the offline tap and replay.
-            // supabase-js does not throw on PostgrestError; the row is either
-            // already there or this insert puts it there. Either way: synced.
-            await supabase.from(action.table).insert(action.data)
+            result = await supabase.from(action.table).insert(action.data)
           } else if (action.type === 'update') {
             let q = supabase.from(action.table).update(action.data)
             for (const [col, val] of Object.entries(action.filters || {})) {
               q = q.eq(col, val)
             }
-            await q
+            result = await q
           } else if (action.type === 'delete') {
             let q = supabase.from(action.table).delete()
             for (const [col, val] of Object.entries(action.filters || {})) {
               if (Array.isArray(val)) q = q.in(col, val)
               else q = q.eq(col, val)
             }
-            await q
+            result = await q
+          }
+          // supabase-js does not throw on PostgrestError — it returns { error }.
+          // 23505 from the partial-unique index is fine (the realtime echo of
+          // the same row landed between the offline tap and replay). Any other
+          // error means the action failed; leave it in the queue for retry.
+          if (result?.error && result.error.code !== '23505') {
+            failed++
+            console.error('[offline-replay] failed action:', action.type, action.table, result.error.message, result.error.code)
+            continue
           }
           if (action._id) succeededIds.add(action._id)
           synced++
         } catch (err) {
           failed++
-          console.error('[offline-replay] failed action:', action.type, action.table, err.message)
+          console.error('[offline-replay] threw:', action.type, action.table, err.message)
         }
       }
 
