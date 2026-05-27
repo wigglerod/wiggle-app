@@ -140,44 +140,15 @@ export function useWalkGroups(events, date, sector) {
           filter: `walk_date=eq.${date}`,
         },
         (payload) => {
-          // Wheel 1 Bug 3: handle DELETE separately. payload.new is null on DELETE;
-          // the deleted row lives on payload.old (REPLICA IDENTITY FULL).
+          // Wheel 1 Bug 3: handle DELETE separately. Supabase realtime sends only
+          // the PK (`id`) in payload.old by default even with REPLICA IDENTITY FULL,
+          // so we can't identify the group_num from the payload alone. Re-load from
+          // the DB instead — cheap and correct: the deleted row will be gone, the
+          // hook recomputes groupNums/groups/groupNames/locks/walkerAssignments
+          // from scratch, and unassigned rebuilds. Same path the visibility-return
+          // backfill uses (HIGH #2).
           if (payload.eventType === 'DELETE') {
-            const oldRow = payload.old
-            if (!oldRow || oldRow.sector !== sector) return
-            const gNum = oldRow.group_num
-
-            setGroupNums((prev) => prev.filter((n) => n !== gNum))
-            setGroupNames((prev) => {
-              if (!(gNum in prev)) return prev
-              const next = { ...prev }
-              delete next[gNum]
-              return next
-            })
-            setGroupLocks((prev) => {
-              if (!(gNum in prev)) return prev
-              const next = { ...prev }
-              delete next[gNum]
-              return next
-            })
-            setWalkerAssignments((prev) => {
-              if (!(gNum in prev)) return prev
-              const next = { ...prev }
-              delete next[gNum]
-              return next
-            })
-            setGroups((prev) => {
-              const next = { ...prev }
-              delete next[gNum]
-              // Rebuild unassigned from remaining known group nums.
-              const remainingNums = groupNumsRef.current.filter((n) => n !== gNum)
-              const assignedSet = new Set()
-              for (const n of remainingNums) {
-                ;(next[n] || []).forEach((id) => assignedSet.add(id))
-              }
-              next.unassigned = allEventIds.filter((id) => !assignedSet.has(id))
-              return next
-            })
+            load()
             return
           }
 
