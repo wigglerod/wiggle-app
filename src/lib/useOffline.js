@@ -82,8 +82,21 @@ async function replayOfflineQueue() {
   if (_replayInflight) return _replayInflight
   _replayInflight = (async () => {
     try {
-      const snapshot = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+      let snapshot = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
       if (snapshot.length === 0) return
+
+      // Normalize: assign an _id to any legacy queue item that lacks one (e.g.
+      // a queue persisted by a pre-Wheel-2 build, or seeded by tests). Persist
+      // the assignment so the drain step can match by id afterwards.
+      let needsBackfill = false
+      snapshot = snapshot.map((a) => {
+        if (a._id) return a
+        needsBackfill = true
+        return { ...a, _id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+      })
+      if (needsBackfill) {
+        try { localStorage.setItem(QUEUE_KEY, JSON.stringify(snapshot)) } catch {}
+      }
 
       // Process snapshot; collect ids that succeeded.
       const succeededIds = new Set()
