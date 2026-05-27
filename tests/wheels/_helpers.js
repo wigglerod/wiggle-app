@@ -71,16 +71,19 @@ export async function loginAs(page, walker) {
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
 
-  // Login page renders auto-login text in DEV; on prod it renders the form.
-  // We hit prod, so the form should be present.
   const emailInput = page.locator('input[type="email"]')
   await emailInput.waitFor({ state: 'visible', timeout: 20_000 })
   await emailInput.fill(walker.email)
   await page.locator('input[type="password"]').fill(walker.password)
   await page.getByRole('button', { name: /sign in/i }).click()
 
-  // Successful sign-in: form is gone and Header (with 🦉) appears.
+  // Wait for password input gone AND for the dashboard's BottomTabs ("Schedule")
+  // to render — confirms ProtectedRoute has session before we navigate away.
   await expect(page.locator('input[type="password"]')).toBeHidden({ timeout: 20_000 })
+  // Wait for the Dashboard bottom-tab "Schedule" button — only renders inside
+  // ProtectedRoute, so its presence guarantees AuthContext has session and
+  // subsequent page.goto() will not redirect to /login.
+  await page.getByRole('button', { name: 'Schedule' }).waitFor({ state: 'visible', timeout: 20_000 })
 }
 
 export async function clearOwlNotesForDog(dogId) {

@@ -21,9 +21,11 @@ import {
 
 async function openDogProfile(page, dogName) {
   await page.goto('/dogs')
-  const dogRow = page.getByText(new RegExp(`^${dogName}\\b`)).first()
-  await dogRow.waitFor({ state: 'visible', timeout: 20_000 })
-  await dogRow.click()
+  const button = page.getByRole('button', { name: new RegExp(`(^|\\s)${dogName}(\\s|$)`) }).first()
+  await button.waitFor({ state: 'visible', timeout: 20_000 })
+  await button.scrollIntoViewIfNeeded()
+  await button.click()
+  await page.locator('text=/ADDRESS|DIRECTIONS|Directions/i').first().waitFor({ state: 'visible', timeout: 10_000 })
 }
 
 test("yesterday's untailed owl note with NULL expires_at is not visible today", async ({ page }) => {
