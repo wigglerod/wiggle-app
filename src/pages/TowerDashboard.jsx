@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { useAuth } from '../context/AuthContext'
 import { assertFreshOrThrow, StaleBundleError } from '../lib/freshBundle'
 import useMiniGenResults from '../hooks/tower/useMiniGenResults'
 import StatsBar from '../components/tower/dashboard/StatsBar'
@@ -25,8 +27,38 @@ const todayLabel = new Date().toLocaleDateString('en-US', {
 
 export default function TowerDashboard() {
   const { drafts, flags, stats, loading, refetch } = useMiniGenResults()
+  const { user, profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
   const [running, setRunning] = useState(false)
   const [runError, setRunError] = useState(null)
+  const [approvingClean, setApprovingClean] = useState(false)
+
+  // Clean = no flags. Bulk-approve folds in the former /tower/mini-gen action.
+  const cleanDrafts = drafts.filter((d) => !d.flags || d.flags.length === 0)
+
+  async function approveAllClean() {
+    try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
+    setApprovingClean(true)
+    try {
+      const results = await Promise.all(
+        cleanDrafts.map((d) =>
+          fetch('/api/tower-approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: d.id, status: 'approved', userId: user?.id }),
+          }),
+        ),
+      )
+      const failed = results.filter((r) => !r.ok).length
+      if (failed) throw new Error(`${failed} approvals failed`)
+      toast.success(`Approved ${cleanDrafts.length} clean day${cleanDrafts.length !== 1 ? 's' : ''}`)
+      await refetch()
+    } catch (e) {
+      toast.error(e.message || 'Bulk approve failed')
+    } finally {
+      setApprovingClean(false)
+    }
+  }
 
   async function runMiniGen() {
     try { await assertFreshOrThrow() } catch (e) { if (e instanceof StaleBundleError) return; throw e }
@@ -99,9 +131,30 @@ export default function TowerDashboard() {
 
       {/* ── 3. DRAFTS SECTION ── */}
       <div className="mb-8">
-        <h2 className="mb-3" style={towerSectionLabel}>
-          \ud83d\udccb THIS WEEK&rsquo;S DRAFTS
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 style={towerSectionLabel}>
+            \ud83d\udccb THIS WEEK&rsquo;S DRAFTS
+          </h2>
+          {isAdmin && cleanDrafts.length > 0 && (
+            <button
+              onClick={approveAllClean}
+              disabled={approvingClean}
+              style={{
+                background: 'var(--tower-sage)',
+                color: 'var(--tower-text-inverse)',
+                fontSize: 'var(--tower-text-sm)',
+                fontWeight: 'var(--tower-font-bold)',
+                borderRadius: 6,
+                padding: '4px 12px',
+                border: 'none',
+                cursor: approvingClean ? 'not-allowed' : 'pointer',
+                opacity: approvingClean ? 0.6 : 1,
+              }}
+            >
+              {approvingClean ? 'Approving\u2026' : `Approve all clean days (${cleanDrafts.length})`}
+            </button>
+          )}
+        </div>
 
         {loading ? (
           <p style={{ fontSize: 'var(--tower-text-md)', color: 'var(--tower-text-muted)' }}>
@@ -153,7 +206,7 @@ export default function TowerDashboard() {
         ) : (
           <div className="flex flex-col gap-3">
             {flags.map((f) => (
-              <FlagCard key={f.id} flag={f} />
+              <FlagCard key={f.id} flag={f} onResolved={refetch} />
             ))}
           </div>
         )}

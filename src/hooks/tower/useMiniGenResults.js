@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 /**
- * Fetches the latest Mini Gen drafts and flags from existing tables.
- * Reads mini_gen_drafts (pending) + walker_notes (resolver_flag).
- * Call refetch() after approve/reject or after triggering a new run.
+ * Fetches the latest Mini Gen drafts and flags from mini_gen_drafts.
+ * Flags are derived from each draft's `flags` JSONB (the canonical source);
+ * each flag carries its parent draft context so the dashboard can resolve it.
+ * Call refetch() after approve/reject/resolve or after triggering a new run.
  */
 export default function useMiniGenResults() {
   const [drafts, setDrafts] = useState([])
@@ -29,28 +30,22 @@ export default function useMiniGenResults() {
         .order('sector')
 
       if (draftErr) throw draftErr
-      setDrafts(draftRows || [])
-
-      // Flags scoped to the drafts' date range
       const rows = draftRows || []
-      if (rows.length > 0) {
-        const minDate = rows.reduce(
-          (m, d) => (d.walk_date < m ? d.walk_date : m),
-          rows[0].walk_date,
-        )
-        const { data: flagRows, error: flagErr } = await supabase
-          .from('walker_notes')
-          .select('id, dog_name, message, walk_date, tags, created_at')
-          .eq('note_type', 'resolver_flag')
-          .gte('walk_date', minDate)
-          .order('walk_date')
-          .order('tags')
+      setDrafts(rows)
 
-        if (flagErr) throw flagErr
-        setFlags(flagRows || [])
-      } else {
-        setFlags([])
-      }
+      // Flags derived from the canonical source — mini_gen_drafts.flags (JSONB).
+      // Each flag carries its parent draft context so the dashboard resolver
+      // tools (name-map / vacation-remove) can act on the right row.
+      const derived = rows.flatMap((d) =>
+        (d.flags || []).map((flag, i) => ({
+          ...flag,
+          id: `${d.id}:${i}`,
+          draftId: d.id,
+          walk_date: d.walk_date,
+          sector: d.sector,
+        })),
+      )
+      setFlags(derived)
     } catch (e) {
       setError(e.message || 'Failed to load Mini Gen results')
     } finally {
