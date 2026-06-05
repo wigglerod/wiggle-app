@@ -47,6 +47,15 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true })
       }
 
+      // Decision #92: skip echoes (Wiggle's OWN outbound message) and events whose
+      // sender is a Wiggle business account — these are not client inbound DMs and
+      // must not become flag_cards. Ack 200, write nothing.
+      if (messaging.message?.is_echo === true ||
+          ['17841401602204726', '17841420645511219'].includes(String(senderId))) {
+        console.log('[scout-webhook] Skipped echo / business-sender event — no card written.')
+        return res.status(200).json({ received: true })
+      }
+
       const today = new Date().toISOString().split('T')[0]
       const sourceId = mid || `ig_${senderId}_${Date.now()}`
       const supabase = getAdminClient()
