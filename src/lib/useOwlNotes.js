@@ -146,7 +146,21 @@ export function useOwlNotes(sector) {
           }
           setNotes((prev) => [note, ...prev])
         } else if (payload.eventType === 'UPDATE') {
-          setNotes((prev) => prev.map((n) => (n.id === payload.new.id ? payload.new : n)))
+          const note = payload.new
+          // Re-apply load()'s validity filter (line ~95): an UPDATE that pushes
+          // expires_at into the past — e.g. the Studio "Map from the Flag" resolve
+          // expiring a Fuzzy Match note — must DROP the note now, not just swap in
+          // the expired row. activeNotes never re-checks expires_at, so a plain
+          // .map() would leave a resolved note on the walker's screen until the
+          // next load()/resync.
+          const stillValid = note.expires_at
+            ? new Date(note.expires_at) > new Date()
+            : !(note.scheduled_date && note.scheduled_date < todayInToronto())
+          setNotes((prev) =>
+            stillValid
+              ? prev.map((n) => (n.id === note.id ? note : n))
+              : prev.filter((n) => n.id !== note.id),
+          )
         } else if (payload.eventType === 'DELETE') {
           setNotes((prev) => prev.filter((n) => n.id !== payload.old.id))
         }
