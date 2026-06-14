@@ -161,7 +161,7 @@ function matchSingleEvent(ev, dogs, nameMap) {
   const rawName = extractDogName(summary)
   const breed = words.length > 1 ? words.slice(1).join(' ') : null
   const nameResult = matchByName(rawName, dogs)
-  if (nameResult.dog) {
+  if (nameResult.dog && nameResult.matchType === 'exact') {
     return [makeResult(ev, rawName, breed, nameResult.dog, nameResult.matchType, nameResult.matchMethod)]
   }
 
