@@ -38,9 +38,20 @@ const SKIP_SENDERS = [
 ]
 
 export default async function handler(req, res) {
-  // Auth — cron header or manual POST with Bearer secret
+  // Auth — cron header or manual POST with Bearer secret. FAIL CLOSED.
+  //
+  // The previous form was `if (secret !== process.env.CRON_SECRET)`. With no headers the
+  // presented secret is `undefined`, so in any deployment where CRON_SECRET is unset the
+  // comparison became `undefined !== undefined` — false — and the request was let through.
+  // The missing variable was never the bug; a comparison that passes when BOTH sides are
+  // absent is. Fixing only the variable would leave the shape armed for the next deployment.
+  //
+  // CRON_SECRET is presently set in this project's Production environment, so the open path
+  // was latent rather than live — but it is one deleted variable away from being live, and
+  // this endpoint reads Gmail and writes flag_cards.
+  const expected = process.env.CRON_SECRET
   const secret = req.headers['x-cron-secret'] || req.headers.authorization?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!expected || !secret || secret !== expected) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
