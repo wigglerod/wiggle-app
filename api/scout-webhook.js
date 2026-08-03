@@ -7,6 +7,7 @@
 // Always returns 200 to Meta on POST — even on error — to prevent retries.
 
 import { getAdminClient } from './lib/supabase-admin.js'
+import { parkedBody, logGate } from './lib/parked.js'
 
 const VERIFY_TOKEN = 'wiggle_scout_2026'
 
@@ -28,6 +29,38 @@ export default async function handler(req, res) {
 
   // ── POST: Receive Instagram DM ──
   if (req.method === 'POST') {
+    // ── GATED, DEFAULT OFF (2026-08-03) ───────────────────────────────────────────
+    // Until this landed, THIS handler had no authentication of any kind: any
+    // unauthenticated POST with a Meta-shaped body wrote an attacker-controlled row
+    // straight into Gen's triage queue (flag_cards, status='open'). No
+    // X-Hub-Signature check exists — META_APP_SECRET is read nowhere in this repo —
+    // and the GET handshake compares a verify token hardcoded in committed source.
+    //
+    // The GET verification branch above is deliberately left working: failing Meta's
+    // verification can make Meta disable the subscription, a state a flag flip does
+    // not undo. Off, never gone.
+    //
+    // ⚠ THIS COPY IS THE LIVE RECEIVER. wiggle-world's copy of this file carries the
+    // same gate and says the live receiver is here — this is that file. So unlike
+    // there, flipping this flag off genuinely stops IG flag_cards being written.
+    // IG_WEBHOOK_LIVE must be set to 'true' on the wiggle-app Vercel project BEFORE
+    // this merges, or live Instagram capture stops silently (200 to Meta, no retry,
+    // no alarm). See the PR body.
+    //
+    // Still 200: Meta retries any non-200, and a retry storm is not what "gated" means.
+    if (!logGate('scout-webhook', 'IG_WEBHOOK_LIVE')) {
+      return res.status(200).json({
+        received: true,
+        ...parkedBody({
+          handler: 'scout-webhook',
+          flag: 'IG_WEBHOOK_LIVE',
+          reason:
+            'Instagram webhook writes are gated (2026-08-03). No flag_cards row is written. ' +
+            'This repo IS the live receiver, so this flag genuinely controls IG capture.',
+        }),
+      })
+    }
+
     try {
       const body = req.body
       const messaging = body?.entry?.[0]?.messaging?.[0]
