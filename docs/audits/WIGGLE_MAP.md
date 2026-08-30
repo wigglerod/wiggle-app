@@ -14,7 +14,7 @@ Rodrigo runs two parallel Wiggle codebases. This is deliberate, not an accident.
 
 Walkers and Gen use this every walk day. Do not break it.
 
-- **Local folder:** `~/Documents/wiggle-v4`
+- **Local folder:** `~/code/wiggle-v4`
 - **GitHub repo:** `github.com/wigglerod/wiggle-app`
 - **Deployed at:** `wiggle-app-dusky.vercel.app`
 - **Supabase project:** `ifhniwjdrsswgemmqddn` (shared)
@@ -24,7 +24,7 @@ Walkers and Gen use this every walk day. Do not break it.
 
 Rebuild in progress. More sophisticated. New Studio (admin UI with rooms: Scout, Dashboard, Owl, Mini Gen), new app, new Gen's Assistant.
 
-- **Local folder:** `~/Documents/wiggle-world`
+- **Local folder:** `~/code/wiggle-world`
 - **GitHub repo:** `github.com/wigglerod/wiggle-world`
 - **Deployed at:** https://wiggle-world.vercel.app
 - **Supabase project:** `ifhniwjdrsswgemmqddn` (SAME as wiggle-v4 — shared database)

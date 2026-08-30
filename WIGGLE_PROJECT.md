@@ -62,12 +62,12 @@ Never claim something works without device verification.
 
 - App: wiggle-app-dusky.vercel.app (React PWA, Vite, Tailwind, Framer Motion,
   @dnd-kit, Supabase realtime, Workbox PWA)
-- App code: ~/Documents/wiggle-v4/
+- App code: ~/code/wiggle-v4/
 - Supabase project ID: ifhniwjdrsswgemmqddn
 - Vercel project ID: prj_8xMbgRMgEXcF0DE44u70SOFeL8ma
 - Team ID: team_UWOcgVnP9qC84S65WA0vSAbr
 - Tower Control: wiggle-app-dusky.vercel.app/tower (React, same codebase)
-- Tower code: ~/Documents/wiggle-v4/src/pages/Tower*.jsx
+- Tower code: ~/code/wiggle-v4/src/pages/Tower*.jsx
 - Tower tabs: /tower/dashboard · /tower/weekly · /tower/schedule
               /tower/dogs · /tower/staff · /tower/billing (placeholder)
 - Tower auth: role = 'admin' in profiles table (not chief_pup)

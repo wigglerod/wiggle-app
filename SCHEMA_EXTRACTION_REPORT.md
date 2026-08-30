@@ -13,7 +13,7 @@ SQL editor without a CREATE TABLE migration.
 
 ## Files produced
 
-All written to `~/Documents/wiggle-v4/migrations/`:
+All written to `~/code/wiggle-v4/migrations/`:
 
 1. `0007_extract_walker_notes.sql`
 2. `0008_extract_owl_notes.sql`
@@ -136,8 +136,8 @@ Not changing anything — flagging.
 
 ## Done criteria checklist
 
-- [x] Five migration files written to `~/Documents/wiggle-v4/migrations/`
-- [x] Summary report at `~/Documents/wiggle-v4/SCHEMA_EXTRACTION_REPORT.md`
+- [x] Five migration files written to `~/code/wiggle-v4/migrations/`
+- [x] Summary report at `~/code/wiggle-v4/SCHEMA_EXTRACTION_REPORT.md`
 - [x] Realtime publication contents captured
 - [x] Replica identity captured per table
 - [x] Zero writes to the database

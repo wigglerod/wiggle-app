@@ -14,7 +14,7 @@ last_rewritten: 2026-05-04
 
 This skill describes what v4 actually does — the walker PWA at
 wiggle-app-dusky.vercel.app and Tower Control at `/tower/*`. Both run
-from `~/Documents/wiggle-v4/`. For wiggle-world (The Field, Fraunces,
+from `~/code/wiggle-v4/`. For wiggle-world (The Field, Fraunces,
 forest frame), load `wiggle-world-design-system` instead.
 
 **Sources of truth.** Codebase wins on facts. `WIGGLE_PROJECT.md` and

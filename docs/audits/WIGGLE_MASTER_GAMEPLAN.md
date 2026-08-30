@@ -24,7 +24,7 @@ Why this exists: April 11 was lost to a Foreman verifying against the wrong prod
 Two phrases only. No abbreviations.
 
 - **the live app's admin** = the existing admin in `wiggle-app-dusky.vercel.app`. We do not touch it.
-- **wiggle-world's Studio** = the new admin desktop in the scaffold at `~/Documents/wiggle-v4/`.
+- **wiggle-world's Studio** = the new admin desktop in the scaffold at `~/code/wiggle-v4/`.
 
 `TowerDashboard.jsx` is *part of* the Studio. It is not the Studio. Don't conflate the file with the surface.
 
@@ -35,7 +35,7 @@ Two phrases only. No abbreviations.
 | | The live app | wiggle-world |
 |---|---|---|
 | URL | `wiggle-app-dusky.vercel.app` ✓ | `(? ASSUMED — Foreman 2 verifies)` |
-| Folder | not in this filing system | `~/Documents/wiggle-v4/` ✓ |
+| Folder | not in this filing system | `~/code/wiggle-v4/` ✓ |
 | Vercel project | not touched | `(? ASSUMED — Foreman 2 verifies)` |
 | Supabase | `ifhniwjdrsswgemmqddn` ✓ | `ifhniwjdrsswgemmqddn` ✓ (shared) |
 | Status | running for walkers, untouched | active build |
@@ -156,7 +156,7 @@ None alone would have prevented the cost. Together they did, before any code shi
 ## CONSTANTS
 
 - **Supabase project ID:** `ifhniwjdrsswgemmqddn` ✓
-- **wiggle-world scaffold folder:** `~/Documents/wiggle-v4/` ✓
+- **wiggle-world scaffold folder:** `~/code/wiggle-v4/` ✓
 - **The live app URL:** `wiggle-app-dusky.vercel.app` ✓
 - **wiggle-world Vercel project:** `(? ASSUMED — Foreman 2 verifies)`
 - **wiggle-world preview URL pattern:** `(? ASSUMED — Foreman 2 verifies)`

@@ -90,7 +90,7 @@ Never claim something works without device verification.
 - Test URL: https://wiggle-app-dusky.vercel.app
 - Login: test@wiggledogwalks.com / WiggleTest2026!
 - NEVER test against localhost — always the live Vercel URL
-- Open folder: ~/Documents/wiggle-v4/
+- Open folder: ~/code/wiggle-v4/
 - CLAUDE.md in project root — Antigravity reads it for context
 
 ### Manager View vs Editor View
@@ -103,9 +103,9 @@ Never claim something works without device verification.
 
 ## CLAUDE CODE SETUP
 
-- Launch: `claude` from ~/Documents/wiggle-v4/
+- Launch: `claude` from ~/code/wiggle-v4/
 - CLAUDE.md auto-loads on every session
-- Tower Control: ~/Documents/wiggle-v4/apps-script/Code.js (5,030 lines)
+- Tower Control: ~/code/wiggle-v4/apps-script/Code.js (5,030 lines)
 - Clasp push: `npx @google/clasp push` from regular Terminal — NOT Claude Code terminal
   (credentials are sandboxed in regular Terminal only)
 
@@ -115,7 +115,7 @@ Never claim something works without device verification.
 
 They don't talk to each other directly. Rod is the connection.
 They share:
-1. The codebase — ~/Documents/wiggle-v4/ — all three can read it
+1. The codebase — ~/code/wiggle-v4/ — all three can read it
 2. CLAUDE.md — design constitution, auto-loaded by Claude Code
 3. WIGGLE_PROJECT.md — master context, Rod drops it into any session
 4. Supabase — Claude Chat queries via MCP, app reads via API

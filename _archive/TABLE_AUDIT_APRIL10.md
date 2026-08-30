@@ -19,7 +19,7 @@ Supabase project: `ifhniwjdrsswgemmqddn`
 - A.3 (archive apps-script): `Code.js` is 66K tokens — too large to read/copy. Cannot delete `.clasp.json` without bash access.
 - A.4 (delete fix_drawer_close.txt): No delete capability for unmounted directories.
 
-**Action for Rod or Claude Code:** Run these commands in a terminal inside `~/Documents/wiggle-v4/`:
+**Action for Rod or Claude Code:** Run these commands in a terminal inside `~/code/wiggle-v4/`:
 ```bash
 mkdir -p _archive
 mv tower-app-vision-draft.html wiggle-vision-2026.html wiggle-product-vision.html wiggle_notes_complete.html wiggle_ecosystem_map.html wiggle-admin-preview.html Wiggle_Master_Gameplan.html WIGGLE_WORLD_SPEC.md _archive/

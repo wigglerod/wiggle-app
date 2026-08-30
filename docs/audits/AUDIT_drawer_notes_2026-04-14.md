@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-14  
 **Auditor:** Claude (read-only, no code changes)  
-**Repo:** wiggle-v4 @ `~/Documents/wiggle-v4/`  
+**Repo:** wiggle-v4 @ `~/code/wiggle-v4/`  
 **Purpose:** Verify five assumptions before Antigravity build adds a Note button to DogDrawer.
 
 ---

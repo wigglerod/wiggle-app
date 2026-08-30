@@ -1,7 +1,7 @@
 # AUDIT: walk_groups.dog_ids Writers & Shape-Drift Risks
 
 **Date:** April 14, 2026
-**Scope:** `~/Documents/wiggle-v4/` (production main, post-revert commit `0c3a9c8`)
+**Scope:** `~/code/wiggle-v4/` (production main, post-revert commit `0c3a9c8`)
 **Auditor:** Cowork session — read-only, no code changes
 
 ---
