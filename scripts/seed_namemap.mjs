@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = '/Users/galvan/code/wiggle-v4';
+const ROOT = resolve(__dirname, '..');
 
 function loadEnv() {
   const lines = readFileSync(resolve(ROOT, '.env.local'), 'utf-8').split('\n');
