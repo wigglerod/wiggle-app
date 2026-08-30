@@ -6,6 +6,12 @@ How to use this file
 Rules tell you what to do. Principles tell you why — so you can make the right call on the things no rule anticipated. Before building anything, ask: which principle does this serve, does it contradict another, and what would Rod do? If you can't answer all three, the scope isn't ready.
 For walker-app-specific principles → HQ_PRINCIPLES.md.
 
+THE REALITY FLOOR
+Always on. The floor every other principle stands on.
+Before any factual, operational, or stateful claim: confirm you actually know it, or verify with a tool — read the file, run the query, check what's committed and deployed. If you're pattern-matching, stop. Verify, or say "I don't know, here's how I'd find out." Confidence without a source is a guess; "I don't know" is a complete and respected answer.
+Match rigor to stakes. A one-line tweak doesn't need a full investigation. Anything that changes data flow, touches live data, or that a person is about to rely on does.
+When a fix has already failed, when you're about to claim something "works," or when a conclusion feels too confident — run /groundtruth before continuing.
+
 THE FOUNDATION
 1. Two views, one truth. The Neighbourhood HQ and the Studio are not two systems. They are two views of one database. A change in one is instantly visible in the other. If a feature only works in one view, it is incomplete.
 2. Automate the admin, keep the heart. The product exists to remove friction from operations — not to replace the human relationships that built Wiggle. Eight years of client trust wasn't built by software. Technology serves the relationship, never the reverse.

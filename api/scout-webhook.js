@@ -1,5 +1,16 @@
 // api/scout-webhook.js
-// Instagram DM webhook receiver for The Scout pipeline.
+//
+// ⚠️ LEGACY / META-DIRECT — NOT the canonical path. DO NOT treat this file as
+// the source of truth for how Instagram reaches Wiggle.
+// CANON: Instagram AND email ingest through COMPOSIO (gmail + instagram are the
+// manually-connected, working Composio accounts). Composio is the ONLY intended
+// path. This direct-Meta webhook exists only because Meta's platform rules made
+// the direct route painful — which is the reason to be ON Composio, not Meta.
+// It is kept ALIVE for now solely because live IG flag_cards still flow through
+// it; retire it once Composio ingestion writes flag_cards. See the brain entry
+// project_ingestion_is_composio.
+//
+// Instagram DM webhook receiver (legacy Meta path) for The Scout pipeline.
 // GET  → Meta webhook verification (hub.verify_token check)
 // POST → Receives DM payloads, upserts into flag_cards in Supabase
 //        (source='instagram', onConflict 'source,source_id', status='open')
